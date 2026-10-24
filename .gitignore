@@ -45,6 +45,7 @@ pnpm-debug.log*
 coverage/
 *.lcov
 test-results/
+structure.md
 
 # Local database data
 mysql-data/

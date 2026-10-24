@@ -44,7 +44,7 @@ goevent/
 │   │   ├── config/
 │   │   ├── security/
 │   │   ├── common/          # Shared abstractions
-│   │   └── modules/         # Feature modules: auth, user, event, ticket, cart, booking, payment, notification, reporting
+│   │   └── modules/         # Feature modules: auth, user, event, ticketcatalog, issuedticket, checkin, cart, booking, payment, notification, reporting
 │   │       └── [feature]/
 │   │           ├── presentation/  # Controllers, request/response DTOs
 │   │           ├── application/   # Use cases, transactions, orchestration

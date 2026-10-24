@@ -51,6 +51,24 @@ GoEvent is structured around cohesive business feature modules running inside a 
    - User account management and dispute resolution.
    - System settings and financial audit tracking.
 
+## Feature Modules
+
+The backend modular monolith is organized into 11 focused business modules:
+
+| Module | Core Responsibility |
+| --- | --- |
+| `auth` | Authentication, credentials, session/JWT token lifecycle |
+| `user` | User profiles, account settings, roles (`ROLE_VIEWER`, `ROLE_CREATOR`, `ROLE_ADMIN`) |
+| `event` | Event creation, venue details, schedules, status lifecycle (`DRAFT`, `PUBLISHED`, `CANCELLED`, `COMPLETED`) |
+| `ticketcatalog` | Ticket tiers, pricing, stock inventory, and reservation hold rules |
+| `issuedticket` | Confirmed ticket instances, unique ticket numbers, verifiable QR code payload signing |
+| `checkin` | Gate attendee scanning, cryptographic verification, atomic check-in execution, double check-in prevention |
+| `cart` | Client/temporary ticket selections and preliminary price calculations |
+| `booking` | Reservation coordination, expiry timers, order status transitions |
+| `payment` | Payment gateway integration, tokenized checkout, idempotent webhook processing |
+| `notification` | Transactional emails, booking confirmations, QR ticket delivery |
+| `reporting` | Organizer sales metrics, attendance rates, revenue and payout breakdowns |
+
 ## Module Boundaries and Dependency Direction
 
 1. **Presentation -> Application -> Domain**:
