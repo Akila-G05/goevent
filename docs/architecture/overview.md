@@ -1,15 +1,13 @@
 # GoEvent Architecture Overview
 
-GoEvent is an event planning and ticket booking platform designed as a **modular monolith** with clean architectural layers.
+GoEvent is an event planning and ticket booking platform built with **Next.js (App Router)** on the frontend and a robust **Layered Architecture Spring Boot backend**.
 
 ## High-Level Architecture
 
-GoEvent is structured around cohesive business feature modules running inside a single deployable application unit.
-
 ```
                       +-----------------------------+
-                      |       Vite + React UI       |
-                      |   (TanStack Query, Zustand) |
+                      |    Next.js 14 App Router    |
+                      |  (React, Query, Tailwind)   |
                       +--------------+--------------+
                                      |
                                 REST / JSON
@@ -18,13 +16,13 @@ GoEvent is structured around cohesive business feature modules running inside a 
 +------------------------------------+------------------------------------+
 |                         GoEvent Backend (Spring Boot)                   |
 |                                                                         |
-|  Presentation Layer (Controllers, DTOs, Security Context)               |
+|  Controller Layer (REST Controllers, DTOs, Web Security Context)        |
 |                                |                                        |
-|  Application Layer (Use Cases, Transaction Boundaries, Orchestration)   |
+|  Service Layer (Business Logic, Workflows, @Transactional Boundaries)   |
 |                                |                                        |
-|  Domain Layer (Entities, Value Objects, Domain Policies, Ports)         |
-|                                ^                                        |
-|  Infrastructure Layer (Spring Data JPA, Hibernate, External Adapters)   |
+|  Repository Layer (Spring Data JPA Repositories)                        |
+|                                |                                        |
+|  Entity Layer (JPA Entities, Enums, Relational Mapping)                 |
 +------------------------------------+------------------------------------+
                                      |
                                      v
@@ -51,31 +49,26 @@ GoEvent is structured around cohesive business feature modules running inside a 
    - User account management and dispute resolution.
    - System settings and financial audit tracking.
 
-## Feature Modules
+## Backend Layered Architecture
 
-The backend modular monolith is organized into 11 focused business modules:
+The backend follows a clean **Package-by-Layer** pattern:
 
-| Module | Core Responsibility |
-| --- | --- |
-| `auth` | Authentication, credentials, session/JWT token lifecycle |
-| `user` | User profiles, account settings, roles (`ROLE_VIEWER`, `ROLE_CREATOR`, `ROLE_ADMIN`) |
-| `event` | Event creation, venue details, schedules, status lifecycle (`DRAFT`, `PUBLISHED`, `CANCELLED`, `COMPLETED`) |
-| `ticketcatalog` | Ticket tiers, pricing, stock inventory, and reservation hold rules |
-| `issuedticket` | Confirmed ticket instances, unique ticket numbers, verifiable QR code payload signing |
-| `checkin` | Gate attendee scanning, cryptographic verification, atomic check-in execution, double check-in prevention |
-| `cart` | Client/temporary ticket selections and preliminary price calculations |
-| `booking` | Reservation coordination, expiry timers, order status transitions |
-| `payment` | Payment gateway integration, tokenized checkout, idempotent webhook processing |
-| `notification` | Transactional emails, booking confirmations, QR ticket delivery |
-| `reporting` | Organizer sales metrics, attendance rates, revenue and payout breakdowns |
+| Package | Layer | Responsibilities |
+| --- | --- | --- |
+| `com.goevent.controller` | Presentation | Handles incoming HTTP requests, input validation, and response serialization. |
+| `com.goevent.dto` | Data Transfer | Defines structured request and response contracts. |
+| `com.goevent.service` | Business Logic | Coordinates business rules, domain calculations, and transaction boundaries (`@Transactional`). |
+| `com.goevent.repository` | Persistence | Owns Spring Data JPA repositories and query execution. |
+| `com.goevent.entity` | Data Model | Encapsulates relational entities, fields, constraints, and audit timestamps. |
+| `com.goevent.security` | Security | Manages Spring Security filter chain, JWT authentication, and role authorization. |
+| `com.goevent.common` | Cross-Cutting | Standard JSON envelopes (`ApiResponse<T>`) and global exception handling. |
 
-## Module Boundaries and Dependency Direction
+## Frontend Next.js Architecture
 
-1. **Presentation -> Application -> Domain**:
-   - Domain logic does not depend on Spring Web, JPA/Hibernate, or third-party payment SDKs.
-   - Application layer defines use cases and orchestrates domain policies within transactions.
-   - Infrastructure layer implements repository ports and external adapters.
+The frontend uses the modern **Next.js App Router**:
 
-2. **Inter-Module Communication**:
-   - Modules do not cross-query other module tables directly.
-   - Modules communicate via explicit application service interfaces or public domain contracts.
+- `src/app/`: File-system routing with root layout, error boundaries, providers, and page views.
+- `src/components/ui/`: Reusable, accessible UI primitives (buttons, inputs, modals).
+- `src/components/shared/`: Shared application components (navigation bar, layout wrappers).
+- `src/lib/`: Typed Axios client (`api-client.ts`) with request/response interceptors.
+- `src/types/`: Shared TypeScript contracts matching backend REST DTOs.

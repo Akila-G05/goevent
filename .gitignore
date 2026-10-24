@@ -29,12 +29,16 @@ backend/.mvn/wrapper/maven-wrapper.jar
 *.class
 *.log
 
-# Frontend / Node / Vite
+# Frontend / Node / Next.js
 frontend/node_modules/
 **/node_modules/
+frontend/.next/
+**/.next/
 frontend/dist/
 **/dist/
 frontend/.cache/
+frontend/next-env.d.ts
+next-env.d.ts
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
@@ -46,6 +50,7 @@ coverage/
 *.lcov
 test-results/
 structure.md
+*.tsbuildinfo
 
 # Local database data
 mysql-data/

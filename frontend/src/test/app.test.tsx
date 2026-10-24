@@ -1,11 +1,12 @@
+import React from 'react';
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect } from 'vitest';
-import { App } from '@/app/App';
+import HomePage from '@/app/page';
 
-describe('App Component', () => {
-  it('renders the GoEvent branding and hero title', () => {
-    render(<App />);
-    expect(screen.getByText('GoEvent')).toBeInTheDocument();
+describe('HomePage Component', () => {
+  it('renders the GoEvent hero title and search button', () => {
+    render(<HomePage />);
     expect(screen.getByText(/Discover & Book Unforgettable Experiences/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Search/i })).toBeInTheDocument();
   });
 });

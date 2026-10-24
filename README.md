@@ -17,7 +17,7 @@ GoEvent is a high-integrity, modular monolith event planning and ticket booking 
 | **Backend** | Java 21 LTS, Spring Boot 3.4, Spring Security, Spring Data JPA (Hibernate ORM), Maven |
 | **Database** | MySQL 8.4 LTS (InnoDB, `utf8mb4`), Flyway versioned migrations |
 | **API Contract** | REST/JSON, OpenAPI (Swagger UI) |
-| **Frontend** | React, TypeScript (strict), Vite, React Router, TanStack Query, Zustand, Tailwind CSS |
+| **Frontend** | Next.js (App Router), React, TypeScript (strict), TanStack Query, Tailwind CSS |
 | **Validation** | Jakarta Bean Validation (Backend), Zod + React Hook Form (Frontend) |
 | **Testing** | JUnit 5, Mockito, Testcontainers (MySQL), Vitest, React Testing Library |
 | **Tooling** | Docker & Docker Compose, GitHub Actions |
@@ -28,28 +28,26 @@ GoEvent is a high-integrity, modular monolith event planning and ticket booking 
 
 ```text
 goevent/
-├── frontend/                # Vite + React + TypeScript application
+├── frontend/                # Next.js App Router application
 │   ├── src/
-│   │   ├── app/             # Router, app providers, bootstrapping
-│   │   ├── features/        # auth, events, tickets, cart, bookings, payments, admin
+│   │   ├── app/             # App Router layout, pages, route handlers
 │   │   ├── components/ui/   # Reusable UI primitives
 │   │   ├── components/shared/
-│   │   ├── hooks/
 │   │   ├── lib/             # API client, HTTP interceptors, utilities
 │   │   └── types/
-│   └── package.json
-├── backend/                 # Spring Boot modular monolith
+│   ├── package.json
+│   └── next.config.mjs
+├── backend/                 # Spring Boot layered architecture
 │   ├── src/main/java/com/goevent/
 │   │   ├── GoeventApplication.java
-│   │   ├── config/
-│   │   ├── security/
-│   │   ├── common/          # Shared abstractions
-│   │   └── modules/         # Feature modules: auth, user, event, ticketcatalog, issuedticket, checkin, cart, booking, payment, notification, reporting
-│   │       └── [feature]/
-│   │           ├── presentation/  # Controllers, request/response DTOs
-│   │           ├── application/   # Use cases, transactions, orchestration
-│   │           ├── domain/        # Entities, value objects, ports
-│   │           └── infrastructure/# Spring Data JPA repositories, external adapters
+│   │   ├── config/          # OpenAPI, WebConfig
+│   │   ├── security/        # Spring Security, roles
+│   │   ├── common/          # Shared ApiResponse, exception handler
+│   │   ├── controller/      # REST API controllers
+│   │   ├── dto/             # Request & response DTOs
+│   │   ├── service/         # Business logic & transaction boundaries
+│   │   ├── repository/      # Spring Data JPA repositories
+│   │   └── entity/          # JPA entities
 │   ├── src/main/resources/
 │   │   ├── application.yml
 │   │   └── db/migration/    # Flyway versioned SQL migrations
