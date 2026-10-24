@@ -1,6 +1,6 @@
 import axios, { AxiosInstance, AxiosResponse } from 'axios';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api/v1';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || '/api/v1';
 
 export const apiClient: AxiosInstance = axios.create({
   baseURL: API_BASE_URL,
@@ -13,7 +13,6 @@ export const apiClient: AxiosInstance = axios.create({
 apiClient.interceptors.response.use(
   (response: AxiosResponse) => response,
   (error) => {
-    // Standardized error handling
     const customError = {
       message: error.response?.data?.message || 'An unexpected error occurred',
       errorCode: error.response?.data?.errorCode || 'NETWORK_ERROR',

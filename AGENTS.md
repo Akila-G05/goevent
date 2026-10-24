@@ -27,14 +27,14 @@ GoEvent supports three roles:
 
 | Area | Approved technology / approach |
 | --- | --- |
-| Application | Modular monolith; feature-oriented modules with clean layers |
-| Frontend | React, TypeScript (strict), Vite |
-| UI | Tailwind CSS and shadcn/ui (where configured) |
-| Frontend routing | React Router |
+| Application | Monolith with clean Layered Architecture |
+| Frontend | Next.js (App Router), React, TypeScript (strict) |
+| UI | Tailwind CSS and accessible components / shadcn/ui (where configured) |
+| Frontend routing | Next.js App Router |
 | Data fetching | TanStack Query; Axios or the existing typed HTTP client |
 | Client-only state | React state / Zustand where justified |
 | Forms | React Hook Form + Zod (where configured) |
-| Backend | Java 21 LTS, Spring Boot, Maven |
+| Backend | Java 21 LTS, Spring Boot, Maven (Layered: controller, service, repository, entity, dto) |
 | Security | Spring Security with explicit role/ownership checks |
 | Persistence | Spring Data JPA with Hibernate ORM |
 | Database | **MySQL 8.4 LTS**, InnoDB, `utf8mb4` |
@@ -44,41 +44,35 @@ GoEvent supports three roles:
 | Local tooling | Docker / Docker Compose when configured |
 | CI & collaboration | GitHub Actions, branches, pull requests, protected `main` |
 
-Do not switch to Next.js, Bun-only tooling, Node.js backend, Prisma, Drizzle, PostgreSQL, microservices, event buses, or another architecture without an explicit, documented architectural decision and maintainer approval. Align dependency versions to the repository's build files; do not independently upgrade major versions.
+Per maintainer decision (ADR 0003), Next.js (App Router) is the approved frontend framework and Layered Architecture is the approved backend structure. Do not switch to Bun-only tooling, Node.js backend, Prisma, Drizzle, PostgreSQL, microservices, or event buses without an explicit, documented architectural decision and maintainer approval. Align dependency versions to the repository's build files; do not independently upgrade major versions.
 
 ## 3. Expected repository structure
 
-Prefer this layout for a new GoEvent repository. If the repository already exists, **adapt incrementally**; do not reorganize it wholesale for an unrelated task.
+Prefer this layout for the GoEvent repository:
 
 ```text
 goevent/
 ├── frontend/
 │   ├── src/
-│   │   ├── app/                 # router, application providers, bootstrapping
-│   │   ├── features/            # auth, events, tickets, cart, bookings, payments, admin
-│   │   ├── components/ui/       # reusable UI primitives
-│   │   ├── components/shared/   # cross-feature components
+│   │   ├── app/                 # Next.js App Router (layout, pages, route handlers)
+│   │   ├── components/ui/       # Reusable UI primitives
+│   │   ├── components/shared/   # Cross-feature components
 │   │   ├── hooks/
 │   │   ├── lib/                 # API client, auth integration, utilities
 │   │   └── types/
 │   ├── package.json
-│   └── vite.config.ts
+│   └── next.config.mjs
 ├── backend/
 │   ├── src/main/java/com/goevent/
 │   │   ├── GoeventApplication.java
-│   │   ├── config/
-│   │   ├── security/
-│   │   ├── common/              # small, truly shared abstractions only
-│   │   └── modules/
-│   │       ├── auth/
-│   │       ├── user/
-│   │       ├── event/
-│   │       ├── ticket/
-│   │       ├── cart/
-│   │       ├── booking/
-│   │       ├── payment/
-│   │       ├── notification/
-│   │       └── reporting/
+│   │   ├── config/              # OpenApiConfig, WebConfig, etc.
+│   │   ├── security/            # SecurityConfig, UserRole
+│   │   ├── common/              # ApiResponse, GlobalExceptionHandler
+│   │   ├── controller/          # REST API controllers
+│   │   ├── dto/                 # Request and Response DTOs
+│   │   ├── service/             # Business logic & transaction boundaries
+│   │   ├── repository/          # Spring Data JPA repositories
+│   │   └── entity/              # JPA entity models
 │   ├── src/main/resources/
 │   │   ├── application.yml
 │   │   └── db/migration/        # Flyway V...__...sql files
@@ -92,25 +86,13 @@ goevent/
 └── AGENTS.md
 ```
 
-Each backend feature should use these **internal layers** (create only those actually needed):
-
-```text
-modules/event/
-├── presentation/            # controllers, HTTP request/response DTOs, mapping
-├── application/             # use cases, orchestration, transaction boundaries
-├── domain/                  # entities/value objects, policies, repository ports
-└── infrastructure/          # Spring Data JPA, Hibernate mappings, external adapters
-```
-
 ### Dependency direction and boundaries
 
-- **Presentation → Application → Domain.** Infrastructure implements ports/interfaces required by inner layers and is wired with dependency injection. Domain must not import Spring Web, JPA, Hibernate, controllers, or payment SDKs. If JPA annotations on domain entities are an intentional, documented project simplification, keep persistence concerns minimal and never spread them to application code.
-- Controllers handle HTTP concerns, input validation, authentication context, and response mapping—not business rules or SQL.
-- Application services coordinate use cases and transaction boundaries; domain objects enforce their own invariants.
-- Infrastructure owns Spring Data repository implementations, database mapping, email providers, storage, QR libraries, and payment gateway adapters.
-- A module must not access another module's tables/repository implementation or internal service directly. Use a documented application-facing interface or an explicit integration boundary.
-- Prevent circular module dependencies. Favor cohesive services and composition over inheritance-heavy hierarchies.
-- No catch-all `Utils`, `CommonService`, or mega-controller; keep `common/` small.
+- **Controller → Service → Repository / Entity.**
+- Controllers handle HTTP transport concerns, input validation, authentication context, and response mapping—not business rules or SQL.
+- Services coordinate business logic, use cases, and transaction boundaries (`@Transactional`).
+- Repositories own Spring Data JPA database access and custom queries.
+- Entities represent relational persistence mappings and protect state invariants.
 
 ## 4. Object-oriented programming and Java standards
 
