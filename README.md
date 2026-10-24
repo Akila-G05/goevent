@@ -67,7 +67,7 @@ goevent/
 
 - **Java 21 LTS**
 - **Maven 3.9+** (or use included `./mvnw`)
-- **Node.js 20+** and **npm**
+- **Bun 1.1+** (for frontend package management and runtime)
 - **Docker & Docker Compose**
 
 ### 1. Start Database
@@ -98,7 +98,7 @@ Navigate to `backend/` and run the Spring Boot application:
 
 ```bash
 cd backend
-mvn spring-boot:run
+./mvnw spring-boot:run
 ```
 
 The backend server will start on `http://localhost:8080`.
@@ -110,11 +110,11 @@ In another terminal, navigate to `frontend/`:
 
 ```bash
 cd frontend
-npm install
-npm run dev
+bun install
+bun run dev
 ```
 
-The frontend application will start on `http://localhost:5173`.
+The frontend application will start on `http://localhost:3000`.
 
 ---
 
@@ -124,15 +124,15 @@ The frontend application will start on `http://localhost:5173`.
 
 ```bash
 cd backend
-mvn verify
+./mvnw verify
 ```
 
 ### Frontend Tests & Typecheck
 
 ```bash
 cd frontend
-npm run lint
-npm run typecheck
-npm run test
-npm run build
+bun run lint
+bun run typecheck
+bun run test
+bun run build
 ```

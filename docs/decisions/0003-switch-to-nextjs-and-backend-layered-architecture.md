@@ -1,4 +1,4 @@
-# 3. Adopt Next.js for Frontend and Layered Architecture for Backend
+# 3. Adopt Next.js with Bun for Frontend and Layered Architecture for Backend
 
 Date: 2026-10-24
 Status: Accepted
@@ -6,13 +6,13 @@ Status: Accepted
 ## Context
 
 Following maintainer review, the project architecture has been updated to optimize developer workflow, server-side rendering capabilities, and architectural clarity:
-1. **Frontend**: Vite + React SPA is transitioned to **Next.js (App Router)**. This provides improved SEO for public event discovery, native server components, integrated routing, and modern full-stack developer ergonomics.
+1. **Frontend**: Vite + React SPA is transitioned to **Next.js (App Router)** with **Bun** as the approved runtime, package manager, and script runner. This provides improved SEO for public event discovery, native server components, integrated routing, ultra-fast dependency management, and modern full-stack developer ergonomics.
 2. **Backend**: Package-by-feature modular monolith structure is transitioned to **Layered Architecture (Package-by-Layer)**. This simplifies component discovery, standardizes Spring Boot layering across the codebase, and reduces boilerplate across packages.
 
 ## Decision
 
 1. **Frontend Tech Stack**:
-   - Framework: Next.js (App Router) with React 18 and strict TypeScript.
+   - Framework & Tooling: Next.js (App Router) with React 18, strict TypeScript, and **Bun** (`bun.lock`).
    - Styling: Tailwind CSS with PostCSS.
    - State & Data Fetching: TanStack Query (React Query) and Axios client with custom interceptors.
    - Directory Layout:
@@ -35,6 +35,6 @@ Following maintainer review, the project architecture has been updated to optimi
 
 ## Consequences
 
-- Next.js replaces Vite build scripts in CI (`next build`, `next lint`).
+- Next.js and Bun replace Vite and npm build scripts in CI (`bun install --frozen-lockfile`, `bun run build`, `bun run lint`).
 - Backend packages follow standard layer-by-layer convention, making it straightforward to add new controllers, services, entities, and repositories.
 - MySQL 8.4 LTS, Flyway migrations (`V...__...sql`), and `ddl-auto: validate` remain strictly enforced.

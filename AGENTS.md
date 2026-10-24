@@ -29,6 +29,7 @@ GoEvent supports three roles:
 | --- | --- |
 | Application | Monolith with clean Layered Architecture |
 | Frontend | Next.js (App Router), React, TypeScript (strict) |
+| Frontend tooling | **Bun** (runtime, package manager, and script runner) |
 | UI | Tailwind CSS and accessible components / shadcn/ui (where configured) |
 | Frontend routing | Next.js App Router |
 | Data fetching | TanStack Query; Axios or the existing typed HTTP client |
@@ -41,10 +42,10 @@ GoEvent supports three roles:
 | Schema migrations | Flyway versioned SQL migrations |
 | API contract | REST/JSON, OpenAPI documentation |
 | Testing | JUnit, Mockito, Spring Boot Test, Testcontainers; Vitest, React Testing Library, Playwright |
-| Local tooling | Docker / Docker Compose when configured |
+| Local tooling | Docker / Docker Compose when configured; Bun for frontend |
 | CI & collaboration | GitHub Actions, branches, pull requests, protected `main` |
 
-Per maintainer decision (ADR 0003), Next.js (App Router) is the approved frontend framework and Layered Architecture is the approved backend structure. Do not switch to Bun-only tooling, Node.js backend, Prisma, Drizzle, PostgreSQL, microservices, or event buses without an explicit, documented architectural decision and maintainer approval. Align dependency versions to the repository's build files; do not independently upgrade major versions.
+Per maintainer decision (ADR 0003), Next.js (App Router) with Bun package management is the approved frontend stack and Layered Architecture is the approved backend structure. Do not switch to Node.js backend, Prisma, Drizzle, PostgreSQL, microservices, or event buses without an explicit, documented architectural decision and maintainer approval. Align dependency versions to the repository's build files; do not independently upgrade major versions.
 
 ## 3. Expected repository structure
 
@@ -185,11 +186,11 @@ Use installed scripts/commands verified from `frontend/package.json` and `backen
 
 ```bash
 # Frontend (from frontend/)
-npm ci                     # if package-lock.json is present
-npm run lint               # when defined
-npm run typecheck          # when defined
-npm run test               # when defined
-npm run build
+bun install                # or: bun install --frozen-lockfile
+bun run lint               # when defined
+bun run typecheck          # when defined
+bun run test               # when defined
+bun run build
 
 # Backend (from backend/)
 ./mvnw verify              # if Maven wrapper is committed
