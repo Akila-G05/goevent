@@ -5,8 +5,6 @@ import Image from 'next/image';
 import Link from 'next/link';
 import {
   Search,
-  Calendar,
-  MapPin,
   ArrowUpRight,
   ChevronDown,
   ChevronLeft,
@@ -15,13 +13,9 @@ import {
   Pause,
   SkipBack,
   SkipForward,
-  Volume2,
-  Ticket,
   Sparkles,
   ShieldCheck,
-  CheckCircle2,
   X,
-  ExternalLink,
 } from 'lucide-react';
 
 // Data types
@@ -371,12 +365,13 @@ export default function HomePage() {
               <div className="bg-[#18181c]/65 backdrop-blur-xl border border-white/20 rounded-2xl p-4 sm:p-5 shadow-2xl space-y-3">
                 {/* Search Text Input */}
                 <div className="relative">
+                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 pointer-events-none" />
                   <input
                     type="text"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder="Search by artist, event, venue"
-                    className="w-full bg-white/10 hover:bg-white/15 focus:bg-white/20 border border-white/15 rounded-xl px-4 py-3 text-sm text-white placeholder-zinc-400 focus:outline-none focus:ring-1 focus:ring-white/40 transition-all"
+                    className="w-full bg-white/10 hover:bg-white/15 focus:bg-white/20 border border-white/15 rounded-xl pl-11 pr-4 py-3 text-sm text-white placeholder-zinc-400 focus:outline-none focus:ring-1 focus:ring-white/40 transition-all"
                   />
                 </div>
 
@@ -594,8 +589,16 @@ export default function HomePage() {
         {/* Carousel Bottom Indicators */}
         <div className="flex items-center justify-between mt-8 pt-4">
           <div className="flex items-center space-x-1.5">
-            <span className="w-2 h-2 rounded-full bg-black" />
-            <span className="w-2 h-2 rounded-full bg-zinc-300" />
+            <span
+              className={`w-2 h-2 rounded-full transition-colors ${
+                browseCarouselIndex % 2 === 0 ? 'bg-black' : 'bg-zinc-300'
+              }`}
+            />
+            <span
+              className={`w-2 h-2 rounded-full transition-colors ${
+                browseCarouselIndex % 2 === 1 ? 'bg-black' : 'bg-zinc-300'
+              }`}
+            />
           </div>
 
           <div className="flex items-center space-x-2">

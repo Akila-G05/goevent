@@ -2,11 +2,9 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { ArrowUpRight, Menu, X, Shield, PlusCircle, Sparkles } from 'lucide-react';
+import { ArrowUpRight, Menu, X, Shield, PlusCircle } from 'lucide-react';
 
 export const Navbar: React.FC = () => {
-  const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const navLinks = [
