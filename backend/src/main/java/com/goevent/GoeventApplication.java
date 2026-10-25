@@ -5,8 +5,8 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 @SpringBootApplication
 public class GoeventApplication {
-
     public static void main(String[] args) {
-        SpringApplication.run(GoeventApplication.class, args);
+        System.out.println("Site Url is http://localhost:8080/goevent/");
+        SpringApplication.run(GoeventApplication.class);
     }
 }
