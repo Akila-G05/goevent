@@ -1041,24 +1041,24 @@ export default function HomePage() {
             {/* Col 3: Role Portals */}
             <div>
               <h4 className="font-display text-lg font-bold uppercase text-white tracking-wider mb-4">
-                GoEvent Roles
+                Account & Access
               </h4>
               <ul className="space-y-2 text-xs text-zinc-400">
                 <li>
-                  <Link href="/creator" className="hover:text-white flex items-center space-x-1 transition-colors">
-                    <span>Creator Studio (Host Event)</span>
+                  <Link href="/login" className="hover:text-white flex items-center space-x-1 transition-colors">
+                    <span>Sign In to Your Account</span>
                     <ArrowUpRight className="w-3 h-3 text-red-400" />
                   </Link>
                 </li>
                 <li>
-                  <Link href="/admin" className="hover:text-white flex items-center space-x-1 transition-colors">
-                    <span>Admin Moderation Console</span>
+                  <Link href="/signup" className="hover:text-white flex items-center space-x-1 transition-colors">
+                    <span>Create Attendee or Creator Account</span>
                     <ArrowUpRight className="w-3 h-3 text-zinc-400" />
                   </Link>
                 </li>
                 <li>
-                  <Link href="/login" className="hover:text-white transition-colors">
-                    Viewer / Attendee Account
+                  <Link href="#browse" className="hover:text-white transition-colors">
+                    Browse All Concert Passes
                   </Link>
                 </li>
               </ul>

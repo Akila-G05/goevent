@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { ArrowUpRight, Menu, X, Shield, PlusCircle } from 'lucide-react';
+import { ArrowUpRight, Menu, X } from 'lucide-react';
 
 export const Navbar: React.FC = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -46,23 +46,13 @@ export const Navbar: React.FC = () => {
           {/* Right Action Buttons */}
           <div className="hidden md:flex items-center space-x-3">
             <Link
-              href="/creator"
-              className="text-xs font-semibold text-zinc-300 hover:text-white px-3 py-2 rounded-full border border-white/10 hover:border-white/30 transition-all flex items-center space-x-1.5"
-              title="Creator Studio"
-            >
-              <PlusCircle className="w-3.5 h-3.5 text-red-400" />
-              <span>Host Event</span>
-            </Link>
-            <Link
-              href="/admin"
-              className="text-xs font-semibold text-zinc-300 hover:text-white px-3 py-2 rounded-full border border-white/10 hover:border-white/30 transition-all flex items-center space-x-1.5"
-              title="Admin Moderation"
-            >
-              <Shield className="w-3.5 h-3.5 text-zinc-400" />
-              <span>Admin</span>
-            </Link>
-            <Link
               href="/login"
+              className="text-xs font-semibold text-zinc-300 hover:text-white px-4 py-2 rounded-full border border-white/10 hover:border-white/30 transition-all flex items-center space-x-1.5"
+            >
+              <span>Sign In</span>
+            </Link>
+            <Link
+              href="/signup"
               className="bg-white text-black hover:bg-zinc-100 text-xs sm:text-sm font-semibold px-4 py-2.5 rounded-full flex items-center space-x-1.5 shadow-md hover:shadow-lg transition-transform active:scale-95"
             >
               <span>Join Us</span>
@@ -73,7 +63,7 @@ export const Navbar: React.FC = () => {
           {/* Mobile Menu Button */}
           <div className="flex md:hidden items-center space-x-2">
             <Link
-              href="/login"
+              href="/signup"
               className="bg-white text-black text-xs font-semibold px-3 py-1.5 rounded-full flex items-center space-x-1"
             >
               <span>Join</span>
@@ -106,20 +96,20 @@ export const Navbar: React.FC = () => {
             ))}
             <div className="pt-2 border-t border-white/10 flex flex-col space-y-2">
               <Link
-                href="/creator"
+                href="/login"
                 onClick={() => setMobileMenuOpen(false)}
-                className="px-3 py-2 text-sm text-zinc-200 hover:bg-white/5 rounded-lg flex items-center space-x-2"
+                className="px-3 py-2 text-sm text-zinc-200 hover:bg-white/5 rounded-lg flex items-center justify-between"
               >
-                <PlusCircle className="w-4 h-4 text-red-400" />
-                <span>Host an Event (Creator Studio)</span>
+                <span>Sign In to Account</span>
+                <ArrowUpRight className="w-3.5 h-3.5 text-zinc-400" />
               </Link>
               <Link
-                href="/admin"
+                href="/signup"
                 onClick={() => setMobileMenuOpen(false)}
-                className="px-3 py-2 text-sm text-zinc-200 hover:bg-white/5 rounded-lg flex items-center space-x-2"
+                className="px-3 py-2 text-sm font-semibold text-black bg-white rounded-lg flex items-center justify-between"
               >
-                <Shield className="w-4 h-4 text-zinc-400" />
-                <span>Admin Console</span>
+                <span>Join Us / Sign Up</span>
+                <ArrowUpRight className="w-3.5 h-3.5 text-black" />
               </Link>
             </div>
           </div>
