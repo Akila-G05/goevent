@@ -6,6 +6,7 @@ import Link from 'next/link';
 import {
   Search,
   ArrowUpRight,
+  CornerDownRight,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
@@ -285,7 +286,7 @@ export default function HomePage() {
       dayNumber: '16',
       monthYear: 'APR 24',
       badgeOverlay: 'COMEBACK AGAIN NAILONG 24 CITY ALL THE WORLD',
-      imageUrl: 'https://images.unsplash.com/photo-1520523839898-507121c172a7?auto=format&fit=crop&w=800&q=80',
+      imageUrl: 'https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?auto=format&fit=crop&w=800&q=80',
       price: 80,
     },
   ];
@@ -334,11 +335,11 @@ export default function HomePage() {
       {/* =========================================================================
           SECTION 1: HERO SECTION (From Screenshot 1)
           ========================================================================= */}
-      <section className="relative w-full min-h-[85vh] lg:min-h-[92vh] bg-[#0c0c0e] flex flex-col justify-between overflow-hidden">
+      <section className="relative w-full h-[100dvh] min-h-[640px] bg-[#0c0c0e] flex flex-col justify-between overflow-hidden">
         {/* Background Concert Image with Dark Gradient Overlays */}
         <div className="absolute inset-0 z-0">
           <Image
-            src="https://images.unsplash.com/photo-1470225620780-dba8ba36b745?auto=format&fit=crop&w=2000&q=85"
+            src="https://images.unsplash.com/photo-1659273145168-7217ae03db0c?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=NHwxMjA3fDA%3D"
             alt="Concert stage crowd hands up"
             fill
             priority
@@ -350,16 +351,16 @@ export default function HomePage() {
         </div>
 
         {/* Hero Content Container */}
-        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-12 pb-16 flex-1 flex flex-col justify-end w-full">
+        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 sm:pt-28 pb-6 sm:pb-8 lg:pb-10 flex-1 flex flex-col justify-end w-full h-full">
           {/* Main Headline */}
-          <div className="max-w-4xl mb-8">
-            <h1 className="font-display text-5xl sm:text-7xl lg:text-8xl xl:text-9xl text-white font-black tracking-tight leading-[0.88] uppercase drop-shadow-md">
+          <div className="max-w-4xl mb-4 sm:mb-6">
+            <h1 className="font-display text-4xl sm:text-6xl lg:text-7xl xl:text-8xl text-white font-black tracking-tight leading-[0.88] uppercase drop-shadow-md">
               WHAT&apos;S CONCERT<br />HAPPENING IN ASIA?
             </h1>
           </div>
 
           {/* Bottom Bar: Glassmorphic Search Form (Left) & Tour Spotlight Card (Right) */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-end">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-6 items-end">
             {/* Left: Floating Search Box */}
             <div className="lg:col-span-8">
               <div className="bg-[#18181c]/65 backdrop-blur-xl border border-white/20 rounded-2xl p-4 sm:p-5 shadow-2xl space-y-3">
@@ -417,8 +418,8 @@ export default function HomePage() {
                     }}
                     className="w-full bg-white text-black hover:bg-zinc-200 font-semibold text-sm py-3 px-5 rounded-xl flex items-center justify-center space-x-2 transition-all active:scale-[0.98] shadow-lg"
                   >
+                    <CornerDownRight className="w-4 h-4 stroke-[2.5]" />
                     <span>Search</span>
-                    <ArrowUpRight className="w-4 h-4 stroke-[2.5]" />
                   </button>
                 </div>
               </div>
@@ -429,7 +430,7 @@ export default function HomePage() {
               <div className="bg-[#1a1a1f]/80 backdrop-blur-md border border-white/15 rounded-2xl p-3 shadow-2xl flex flex-col space-y-2 group cursor-pointer hover:border-white/30 transition-all">
                 <div className="relative h-36 w-full rounded-xl overflow-hidden">
                   <Image
-                    src="https://images.unsplash.com/photo-1501386761578-eac5c94b800a?auto=format&fit=crop&w=600&q=80"
+                    src="https://images.unsplash.com/photo-1558047291-26cc184812b6?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=NHwxMjA3fDA%3D"
                     alt="Metal Matters Tour"
                     fill
                     className="object-cover group-hover:scale-105 transition-transform duration-500"
@@ -492,11 +493,10 @@ export default function HomePage() {
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className={`pb-2 whitespace-nowrap transition-colors relative ${
-                activeTab === tab
-                  ? 'text-black font-bold'
-                  : 'text-zinc-500 hover:text-black'
-              }`}
+              className={`pb-2 whitespace-nowrap transition-colors relative ${activeTab === tab
+                ? 'text-black font-bold'
+                : 'text-zinc-500 hover:text-black'
+                }`}
             >
               {tab}
               {activeTab === tab && (
@@ -590,14 +590,12 @@ export default function HomePage() {
         <div className="flex items-center justify-between mt-8 pt-4">
           <div className="flex items-center space-x-1.5">
             <span
-              className={`w-2 h-2 rounded-full transition-colors ${
-                browseCarouselIndex % 2 === 0 ? 'bg-black' : 'bg-zinc-300'
-              }`}
+              className={`w-2 h-2 rounded-full transition-colors ${browseCarouselIndex % 2 === 0 ? 'bg-black' : 'bg-zinc-300'
+                }`}
             />
             <span
-              className={`w-2 h-2 rounded-full transition-colors ${
-                browseCarouselIndex % 2 === 1 ? 'bg-black' : 'bg-zinc-300'
-              }`}
+              className={`w-2 h-2 rounded-full transition-colors ${browseCarouselIndex % 2 === 1 ? 'bg-black' : 'bg-zinc-300'
+                }`}
             />
           </div>
 
@@ -745,21 +743,19 @@ export default function HomePage() {
                   <div className="flex items-center space-x-4 text-xs font-semibold">
                     <button
                       onClick={() => setEventRegion('Asia')}
-                      className={`transition-colors ${
-                        eventRegion === 'Asia'
-                          ? 'text-white border-b-2 border-white pb-1'
-                          : 'text-zinc-500 hover:text-zinc-300'
-                      }`}
+                      className={`transition-colors ${eventRegion === 'Asia'
+                        ? 'text-white border-b-2 border-white pb-1'
+                        : 'text-zinc-500 hover:text-zinc-300'
+                        }`}
                     >
                       Asia (8)
                     </button>
                     <button
                       onClick={() => setEventRegion('International')}
-                      className={`transition-colors ${
-                        eventRegion === 'International'
-                          ? 'text-white border-b-2 border-white pb-1'
-                          : 'text-zinc-500 hover:text-zinc-300'
-                      }`}
+                      className={`transition-colors ${eventRegion === 'International'
+                        ? 'text-white border-b-2 border-white pb-1'
+                        : 'text-zinc-500 hover:text-zinc-300'
+                        }`}
                     >
                       International (5)
                     </button>
