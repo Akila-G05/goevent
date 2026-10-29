@@ -17,7 +17,6 @@ public class TestRepo {
     }
 
     public List<TestDTO> getAllEvents() {
-
         String sql = "SELECT * FROM test";
 
         return jdbcTemplate.query(sql, rs -> {

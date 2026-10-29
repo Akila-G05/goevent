@@ -72,6 +72,10 @@ spring:
                     redis-rate-limiter.replenishRate: 2
                     redis-rate-limiter.burstCapacity: 5
 
+                - name: ResponseCache
+                  args:
+                    namespace: goevent-test
+                    ttlSeconds: 300
 
 # Logging
 logging:

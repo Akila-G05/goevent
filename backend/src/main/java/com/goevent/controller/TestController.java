@@ -17,7 +17,7 @@ public class TestController {
     }
 
     @GetMapping("/test")
-    public List<TestDTO> getAllUsers() {
+    public String getAllUsers() {
         return testService.getData();
     }
 
