@@ -46,6 +46,11 @@ spring:
                     redis-rate-limiter.replenishRate: 2
                     redis-rate-limiter.burstCapacity: 5
 
+#                - name: ResponseCache
+#                  args:
+#                    namespace: goevent-test
+#                    ttlSeconds: 300
+
             # 3. Relaxed rate limit
             - id: test-relaxed
               uri: http://localhost:8081
@@ -72,6 +77,10 @@ spring:
                     redis-rate-limiter.replenishRate: 2
                     redis-rate-limiter.burstCapacity: 5
 
+                - name: ResponseCache
+                  args:
+                    namespace: goevent-test
+                    ttlSeconds: 300
 
 # Logging
 logging:
