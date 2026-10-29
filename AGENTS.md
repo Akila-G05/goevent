@@ -4,7 +4,7 @@
 
 ## 1. Read first and inspect the repository
 
-Before editing, read this file, `README.md`, and any existing `CONTRIBUTING.md`, `DESIGN.md`, architecture decision records, relevant module documentation, and nearby tests. If `.agents/skills/` or project-specific agent instructions exist, read the appropriate instructions before invoking them. The uploaded reference project's Next.js, Bun, Drizzle, and PostgreSQL-specific instructions **do not apply** to GoEvent.
+Before editing, read this file, `README.md`, and any existing `CONTRIBUTING.md`, `DESIGN.md`, architecture decision records, relevant module documentation, and nearby tests. If `.agents/skills/` or project-specific agent instructions exist, read the appropriate instructions before invoking them. Use GoEvent's own architecture documents and build files; instructions from unrelated reference projects do not apply.
 
 Start each task by inspecting the working tree and nearby code:
 
@@ -27,7 +27,8 @@ GoEvent supports three roles:
 
 | Area | Approved technology / approach |
 | --- | --- |
-| Application | Monolith with clean Layered Architecture |
+| Application | Monolithic business backend with clean Package-by-Layer architecture; separate API gateway |
+| Gateway | Spring Cloud Gateway (WebFlux), reactive Redis rate limiting |
 | Frontend | Next.js (App Router), React, TypeScript (strict) |
 | Frontend tooling | **Bun** (runtime, package manager, and script runner) |
 | UI | Tailwind CSS and accessible components / shadcn/ui (where configured) |
@@ -47,9 +48,18 @@ GoEvent supports three roles:
 
 Per maintainer decision (ADR 0003), Next.js (App Router) with Bun package management is the approved frontend stack and Layered Architecture is the approved backend structure. Do not switch to Node.js backend, Prisma, Drizzle, PostgreSQL, microservices, or event buses without an explicit, documented architectural decision and maintainer approval. Align dependency versions to the repository's build files; do not independently upgrade major versions.
 
+### Architecture sources and current implementation
+
+- Read [architecture overview](docs/architecture/overview.md) and [ADR 0003](docs/decisions/0003-switch-to-nextjs-and-backend-layered-architecture.md) as the current architecture baseline.
+- ADR 0003 supersedes ADR 0001's Vite/React Router tooling and package-by-feature layering, and ADR 0002's per-module internal package layout. Preserve ADR 0002's separation of ticket catalog/inventory, issued tickets, and check-in responsibilities within the current layers; do not recreate the old module structure.
+- Distinguish approved architecture from installed capabilities. The current backend uses Spring Boot **3.5.7**, Java 21, Spring Web, JDBC/`JdbcTemplate`, and the MySQL driver. JPA/Hibernate, Flyway, Spring Security, Bean Validation, OpenAPI, and backend test dependencies are documented targets but are not currently declared in `backend/pom.xml`. Do not claim their enforcement or endpoints exist; introduce them explicitly with the relevant implementation work.
+- The frontend currently declares Next.js 14, React 18, Tailwind CSS 3, TanStack Query 5, Axios, React Hook Form, Zod, and Zustand. Bun remains the approved tool despite the tracked `package-lock.json`; no Bun lockfile is currently tracked. Do not claim frozen Bun installs are reproducible until a compatible lockfile exists, and do not replace lockfiles as part of unrelated work.
+- The separate `gateway/` application uses Spring Boot 3.5.7 and Spring Cloud 2025.0.3 with WebFlux and Redis rate limiting. This edge component does not authorize splitting business workflows into microservices.
+- README setup examples and older ADR version numbers can lag implementation. Verify commands, paths, ports, and dependencies against source before using them; report discrepancies rather than silently changing the stack.
+
 ## 3. Expected repository structure
 
-Prefer this layout for the GoEvent repository:
+Use the documented layer layout below. Packages such as `entity`, `security`, and `common`, and backend tests, are target additions rather than currently implemented capabilities:
 
 ```text
 goevent/
@@ -79,6 +89,12 @@ goevent/
 │   │   └── db/migration/        # Flyway V...__...sql files
 │   ├── src/test/
 │   └── pom.xml
+├── gateway/                 # Separate reactive edge application
+│   ├── src/main/java/com/goevent/gateway/
+│   │   ├── GatewayApplication.java
+│   │   └── config/          # Redis-backed IP rate limiting
+│   ├── src/main/resources/application.yml
+│   └── pom.xml
 ├── docs/architecture/
 ├── docs/decisions/
 ├── .github/workflows/
@@ -92,8 +108,16 @@ goevent/
 - **Controller → Service → Repository / Entity.**
 - Controllers handle HTTP transport concerns, input validation, authentication context, and response mapping—not business rules or SQL.
 - Services coordinate business logic, use cases, and transaction boundaries (`@Transactional`).
-- Repositories own Spring Data JPA database access and custom queries.
+- Repositories own database access and custom queries. Existing scaffolding uses `JdbcTemplate`; Spring Data JPA is the documented target, not an installed ORM today.
 - Entities represent relational persistence mappings and protect state invariants.
+
+### Gateway and API boundaries
+
+- Keep routing, rate limiting, and edge configuration in `gateway/`; keep business rules, ownership checks, inventory, and payment transactions in `backend/`. Gateway filtering does not replace backend authorization.
+- Current gateway configuration listens on port `8080`, forwards `/goevent/api/**` unchanged to backend port `8081`, and requires Redis at `localhost:6379`. The backend combines servlet context `/goevent` with the `/api` controller prefix.
+- The frontend Axios client defaults to `/api/v1`; Next.js rewrites that prefix to `BACKEND_URL` (default `http://localhost:8080`). This differs from the configured gateway/backend route prefix. Trace and test the full path before changing any API URL; do not assume these defaults already interoperate.
+- `compose.yaml` currently provisions MySQL only, not Redis or the application processes. Check datasource settings against Compose before running integration work; environment variables are not automatically consumed unless configuration references them.
+- Gateway changes must consider route order, downstream paths, Redis availability, rate-limit responses, and trustworthy client address resolution. Keep blocking JDBC/business operations out of reactive gateway code.
 
 ## 4. Object-oriented programming and Java standards
 
@@ -143,7 +167,7 @@ goevent/
 
 - **MySQL is the only supported production relational database** unless a decision explicitly changes this. Use InnoDB and `utf8mb4`; define foreign keys, unique constraints, and indexes based on query patterns.
 - Use **Spring Data JPA backed by Hibernate**; do not use a parallel ORM or raw SQL everywhere. SQL is appropriate for Flyway migrations or measured, reviewed query needs.
-- **Flyway owns schema changes.** Commit ordered, versioned SQL files under `backend/src/main/resources/db/migration/`. Never rely on `hibernate.hbm2ddl.auto=update` or `create` in shared/production environments. Use `ddl-auto=validate` (or `none` where configured).
+- **Flyway is the approved schema migration mechanism.** The current `db/migration/init.sql` is not a versioned Flyway migration, and Flyway is not yet a backend dependency. Do not assume it runs automatically; establish versioned migrations and an explicit baseline plan before migrating existing databases. Commit ordered, versioned SQL files under `backend/src/main/resources/db/migration/`. Never rely on `hibernate.hbm2ddl.auto=update` or `create` in shared/production environments. Use `ddl-auto=validate` (or `none` where configured).
 - Do not modify an already-applied migration; create a new forward migration. Validate migrations and check Hibernate mappings against the resulting schema.
 - Prefer expand → backfill → contract for breaking schema changes; coordinate database and application rollout. Review locks, data volume, rollbacks, defaults, nullability, and indexing before applying schema changes.
 - Take and **verify** an authorized backup before risky production migrations. Do not run production migrations, destructive SQL, or data exports without explicit approval and an appropriate recovery plan.
@@ -182,7 +206,7 @@ Never declare a change “safe” solely because it compiles or its own unit tes
 
 ## 9. Testing and quality gates
 
-Use installed scripts/commands verified from `frontend/package.json` and `backend/pom.xml`. **The examples below are conditional, not a claim that scripts already exist.**
+Use installed scripts/commands verified from `frontend/package.json`, `backend/pom.xml`, and `gateway/pom.xml`. **The examples below are conditional, not a claim that scripts already exist.**
 
 ```bash
 # Frontend (from frontend/)
@@ -194,9 +218,14 @@ bun run build
 
 # Backend (from backend/)
 ./mvnw verify              # if Maven wrapper is committed
-# or: mvn verify
+# Current checkout has no committed Maven wrapper: use mvn verify.
+
+# Gateway (from gateway/, when affected)
+mvn verify
 ```
 
+- Current coverage: frontend Vitest/React Testing Library and `src/test/app.test.tsx` exist; no backend or gateway test sources are currently tracked. The gateway declares Spring Boot Test; the backend does not. Maven build success alone does not demonstrate business regression coverage.
+- CI currently checks backend and frontend only; gateway changes require explicit verification. CI requests a frozen Bun install although no Bun lockfile is tracked; report this gap rather than claiming CI passes.
 - Backend: unit-test domain rules and use cases with JUnit/Mockito; integration-test JPA, MySQL migrations, and Spring Security with Spring Boot Test + Testcontainers using **MySQL**, not an incompatible in-memory substitute for critical DB behavior.
 - Frontend: use Vitest/React Testing Library for UI logic and Playwright for purchase and access-control journeys when configured.
 - Add regression tests for bug fixes. High-risk changes need concurrency/race, authorization, retry/idempotency, and failure/recovery coverage.
@@ -210,7 +239,7 @@ bun run build
 - Follow OWASP-style secure defaults: validate input, enforce server-side authorization, use CSRF protection where relevant to chosen auth method, apply secure session/cookie settings, use HTTPS, rate-limit sensitive endpoints, and defend against injection and broken object-level authorization.
 - Keep credentials and personally identifiable data out of logs, exceptions, test fixtures, generated assets, and Git. Commit only `.env.example` with placeholders; use environment variables or secret management for actual values.
 - Treat attachments and event images as untrusted: validate type/size, randomize storage names, constrain access, and scan when applicable.
-- Avoid sensitive details in frontend environment variables (Vite `VITE_*` values are public at build time).
+- Avoid sensitive details in frontend environment variables (`NEXT_PUBLIC_*` values are exposed to the browser by Next.js).
 - Review dependencies, licenses, maintenance, transitive vulnerabilities, and lifecycle hooks before adding packages.
 - Protect operational actions (bulk delete, mass refunds, schema changes, deploys, production data access) with explicit authorization and auditable procedures.
 - Use structured operational logs/metrics with correlation IDs where configured; do not log payment gateway secrets, authentication tokens, attendee personal details, or QR validation secrets.
