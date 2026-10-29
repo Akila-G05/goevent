@@ -15,9 +15,9 @@
 /*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
 
 
--- Dumping database structure for goevent_db
-CREATE DATABASE IF NOT EXISTS `goevent_db` /*!40100 DEFAULT CHARACTER SET utf8mb3 */ /*!80016 DEFAULT ENCRYPTION='N' */;
-USE `goevent_db`;
+-- Local Docker bootstrap only: the MySQL entrypoint selects MYSQL_DATABASE
+-- (provided by DB_NAME in Compose) before executing this file.
+-- Do not CREATE DATABASE or USE a fixed schema here.
 
 -- Dumping structure for table goevent_db.audience
 CREATE TABLE IF NOT EXISTS `audience` (
