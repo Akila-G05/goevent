@@ -11,6 +11,17 @@ spring:
   application:
     name: goevent-backend
 
+  # Flyway exclusively owns schema creation and evolution.
+  sql:
+    init:
+      mode: never
+  flyway:
+    locations: classpath:db/migration
+    baseline-on-migrate: false
+    clean-disabled: true
+    validate-on-migrate: true
+    validate-migration-naming: true
+
   # Credentials come from environment variables or the local root .env.
   datasource:
     url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:goevent}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC&characterEncoding=UTF-8

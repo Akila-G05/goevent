@@ -52,14 +52,14 @@ Per maintainer decision (ADR 0003), Next.js (App Router) with Bun package manage
 
 - Read [architecture overview](docs/architecture/overview.md) and [ADR 0003](docs/decisions/0003-switch-to-nextjs-and-backend-layered-architecture.md) as the current architecture baseline.
 - ADR 0003 supersedes ADR 0001's Vite/React Router tooling and package-by-feature layering, and ADR 0002's per-module internal package layout. Preserve ADR 0002's separation of ticket catalog/inventory, issued tickets, and check-in responsibilities within the current layers; do not recreate the old module structure.
-- Distinguish approved architecture from installed capabilities. The current backend uses Spring Boot **3.5.7**, Java 21, Spring Web, JDBC/`JdbcTemplate`, and the MySQL driver. JPA/Hibernate, Flyway, Spring Security, Bean Validation, OpenAPI, and backend test dependencies are documented targets but are not currently declared in `backend/pom.xml`. Do not claim their enforcement or endpoints exist; introduce them explicitly with the relevant implementation work.
+- Distinguish approved architecture from installed capabilities. The current backend uses Spring Boot **3.5.7**, Java 21, Spring Web, JDBC/`JdbcTemplate`, and the MySQL driver. Flyway core and its MySQL module are installed, with Spring Boot Test and MySQL Testcontainers covering migration behavior. JPA/Hibernate, Spring Security, Bean Validation, and OpenAPI remain documented targets not currently declared in `backend/pom.xml`. Do not claim their enforcement or endpoints exist; introduce them explicitly with the relevant implementation work.
 - The frontend currently declares Next.js 14, React 18, Tailwind CSS 3, TanStack Query 5, Axios, React Hook Form, Zod, and Zustand. Bun remains the approved tool despite the tracked `package-lock.json`; no Bun lockfile is currently tracked. Do not claim frozen Bun installs are reproducible until a compatible lockfile exists, and do not replace lockfiles as part of unrelated work.
 - The separate `gateway/` application uses Spring Boot 3.5.7 and Spring Cloud 2025.0.3 with WebFlux and Redis rate limiting. This edge component does not authorize splitting business workflows into microservices.
 - README setup examples and older ADR version numbers can lag implementation. Verify commands, paths, ports, and dependencies against source before using them; report discrepancies rather than silently changing the stack.
 
 ## 3. Expected repository structure
 
-Use the documented layer layout below. Packages such as `entity`, `security`, and `common`, and backend tests, are target additions rather than currently implemented capabilities:
+Use the documented layer layout below. Packages such as `entity`, `security`, and `common` are target additions rather than currently implemented capabilities:
 
 ```text
 goevent/
@@ -167,7 +167,7 @@ goevent/
 
 - **MySQL is the only supported production relational database** unless a decision explicitly changes this. Use InnoDB and `utf8mb4`; define foreign keys, unique constraints, and indexes based on query patterns.
 - Use **Spring Data JPA backed by Hibernate**; do not use a parallel ORM or raw SQL everywhere. SQL is appropriate for Flyway migrations or measured, reviewed query needs.
-- **Flyway is the approved schema migration mechanism.** The current `db/migration/init.sql` is not a versioned Flyway migration, and Flyway is not yet a backend dependency. Do not assume it runs automatically; establish versioned migrations and an explicit baseline plan before migrating existing databases. Commit ordered, versioned SQL files under `backend/src/main/resources/db/migration/`. Never rely on `hibernate.hbm2ddl.auto=update` or `create` in shared/production environments. Use `ddl-auto=validate` (or `none` where configured).
+- **Flyway owns schema changes at backend startup.** `V1__initial_schema.sql` replaces the old Docker bootstrap script; Compose no longer imports SQL. Automatic baselining and Flyway clean are disabled. Existing databases need explicit review and baselining; follow [database migration instructions](docs/architecture/database-migrations.md). Commit ordered, versioned SQL files under `backend/src/main/resources/db/migration/`. Never rely on `hibernate.hbm2ddl.auto=update` or `create` in shared/production environments. Use `ddl-auto=validate` (or `none` where configured).
 - Do not modify an already-applied migration; create a new forward migration. Validate migrations and check Hibernate mappings against the resulting schema.
 - Prefer expand → backfill → contract for breaking schema changes; coordinate database and application rollout. Review locks, data volume, rollbacks, defaults, nullability, and indexing before applying schema changes.
 - Take and **verify** an authorized backup before risky production migrations. Do not run production migrations, destructive SQL, or data exports without explicit approval and an appropriate recovery plan.
@@ -224,7 +224,7 @@ bun run build
 mvn verify
 ```
 
-- Current coverage: frontend Vitest/React Testing Library and `src/test/app.test.tsx` exist; no backend or gateway test sources are currently tracked. The gateway declares Spring Boot Test; the backend does not. Maven build success alone does not demonstrate business regression coverage.
+- Current coverage: frontend Vitest/React Testing Library and `src/test/app.test.tsx` exist. Backend `FlywayMigrationTest` uses Spring Boot Test and isolated MySQL 8.4 Testcontainers; Docker is required for `mvn clean verify`. No gateway test sources are currently tracked. Migration tests do not demonstrate business workflow regression coverage.
 - CI currently checks backend and frontend only; gateway changes require explicit verification. CI requests a frozen Bun install although no Bun lockfile is tracked; report this gap rather than claiming CI passes.
 - Backend: unit-test domain rules and use cases with JUnit/Mockito; integration-test JPA, MySQL migrations, and Spring Security with Spring Boot Test + Testcontainers using **MySQL**, not an incompatible in-memory substitute for critical DB behavior.
 - Frontend: use Vitest/React Testing Library for UI logic and Playwright for purchase and access-control journeys when configured.

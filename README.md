@@ -92,15 +92,14 @@ docker compose ps
 ```
 
 Compose reads the root `.env`, creates `DB_NAME` (default `goevent`), and grants
-`DB_USER` access to that database. The mounted `init.sql` populates that selected
-database on the **first startup of an empty MySQL data directory**. It is a local
-bootstrap dump, not a Flyway migration; Flyway is not currently configured.
+`DB_USER` access to that database. Compose starts MySQL without creating tables;
+Flyway creates and versions the schema when the backend starts.
 
 Existing volumes are preserved: changing `.env` does not change existing MySQL
-users/passwords, rename a database, or rerun the SQL. For an existing database,
-use its current credentials and database name, or plan an explicit migration.
-Do not delete a volume containing data to apply this setup. The bootstrap dump's
-existing column types, seed data, and table character sets are unchanged.
+users/passwords or rename a database. Use matching credentials. Databases that
+already contain tables require an explicitly reviewed baseline before starting
+the updated backend; see [database migrations](docs/architecture/database-migrations.md).
+Do not delete an existing volume to adopt Flyway.
 
 ### 3. Run Backend
 
@@ -140,8 +139,14 @@ The frontend application will start on `http://localhost:3000`.
 
 ```bash
 cd backend
-mvn verify
+mvn clean verify
 ```
+
+Backend verification requires a running Docker daemon. The Flyway integration
+tests create an isolated MySQL 8.4 Testcontainers instance; they do not use the
+Compose database or local `.env` credentials. Tests cover startup migration,
+repeat execution, constraints, checksum mismatch, explicit baselining, and failed
+DDL recovery. Docker availability is required rather than silently skipping tests.
 
 ### Frontend Tests & Typecheck
 
