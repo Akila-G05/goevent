@@ -21,4 +21,19 @@ public class TestController {
         return testService.getData();
     }
 
+    @GetMapping("/test/strict")
+    public String strictRateLimitTest() {
+        return "Strict rate limit endpoint";
+    }
+
+    @GetMapping("/test/normal")
+    public String normalRateLimitTest() {
+        return "Normal rate limit endpoint";
+    }
+
+    @GetMapping("/test/relaxed")
+    public String relaxedRateLimitTest() {
+        return "Relaxed rate limit endpoint";
+    }
+
 }

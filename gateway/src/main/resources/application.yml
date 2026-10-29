@@ -1,0 +1,93 @@
+
+# Server
+server:
+  port: 8080
+
+spring:
+  application:
+    name: goevent-gateway
+
+  # Redis connection
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      timeout: 2s
+
+  # Gateway routing
+  cloud:
+    gateway:
+      server:
+        webflux:
+          routes:
+            # 1. Strict rate limit
+            - id: test-strict
+              uri: http://localhost:8081
+              order: -3
+              predicates:
+                - Path=/goevent/api/test/strict
+              filters:
+                - name: RequestRateLimiter
+                  args:
+                    key-resolver: "#{@ipKeyResolver}"
+                    redis-rate-limiter.replenishRate: 1
+                    redis-rate-limiter.burstCapacity: 2
+
+            # 2. Normal rate limit
+            - id: test-normal
+              uri: http://localhost:8081
+              order: -2
+              predicates:
+                - Path=/goevent/api/test/normal
+              filters:
+                - name: RequestRateLimiter
+                  args:
+                    key-resolver: "#{@ipKeyResolver}"
+                    redis-rate-limiter.replenishRate: 2
+                    redis-rate-limiter.burstCapacity: 5
+
+            # 3. Relaxed rate limit
+            - id: test-relaxed
+              uri: http://localhost:8081
+              order: -1
+              predicates:
+                - Path=/goevent/api/test/relaxed
+              filters:
+                - name: RequestRateLimiter
+                  args:
+                    key-resolver: "#{@ipKeyResolver}"
+                    redis-rate-limiter.replenishRate: 5
+                    redis-rate-limiter.burstCapacity: 10
+
+            # 4. Default rate limit for other API routes
+            - id: goevent-backend
+              uri: http://localhost:8081
+              order: 0
+              predicates:
+                - Path=/goevent/api/**
+              filters:
+                - name: RequestRateLimiter
+                  args:
+                    key-resolver: "#{@ipKeyResolver}"
+                    redis-rate-limiter.replenishRate: 2
+                    redis-rate-limiter.burstCapacity: 5
+
+
+# Logging
+logging:
+  file:
+    name: logs/goevent-gateway.log
+  level:
+    root: INFO
+    com.goevent: DEBUG
+    org.springframework.cloud.gateway: INFO
+
+# Actuator
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,gateway
+  endpoint:
+    gateway:
+      access: unrestricted

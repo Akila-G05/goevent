@@ -24,7 +24,7 @@ spring:
 # Logging
 logging:
   file:
-    name: backend/logs/goevent.log
+    name: logs/goevent.log
 
   level:
     root: INFO
