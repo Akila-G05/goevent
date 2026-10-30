@@ -35,7 +35,7 @@ public class TestService {
             status = true;
         } catch (Exception e) {
             message = "Failed to retrieve data";
-            responseObject.add("events", new JsonArray());
+            responseObject.add("dbdata", new JsonArray());
         }
 
         responseObject.addProperty("status", status);
