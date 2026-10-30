@@ -1,13 +1,13 @@
 # Server
 server:
-  port: ${PORT:8081}
+  port: ${PORT}
   servlet:
     context-path: /goevent
 
 spring:
   # Supports launches from either the repository root or backend/.
   config:
-    import: "optional:file:../.env[.properties],optional:file:.env[.properties]"
+    import: optional:file:.env[.properties]
   application:
     name: goevent-backend
 
@@ -16,6 +16,7 @@ spring:
     init:
       mode: never
   flyway:
+    enabled: ${STATE}
     locations: classpath:db/migration
     baseline-on-migrate: false
     clean-disabled: true
@@ -24,8 +25,8 @@ spring:
 
   # Credentials come from environment variables or the local root .env.
   datasource:
-    url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:goevent}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC&characterEncoding=UTF-8
-    username: ${DB_USER:goevent}
+    url: jdbc:mysql://${DB_HOST}:${DB_PORT}/${DB_NAME}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC&characterEncoding=UTF-8
+    username: ${DB_USER}
     password: ${DB_PASSWORD}
     driver-class-name: com.mysql.cj.jdbc.Driver
     hikari:
@@ -54,6 +55,9 @@ logging:
       max-file-size: 10MB
       max-history: 30
       total-size-cap: 1GB
+
+google:
+  client-id: ${GOOGLE_CLIENT_ID}
 
 
 #app:

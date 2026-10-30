@@ -1,9 +1,12 @@
--- Initial schema adapted from the legacy bootstrap dump.
--- Flyway selects the configured database; no fixed schema or personal/demo seed data.
--- Foreign key checks are temporarily disabled because the legacy table order
--- includes forward references. All retained seed rows are reference data.
+-- --------------------------------------------------------
+-- Host:                         127.0.0.1
+-- Server version:               8.0.46 - MySQL Community Server - GPL
+-- Server OS:                    Win64
+-- HeidiSQL Version:             12.21.0.7344
+-- --------------------------------------------------------
 
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
+/*!40101 SET NAMES utf8 */;
 /*!50503 SET NAMES utf8mb4 */;
 /*!40103 SET @OLD_TIME_ZONE=@@TIME_ZONE */;
 /*!40103 SET TIME_ZONE='+00:00' */;
@@ -12,22 +15,37 @@
 /*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
 
 
+-- Dumping database structure for goevent_db
+CREATE DATABASE IF NOT EXISTS `goevent_db` /*!40100 DEFAULT CHARACTER SET utf8mb3 */ /*!80016 DEFAULT ENCRYPTION='N' */;
+USE `goevent_db`;
 
--- Legacy table: audience
-CREATE TABLE `audience` (
+-- Dumping structure for table goevent_db.audience
+CREATE TABLE IF NOT EXISTS `audience` (
   `id` int NOT NULL AUTO_INCREMENT,
   `type` varchar(45) NOT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb3;
 
--- Legacy table: audience: ~3 rows (approximately)
+-- Dumping data for table goevent_db.audience: ~3 rows (approximately)
 INSERT INTO `audience` (`id`, `type`) VALUES
 	(1, 'UNIVERSITY'),
 	(2, 'PUBLIC'),
 	(3, 'BOTH');
 
--- Legacy table: booking
-CREATE TABLE `booking` (
+-- Dumping structure for table goevent_db.auth_type
+CREATE TABLE IF NOT EXISTS `auth_type` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `type` varchar(45) NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb3;
+
+-- Dumping data for table goevent_db.auth_type: ~2 rows (approximately)
+INSERT INTO `auth_type` (`id`, `type`) VALUES
+	(1, 'GOOGLE'),
+	(2, 'MANUAL');
+
+-- Dumping structure for table goevent_db.booking
+CREATE TABLE IF NOT EXISTS `booking` (
   `id` int NOT NULL AUTO_INCREMENT,
   `user_id` int NOT NULL,
   `event_id` int NOT NULL,
@@ -40,12 +58,12 @@ CREATE TABLE `booking` (
   KEY `fk_user_has_event_user2_idx` (`user_id`),
   CONSTRAINT `fk_user_has_event_event2` FOREIGN KEY (`event_id`) REFERENCES `event` (`id`),
   CONSTRAINT `fk_user_has_event_user2` FOREIGN KEY (`user_id`) REFERENCES `user` (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
 
--- Legacy table: booking: ~0 rows (approximately)
+-- Dumping data for table goevent_db.booking: ~0 rows (approximately)
 
--- Legacy table: booking_item
-CREATE TABLE `booking_item` (
+-- Dumping structure for table goevent_db.booking_item
+CREATE TABLE IF NOT EXISTS `booking_item` (
   `id` int NOT NULL AUTO_INCREMENT,
   `booking_id` int NOT NULL,
   `ticket_id` int NOT NULL,
@@ -56,18 +74,18 @@ CREATE TABLE `booking_item` (
   KEY `fk_booking_item_ticket1_idx` (`ticket_id`),
   CONSTRAINT `fk_booking_item_booking1` FOREIGN KEY (`booking_id`) REFERENCES `booking` (`id`),
   CONSTRAINT `fk_booking_item_ticket1` FOREIGN KEY (`ticket_id`) REFERENCES `ticket` (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
 
--- Legacy table: booking_item: ~0 rows (approximately)
+-- Dumping data for table goevent_db.booking_item: ~0 rows (approximately)
 
--- Legacy table: category
-CREATE TABLE `category` (
+-- Dumping structure for table goevent_db.category
+CREATE TABLE IF NOT EXISTS `category` (
   `id` int NOT NULL AUTO_INCREMENT,
   `name` varchar(45) NOT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=17 DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB AUTO_INCREMENT=17 DEFAULT CHARSET=utf8mb3;
 
--- Legacy table: category: ~16 rows (approximately)
+-- Dumping data for table goevent_db.category: ~16 rows (approximately)
 INSERT INTO `category` (`id`, `name`) VALUES
 	(1, 'EDUCATION'),
 	(2, 'TECHNOLOGY'),
@@ -86,8 +104,8 @@ INSERT INTO `category` (`id`, `name`) VALUES
 	(15, 'CAREER'),
 	(16, 'OTHER');
 
--- Legacy table: event
-CREATE TABLE `event` (
+-- Dumping structure for table goevent_db.event
+CREATE TABLE IF NOT EXISTS `event` (
   `id` int NOT NULL AUTO_INCREMENT,
   `name` varchar(100) NOT NULL,
   `description` text,
@@ -119,12 +137,12 @@ CREATE TABLE `event` (
   CONSTRAINT `fk_event_user1` FOREIGN KEY (`published_by`) REFERENCES `user` (`id`),
   CONSTRAINT `fk_event_user2` FOREIGN KEY (`aproved_by`) REFERENCES `user` (`id`),
   CONSTRAINT `fk_event_venue1` FOREIGN KEY (`venue_id`) REFERENCES `venue` (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
 
--- Legacy table: event: ~0 rows (approximately)
+-- Dumping data for table goevent_db.event: ~0 rows (approximately)
 
--- Legacy table: event_dates
-CREATE TABLE `event_dates` (
+-- Dumping structure for table goevent_db.event_dates
+CREATE TABLE IF NOT EXISTS `event_dates` (
   `id` int NOT NULL AUTO_INCREMENT,
   `date` date NOT NULL,
   `time` varchar(45) NOT NULL,
@@ -132,12 +150,12 @@ CREATE TABLE `event_dates` (
   PRIMARY KEY (`id`),
   KEY `fk_event_dates_event1_idx` (`event_id`),
   CONSTRAINT `fk_event_dates_event1` FOREIGN KEY (`event_id`) REFERENCES `event` (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
 
--- Legacy table: event_dates: ~0 rows (approximately)
+-- Dumping data for table goevent_db.event_dates: ~0 rows (approximately)
 
--- Legacy table: event_has_tags
-CREATE TABLE `event_has_tags` (
+-- Dumping structure for table goevent_db.event_has_tags
+CREATE TABLE IF NOT EXISTS `event_has_tags` (
   `id` int NOT NULL AUTO_INCREMENT,
   `event_id` int NOT NULL,
   `tags_id` int NOT NULL,
@@ -146,25 +164,25 @@ CREATE TABLE `event_has_tags` (
   KEY `fk_event_has_tags_event1_idx` (`event_id`),
   CONSTRAINT `fk_event_has_tags_event1` FOREIGN KEY (`event_id`) REFERENCES `event` (`id`),
   CONSTRAINT `fk_event_has_tags_tags1` FOREIGN KEY (`tags_id`) REFERENCES `tags` (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
 
--- Legacy table: event_has_tags: ~0 rows (approximately)
+-- Dumping data for table goevent_db.event_has_tags: ~0 rows (approximately)
 
--- Legacy table: event_level
-CREATE TABLE `event_level` (
+-- Dumping structure for table goevent_db.event_level
+CREATE TABLE IF NOT EXISTS `event_level` (
   `id` int NOT NULL AUTO_INCREMENT,
   `name` varchar(45) NOT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb3;
 
--- Legacy table: event_level: ~3 rows (approximately)
+-- Dumping data for table goevent_db.event_level: ~3 rows (approximately)
 INSERT INTO `event_level` (`id`, `name`) VALUES
 	(1, 'LISTING_ONLY'),
 	(2, 'FREE'),
 	(3, 'PAYED');
 
--- Legacy table: event_verification
-CREATE TABLE `event_verification` (
+-- Dumping structure for table goevent_db.event_verification
+CREATE TABLE IF NOT EXISTS `event_verification` (
   `id` int NOT NULL AUTO_INCREMENT,
   `event_id` int NOT NULL,
   `user_id` int NOT NULL,
@@ -173,44 +191,44 @@ CREATE TABLE `event_verification` (
   KEY `fk_event_verification_user1_idx` (`user_id`),
   CONSTRAINT `fk_event_verification_event1` FOREIGN KEY (`event_id`) REFERENCES `event` (`id`),
   CONSTRAINT `fk_event_verification_user1` FOREIGN KEY (`user_id`) REFERENCES `user` (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
 
--- Legacy table: event_verification: ~0 rows (approximately)
+-- Dumping data for table goevent_db.event_verification: ~0 rows (approximately)
 
--- Legacy table: featured_events
-CREATE TABLE `featured_events` (
+-- Dumping structure for table goevent_db.featured_events
+CREATE TABLE IF NOT EXISTS `featured_events` (
   `id` int NOT NULL AUTO_INCREMENT,
   `event_id` int NOT NULL,
   `display_order` int NOT NULL,
   PRIMARY KEY (`id`),
   KEY `fk_featured_events_event1_idx` (`event_id`),
   CONSTRAINT `fk_featured_events_event1` FOREIGN KEY (`event_id`) REFERENCES `event` (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
 
--- Legacy table: featured_events: ~0 rows (approximately)
+-- Dumping data for table goevent_db.featured_events: ~0 rows (approximately)
 
--- Legacy table: img
-CREATE TABLE `img` (
+-- Dumping structure for table goevent_db.img
+CREATE TABLE IF NOT EXISTS `img` (
   `id` int NOT NULL AUTO_INCREMENT,
   `path` varchar(200) NOT NULL,
   `bannerpath` varchar(200) DEFAULT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
 
--- Legacy table: img: ~0 rows (approximately)
+-- Dumping data for table goevent_db.img: ~0 rows (approximately)
 
--- Legacy table: link
-CREATE TABLE `link` (
+-- Dumping structure for table goevent_db.link
+CREATE TABLE IF NOT EXISTS `link` (
   `id` int NOT NULL AUTO_INCREMENT,
   `link_name` varchar(45) NOT NULL,
   `link` varchar(200) NOT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
 
--- Legacy table: link: ~0 rows (approximately)
+-- Dumping data for table goevent_db.link: ~0 rows (approximately)
 
--- Legacy table: offer
-CREATE TABLE `offer` (
+-- Dumping structure for table goevent_db.offer
+CREATE TABLE IF NOT EXISTS `offer` (
   `id` int NOT NULL AUTO_INCREMENT,
   `amount` double DEFAULT NULL,
   `offer_start_at` datetime DEFAULT NULL,
@@ -219,47 +237,47 @@ CREATE TABLE `offer` (
   PRIMARY KEY (`id`),
   KEY `fk_offer_audience1_idx` (`audience_id`),
   CONSTRAINT `fk_offer_audience1` FOREIGN KEY (`audience_id`) REFERENCES `audience` (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
 
--- Legacy table: offer: ~0 rows (approximately)
+-- Dumping data for table goevent_db.offer: ~0 rows (approximately)
 
--- Legacy table: org_type
-CREATE TABLE `org_type` (
+-- Dumping structure for table goevent_db.org_type
+CREATE TABLE IF NOT EXISTS `org_type` (
   `id` int NOT NULL AUTO_INCREMENT,
   `type` varchar(45) NOT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb3;
 
--- Legacy table: org_type: ~3 rows (approximately)
+-- Dumping data for table goevent_db.org_type: ~0 rows (approximately)
 INSERT INTO `org_type` (`id`, `type`) VALUES
 	(1, 'Club'),
 	(2, 'Technology Community'),
 	(3, 'Society');
 
--- Legacy table: organization
-CREATE TABLE `organization` (
+-- Dumping structure for table goevent_db.organization
+CREATE TABLE IF NOT EXISTS `organization` (
   `id` int NOT NULL AUTO_INCREMENT,
   `name` varchar(45) NOT NULL,
   `org_type_id` int NOT NULL,
   PRIMARY KEY (`id`),
   KEY `fk_organization_org_type1_idx` (`org_type_id`),
   CONSTRAINT `fk_organization_org_type1` FOREIGN KEY (`org_type_id`) REFERENCES `org_type` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8mb3;
 
--- Legacy table: organization: ~3 rows (approximately)
+-- Dumping data for table goevent_db.organization: ~0 rows (approximately)
 INSERT INTO `organization` (`id`, `name`, `org_type_id`) VALUES
 	(4, 'Leo', 1),
 	(5, 'VoiceTech', 3),
 	(6, 'ICTS', 3);
 
--- Legacy table: p_status
-CREATE TABLE `p_status` (
+-- Dumping structure for table goevent_db.p_status
+CREATE TABLE IF NOT EXISTS `p_status` (
   `id` int NOT NULL AUTO_INCREMENT,
   `name` varchar(45) NOT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb3;
 
--- Legacy table: p_status: ~5 rows (approximately)
+-- Dumping data for table goevent_db.p_status: ~5 rows (approximately)
 INSERT INTO `p_status` (`id`, `name`) VALUES
 	(1, 'PENDING'),
 	(2, 'SUCCESS'),
@@ -267,8 +285,8 @@ INSERT INTO `p_status` (`id`, `name`) VALUES
 	(4, 'CANCELLED'),
 	(5, 'REFUNDED');
 
--- Legacy table: payment
-CREATE TABLE `payment` (
+-- Dumping structure for table goevent_db.payment
+CREATE TABLE IF NOT EXISTS `payment` (
   `id` int NOT NULL,
   `payment_method_id` int NOT NULL,
   `booking_id` int NOT NULL,
@@ -283,38 +301,38 @@ CREATE TABLE `payment` (
   CONSTRAINT `fk_payment_booking1` FOREIGN KEY (`booking_id`) REFERENCES `booking` (`id`),
   CONSTRAINT `fk_payment_p_status1` FOREIGN KEY (`p_status_id`) REFERENCES `p_status` (`id`),
   CONSTRAINT `fk_payment_payment_method1` FOREIGN KEY (`payment_method_id`) REFERENCES `payment_method` (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
 
--- Legacy table: payment: ~0 rows (approximately)
+-- Dumping data for table goevent_db.payment: ~0 rows (approximately)
 
--- Legacy table: payment_method
-CREATE TABLE `payment_method` (
+-- Dumping structure for table goevent_db.payment_method
+CREATE TABLE IF NOT EXISTS `payment_method` (
   `id` int NOT NULL AUTO_INCREMENT,
   `method` varchar(45) NOT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COMMENT='							';
+) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb3 COMMENT='							';
 
--- Legacy table: payment_method: ~0 rows (approximately)
+-- Dumping data for table goevent_db.payment_method: ~4 rows (approximately)
 INSERT INTO `payment_method` (`id`, `method`) VALUES
 	(1, 'PayHere'),
 	(2, 'Credit/Debit Card'),
 	(3, 'Bank Transfer'),
 	(4, 'Cash');
 
--- Legacy table: receipt
-CREATE TABLE `receipt` (
+-- Dumping structure for table goevent_db.receipt
+CREATE TABLE IF NOT EXISTS `receipt` (
   `id` int NOT NULL AUTO_INCREMENT,
-  `path` varchar(300) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `path` varchar(300) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci DEFAULT NULL,
   `payment_id` int NOT NULL,
   PRIMARY KEY (`id`),
   KEY `fk_receipt_payment1_idx` (`payment_id`),
   CONSTRAINT `fk_receipt_payment1` FOREIGN KEY (`payment_id`) REFERENCES `payment` (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
 
--- Legacy table: receipt: ~0 rows (approximately)
+-- Dumping data for table goevent_db.receipt: ~0 rows (approximately)
 
--- Legacy table: request
-CREATE TABLE `request` (
+-- Dumping structure for table goevent_db.request
+CREATE TABLE IF NOT EXISTS `request` (
   `id` int NOT NULL AUTO_INCREMENT,
   `msg` varchar(200) DEFAULT NULL,
   `user_id` int NOT NULL,
@@ -330,27 +348,27 @@ CREATE TABLE `request` (
   CONSTRAINT `fk_request_status1` FOREIGN KEY (`status_id`) REFERENCES `status` (`id`),
   CONSTRAINT `fk_request_user1` FOREIGN KEY (`user_id`) REFERENCES `user` (`id`),
   CONSTRAINT `fk_request_user2` FOREIGN KEY (`aproved_by`) REFERENCES `user` (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
 
--- Legacy table: request: ~0 rows (approximately)
+-- Dumping data for table goevent_db.request: ~0 rows (approximately)
 
--- Legacy table: role
-CREATE TABLE `role` (
+-- Dumping structure for table goevent_db.role
+CREATE TABLE IF NOT EXISTS `role` (
   `id` int NOT NULL AUTO_INCREMENT,
   `type` varchar(45) NOT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb3;
 
--- Legacy table: role: ~3 rows (approximately)
+-- Dumping data for table goevent_db.role: ~5 rows (approximately)
 INSERT INTO `role` (`id`, `type`) VALUES
 	(1, 'USER'),
-	(2, 'EVENT ORGANIZER'),
+	(2, 'ORGANIZER'),
 	(3, 'ADMIN'),
 	(4, 'STUDENT'),
 	(5, 'CONTRUBUTERS');
 
--- Legacy table: saved_event
-CREATE TABLE `saved_event` (
+-- Dumping structure for table goevent_db.saved_event
+CREATE TABLE IF NOT EXISTS `saved_event` (
   `user_id` int NOT NULL,
   `event_id` int NOT NULL,
   PRIMARY KEY (`user_id`,`event_id`),
@@ -358,25 +376,25 @@ CREATE TABLE `saved_event` (
   KEY `fk_user_has_event_user1_idx` (`user_id`),
   CONSTRAINT `fk_user_has_event_event1` FOREIGN KEY (`event_id`) REFERENCES `event` (`id`),
   CONSTRAINT `fk_user_has_event_user1` FOREIGN KEY (`user_id`) REFERENCES `user` (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
 
--- Legacy table: saved_event: ~0 rows (approximately)
+-- Dumping data for table goevent_db.saved_event: ~0 rows (approximately)
 
--- Legacy table: status
-CREATE TABLE `status` (
+-- Dumping structure for table goevent_db.status
+CREATE TABLE IF NOT EXISTS `status` (
   `id` int NOT NULL,
   `name` varchar(45) NOT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
 
--- Legacy table: status: ~0 rows (approximately)
+-- Dumping data for table goevent_db.status: ~0 rows (approximately)
 INSERT INTO `status` (`id`, `name`) VALUES
 	(1, 'PENDING'),
 	(2, 'APROVED'),
 	(3, 'REJECTED');
 
--- Legacy table: student_detail
-CREATE TABLE `student_detail` (
+-- Dumping structure for table goevent_db.student_detail
+CREATE TABLE IF NOT EXISTS `student_detail` (
   `id` int NOT NULL AUTO_INCREMENT,
   `index_no` varchar(45) NOT NULL,
   `uni_email` varchar(100) DEFAULT NULL,
@@ -384,18 +402,18 @@ CREATE TABLE `student_detail` (
   PRIMARY KEY (`id`,`user_id`),
   KEY `fk_student_detail_user1_idx` (`user_id`),
   CONSTRAINT `fk_student_detail_user1` FOREIGN KEY (`user_id`) REFERENCES `user` (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
 
--- Legacy table: student_detail: ~0 rows (approximately)
+-- Dumping data for table goevent_db.student_detail: ~0 rows (approximately)
 
--- Legacy table: tag_types
-CREATE TABLE `tag_types` (
+-- Dumping structure for table goevent_db.tag_types
+CREATE TABLE IF NOT EXISTS `tag_types` (
   `id` int NOT NULL AUTO_INCREMENT,
   `name` varchar(45) NOT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=10 DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB AUTO_INCREMENT=10 DEFAULT CHARSET=utf8mb3;
 
--- Legacy table: tag_types: ~0 rows (approximately)
+-- Dumping data for table goevent_db.tag_types: ~9 rows (approximately)
 INSERT INTO `tag_types` (`id`, `name`) VALUES
 	(1, 'TOPIC'),
 	(2, 'FORMAT'),
@@ -407,17 +425,17 @@ INSERT INTO `tag_types` (`id`, `name`) VALUES
 	(8, 'FORMAT'),
 	(9, 'AUDIENCE');
 
--- Legacy table: tags
-CREATE TABLE `tags` (
+-- Dumping structure for table goevent_db.tags
+CREATE TABLE IF NOT EXISTS `tags` (
   `id` int NOT NULL AUTO_INCREMENT,
   `name` varchar(45) DEFAULT NULL,
   `tag_types_id` int NOT NULL,
   PRIMARY KEY (`id`),
   KEY `fk_tags_tag_types1_idx` (`tag_types_id`),
   CONSTRAINT `fk_tags_tag_types1` FOREIGN KEY (`tag_types_id`) REFERENCES `tag_types` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=70 DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB AUTO_INCREMENT=70 DEFAULT CHARSET=utf8mb3;
 
--- Legacy table: tags: ~6 rows (approximately)
+-- Dumping data for table goevent_db.tags: ~39 rows (approximately)
 INSERT INTO `tags` (`id`, `name`, `tag_types_id`) VALUES
 	(7, 'Technology', 1),
 	(8, 'Technology', 4),
@@ -459,17 +477,21 @@ INSERT INTO `tags` (`id`, `name`, `tag_types_id`) VALUES
 	(44, 'Public', 6),
 	(45, 'Public', 9);
 
--- Legacy table: test
-CREATE TABLE `test` (
+-- Dumping structure for table goevent_db.test
+CREATE TABLE IF NOT EXISTS `test` (
   `id` int NOT NULL AUTO_INCREMENT,
   `name` varchar(45) DEFAULT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb3;
 
--- Legacy table: test: ~2 rows (approximately)
+-- Dumping data for table goevent_db.test: ~2 rows (approximately)
+INSERT INTO `test` (`id`, `name`) VALUES
+	(1, 'GayVinura'),
+	(2, 'GonShehan'),
+	(3, 'BreakupMalan');
 
--- Legacy table: ticket
-CREATE TABLE `ticket` (
+-- Dumping structure for table goevent_db.ticket
+CREATE TABLE IF NOT EXISTS `ticket` (
   `id` int NOT NULL AUTO_INCREMENT,
   `event_dates_id` int NOT NULL,
   `qty` int NOT NULL,
@@ -480,12 +502,12 @@ CREATE TABLE `ticket` (
   PRIMARY KEY (`id`),
   KEY `fk_ticket_event_dates1_idx` (`event_dates_id`),
   CONSTRAINT `fk_ticket_event_dates1` FOREIGN KEY (`event_dates_id`) REFERENCES `event_dates` (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
 
--- Legacy table: ticket: ~0 rows (approximately)
+-- Dumping data for table goevent_db.ticket: ~0 rows (approximately)
 
--- Legacy table: ticket_code
-CREATE TABLE `ticket_code` (
+-- Dumping structure for table goevent_db.ticket_code
+CREATE TABLE IF NOT EXISTS `ticket_code` (
   `id` int NOT NULL AUTO_INCREMENT,
   `code` varchar(45) DEFAULT NULL,
   `qr_token_hash` varchar(45) DEFAULT NULL,
@@ -498,18 +520,18 @@ CREATE TABLE `ticket_code` (
   KEY `fk_ticket_status_ticket_status1_idx` (`ticket_status_id`),
   CONSTRAINT `fk_ticket_code_booking_item1` FOREIGN KEY (`booking_item_id`) REFERENCES `booking_item` (`id`),
   CONSTRAINT `fk_ticket_status_ticket_status1` FOREIGN KEY (`ticket_status_id`) REFERENCES `ticket_status` (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
 
--- Legacy table: ticket_code: ~0 rows (approximately)
+-- Dumping data for table goevent_db.ticket_code: ~0 rows (approximately)
 
--- Legacy table: ticket_status
-CREATE TABLE `ticket_status` (
+-- Dumping structure for table goevent_db.ticket_status
+CREATE TABLE IF NOT EXISTS `ticket_status` (
   `id` int NOT NULL AUTO_INCREMENT,
   `name` varchar(45) NOT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb3;
 
--- Legacy table: ticket_status: ~0 rows (approximately)
+-- Dumping data for table goevent_db.ticket_status: ~5 rows (approximately)
 INSERT INTO `ticket_status` (`id`, `name`) VALUES
 	(1, 'ACTIVE'),
 	(2, 'USED'),
@@ -517,14 +539,14 @@ INSERT INTO `ticket_status` (`id`, `name`) VALUES
 	(4, 'EXPIRED'),
 	(5, 'REFUNDED');
 
--- Legacy table: university
-CREATE TABLE `university` (
+-- Dumping structure for table goevent_db.university
+CREATE TABLE IF NOT EXISTS `university` (
   `id` int NOT NULL AUTO_INCREMENT,
   `name` varchar(45) NOT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=11 DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB AUTO_INCREMENT=11 DEFAULT CHARSET=utf8mb3;
 
--- Legacy table: university: ~0 rows (approximately)
+-- Dumping data for table goevent_db.university: ~10 rows (approximately)
 INSERT INTO `university` (`id`, `name`) VALUES
 	(1, 'University of Sri Jayewardenepura'),
 	(2, 'University of Colombo'),
@@ -537,20 +559,23 @@ INSERT INTO `university` (`id`, `name`) VALUES
 	(9, 'Sri Lanka Institute of Information Technology'),
 	(10, 'NSBM Green University');
 
--- Legacy table: university_details
-CREATE TABLE `university_details` (
+-- Dumping structure for table goevent_db.university_details
+CREATE TABLE IF NOT EXISTS `university_details` (
   `id` int NOT NULL AUTO_INCREMENT,
   `index_no` varchar(45) NOT NULL,
   `university_id` int NOT NULL,
+  `user_id` int NOT NULL,
   PRIMARY KEY (`id`),
   KEY `fk_university_details_university1_idx` (`university_id`),
-  CONSTRAINT `fk_university_details_university1` FOREIGN KEY (`university_id`) REFERENCES `university` (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+  KEY `fk_university_details_user1_idx` (`user_id`),
+  CONSTRAINT `fk_university_details_university1` FOREIGN KEY (`university_id`) REFERENCES `university` (`id`),
+  CONSTRAINT `fk_university_details_user1` FOREIGN KEY (`user_id`) REFERENCES `user` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
 
--- Legacy table: university_details: ~0 rows (approximately)
+-- Dumping data for table goevent_db.university_details: ~0 rows (approximately)
 
--- Legacy table: university_has_offer
-CREATE TABLE `university_has_offer` (
+-- Dumping structure for table goevent_db.university_has_offer
+CREATE TABLE IF NOT EXISTS `university_has_offer` (
   `id` int NOT NULL AUTO_INCREMENT,
   `university_id` int NOT NULL,
   `offer_id` int NOT NULL,
@@ -559,12 +584,12 @@ CREATE TABLE `university_has_offer` (
   KEY `fk_university_has_offer_university1_idx` (`university_id`),
   CONSTRAINT `fk_university_has_offer_offer1` FOREIGN KEY (`offer_id`) REFERENCES `offer` (`id`),
   CONSTRAINT `fk_university_has_offer_university1` FOREIGN KEY (`university_id`) REFERENCES `university` (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
 
--- Legacy table: university_has_offer: ~0 rows (approximately)
+-- Dumping data for table goevent_db.university_has_offer: ~0 rows (approximately)
 
--- Legacy table: user
-CREATE TABLE `user` (
+-- Dumping structure for table goevent_db.user
+CREATE TABLE IF NOT EXISTS `user` (
   `id` int NOT NULL AUTO_INCREMENT,
   `fname` varchar(45) NOT NULL,
   `lname` varchar(45) NOT NULL,
@@ -573,22 +598,27 @@ CREATE TABLE `user` (
   `v_code` varchar(45) DEFAULT NULL,
   `user_status_id` int NOT NULL,
   `role_id` int NOT NULL,
-  `user_type_id` int NOT NULL,
-  `google_sub` bigint DEFAULT NULL,
+  `google_sub` varchar(255) DEFAULT NULL,
   `profile_img_url` varchar(200) DEFAULT NULL,
+  `password` varchar(45) DEFAULT NULL,
+  `auth_type_id` int NOT NULL,
   PRIMARY KEY (`id`),
   KEY `fk_User_user_status_idx` (`user_status_id`),
   KEY `fk_user_role1_idx` (`role_id`),
-  KEY `fk_user_user_type1_idx` (`user_type_id`),
+  KEY `fk_user_auth_type1_idx` (`auth_type_id`),
+  CONSTRAINT `fk_user_auth_type1` FOREIGN KEY (`auth_type_id`) REFERENCES `auth_type` (`id`),
   CONSTRAINT `fk_user_role1` FOREIGN KEY (`role_id`) REFERENCES `role` (`id`),
-  CONSTRAINT `fk_User_user_status` FOREIGN KEY (`user_status_id`) REFERENCES `user_status` (`id`),
-  CONSTRAINT `fk_user_user_type1` FOREIGN KEY (`user_type_id`) REFERENCES `university_details` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4;
+  CONSTRAINT `fk_User_user_status` FOREIGN KEY (`user_status_id`) REFERENCES `user_status` (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb3;
 
--- Legacy table: user: ~1 rows (approximately)
+-- Dumping data for table goevent_db.user: ~3 rows (approximately)
+INSERT INTO `user` (`id`, `fname`, `lname`, `email`, `registered_date`, `v_code`, `user_status_id`, `role_id`, `google_sub`, `profile_img_url`, `password`, `auth_type_id`) VALUES
+	(1, 'Akila', 'Gimhana', 'akila@gmail.com', '2026-10-28 00:39:25', NULL, 1, 3, NULL, NULL, NULL, 2),
+	(2, 'Akila', 'Gimhana', 'akilagimhana2005@gmail.com', '2026-10-30 17:46:08', NULL, 3, 1, '115277782721731308433', 'https://lh3.googleusercontent.com/a/ACg8ocK8Xrori1A8KWG7huphTwZ0Jp8NbHtGPWrGVqDpf0CyD5_l1A=s96-c', NULL, 1),
+	(3, 'kavishka', 'devinda', 'kavishkadevinda11@gmail.com', '2026-10-30 17:57:52', NULL, 3, 1, '114559325010941934222', 'https://lh3.googleusercontent.com/a/ACg8ocKisOWynTkptdLdWa56yro4DSJT7zVyM4laa6pEzHKB3TDwCRUZ=s96-c', NULL, 1);
 
--- Legacy table: user_has_organize
-CREATE TABLE `user_has_organize` (
+-- Dumping structure for table goevent_db.user_has_organize
+CREATE TABLE IF NOT EXISTS `user_has_organize` (
   `id` int NOT NULL AUTO_INCREMENT,
   `user_id` int NOT NULL,
   `registered_date` datetime DEFAULT NULL,
@@ -599,34 +629,34 @@ CREATE TABLE `user_has_organize` (
   KEY `fk_user_has_organize_organization1_idx` (`organization_id`),
   CONSTRAINT `fk_user_has_organize_organization1` FOREIGN KEY (`organization_id`) REFERENCES `organization` (`id`),
   CONSTRAINT `fk_user_has_organize_user1` FOREIGN KEY (`user_id`) REFERENCES `user` (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
 
--- Legacy table: user_has_organize: ~0 rows (approximately)
+-- Dumping data for table goevent_db.user_has_organize: ~0 rows (approximately)
 
--- Legacy table: user_status
-CREATE TABLE `user_status` (
+-- Dumping structure for table goevent_db.user_status
+CREATE TABLE IF NOT EXISTS `user_status` (
   `id` int NOT NULL AUTO_INCREMENT,
   `name` varchar(45) NOT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb3;
 
--- Legacy table: user_status: ~2 rows (approximately)
+-- Dumping data for table goevent_db.user_status: ~3 rows (approximately)
 INSERT INTO `user_status` (`id`, `name`) VALUES
 	(1, 'ACTIVE'),
 	(2, 'SUSPENDED'),
-	(3, 'PENDING_VERIFICATION');
+	(3, 'PENDING');
 
--- Legacy table: venue
-CREATE TABLE `venue` (
+-- Dumping structure for table goevent_db.venue
+CREATE TABLE IF NOT EXISTS `venue` (
   `id` int NOT NULL AUTO_INCREMENT,
   `name` varchar(45) NOT NULL,
   `address` varchar(150) DEFAULT NULL,
   `city` varchar(45) NOT NULL,
   `link` varchar(150) DEFAULT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
 
--- Legacy table: venue: ~0 rows (approximately)
+-- Dumping data for table goevent_db.venue: ~0 rows (approximately)
 
 /*!40103 SET TIME_ZONE=IFNULL(@OLD_TIME_ZONE, 'system') */;
 /*!40101 SET SQL_MODE=IFNULL(@OLD_SQL_MODE, '') */;
