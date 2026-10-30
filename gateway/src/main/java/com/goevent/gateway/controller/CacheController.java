@@ -17,6 +17,7 @@ public class CacheController {
 
     @DeleteMapping("/clear")
     public Mono<ResponseEntity<String>> clearCache() {
+
         return redisTemplate.keys("gateway:response:*")
             .flatMap(redisTemplate::delete)
             .reduce(0L, Long::sum)

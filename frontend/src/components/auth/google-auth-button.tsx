@@ -14,7 +14,7 @@ interface GoogleAuthButtonProps {
 
 export function GoogleAuthButton({
   mode = 'signup',
-  endpoint = 'http://localhost:8080/goevent/api/auth/google-register',
+  endpoint = 'http://localhost:8080/goevent/api/auth/google',
   onCredential,
   onSuccessCallback,
   className = '',

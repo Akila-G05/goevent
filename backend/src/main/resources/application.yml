@@ -56,6 +56,9 @@ logging:
       max-history: 30
       total-size-cap: 1GB
 
+google:
+  client-id: ${GOOGLE_CLIENT_ID}
+
 
 #app:
 #  jwt:

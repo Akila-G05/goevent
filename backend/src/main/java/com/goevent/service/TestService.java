@@ -5,6 +5,7 @@ import com.goevent.repository.TestRepo;
 import com.goevent.util.AppUtil;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
+import org.slf4j.Logger;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -13,6 +14,7 @@ import java.util.List;
 public class TestService {
 
     private final TestRepo testRepo;
+    private static final Logger logger = AppUtil.getLogger(TestService.class);
 
     public TestService(TestRepo testRepo) {
         this.testRepo = testRepo;
@@ -35,6 +37,8 @@ public class TestService {
             status = true;
         } catch (Exception e) {
             message = "Failed to retrieve data";
+            logger.error("Failed to retrieve data", e);
+//            throw new RuntimeException(e);
         }
 
         responseObject.addProperty("status", status);
