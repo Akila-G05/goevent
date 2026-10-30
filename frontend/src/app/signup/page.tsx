@@ -21,6 +21,7 @@ import {
   Ticket,
   Music,
 } from 'lucide-react';
+import { GoogleAuthButton } from '@/components/auth/google-auth-button';
 
 const signupSchema = z
   .object({
@@ -162,6 +163,22 @@ export default function SignupPage() {
                     Sign in here
                   </Link>
                 </p>
+              </div>
+
+              {/* Google Sign-Up */}
+              <div className="space-y-3">
+                <GoogleAuthButton
+                  mode="signup"
+                  onSuccessCallback={() => {
+                    setSignupSuccess(true);
+                  }}
+                />
+                <div className="relative flex items-center justify-center my-4">
+                  <div className="border-t border-white/10 w-full" />
+                  <span className="bg-[#121216] px-3 text-[10px] uppercase tracking-wider text-zinc-500 font-semibold absolute">
+                    Or register with email
+                  </span>
+                </div>
               </div>
 
               {/* Form */}

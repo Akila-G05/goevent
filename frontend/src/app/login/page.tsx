@@ -18,6 +18,7 @@ import {
   Mail,
   Sparkles,
 } from 'lucide-react';
+import { GoogleAuthButton } from '@/components/auth/google-auth-button';
 
 const loginSchema = z.object({
   email: z.string().min(1, 'Email is required').email('Please enter a valid email address'),
@@ -182,6 +183,22 @@ export default function LoginPage() {
                   >
                     Admin Demo
                   </button>
+                </div>
+              </div>
+
+              {/* Google Sign-In */}
+              <div className="space-y-3">
+                <GoogleAuthButton
+                  mode="signin"
+                  onSuccessCallback={() => {
+                    setAuthSuccess(true);
+                  }}
+                />
+                <div className="relative flex items-center justify-center my-4">
+                  <div className="border-t border-white/10 w-full" />
+                  <span className="bg-[#121216] px-3 text-[10px] uppercase tracking-wider text-zinc-500 font-semibold absolute">
+                    Or sign in with email
+                  </span>
                 </div>
               </div>
 
