@@ -16,7 +16,7 @@ public class TestRepo {
         this.jdbcTemplate = jdbcTemplate;
     }
 
-    public List<TestDTO> getAllEvents() {
+    public List<TestDTO> getAllData() {
         String sql = "SELECT * FROM test";
 
         return jdbcTemplate.query(sql, rs -> {

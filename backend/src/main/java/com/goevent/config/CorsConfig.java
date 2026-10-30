@@ -31,8 +31,7 @@ public class CorsConfig {
         // Enable if using cookies or session-based authentication
         configuration.setAllowCredentials(true);
 
-        UrlBasedCorsConfigurationSource source =
-                new UrlBasedCorsConfigurationSource();
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
 
         source.registerCorsConfiguration("/**", configuration);
 

@@ -29,13 +29,12 @@ public class TestService {
         System.out.println(x+y);
 
         try {
-            List<TestDTO> data = testRepo.getAllEvents();
-            responseObject.add("events", AppUtil.gson.toJsonTree(data));
+            List<TestDTO> data = testRepo.getAllData();
+            responseObject.add("dbdata", AppUtil.gson.toJsonTree(data));
             message = "data retrieved successfully";
             status = true;
         } catch (Exception e) {
             message = "Failed to retrieve data";
-            responseObject.add("dbdata", new JsonArray());
         }
 
         responseObject.addProperty("status", status);
