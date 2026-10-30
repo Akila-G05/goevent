@@ -8,10 +8,10 @@ services:
       --collation-server=utf8mb4_unicode_ci
       --explicit_defaults_for_timestamp=true
     environment:
-      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-root_local_password}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:?Set DB_ROOT_PASSWORD in .env}
       MYSQL_DATABASE: ${DB_NAME:-goevent}
       MYSQL_USER: ${DB_USER:-goevent}
-      MYSQL_PASSWORD: ${DB_PASSWORD:-goevent_local_password}
+      MYSQL_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in .env}
     ports:
       - "${DB_PORT:-3306}:3306"
     volumes:

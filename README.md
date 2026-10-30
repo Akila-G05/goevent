@@ -66,43 +66,58 @@ goevent/
 ### Prerequisites
 
 - **Java 21 LTS**
-- **Maven 3.9+** (or use included `./mvnw`)
+- **Maven 3.9+** (no Maven wrapper is currently committed)
 - **Bun 1.1+** (for frontend package management and runtime)
 - **Docker & Docker Compose**
 
-### 1. Start Database
+### 1. Configure Environment
 
-Start MySQL 8.4 LTS locally via Docker Compose:
+From the repository root, copy the template if you do not already have `.env`:
 
 ```bash
-docker compose up -d mysql
+cp -n .env.example .env
+chmod 600 .env
 ```
 
-Verify that MySQL is healthy:
+Set distinct random `DB_PASSWORD` and `DB_ROOT_PASSWORD` values before starting
+MySQL. For example, generate each with `openssl rand -hex 24`. Keep `.env` local
+and untracked. Use plain, unquoted `KEY=value` lines as described in the template
+so Docker Compose and Spring's properties importer interpret values consistently.
+
+### 2. Start Database
 
 ```bash
+docker compose up -d --wait mysql
 docker compose ps
 ```
 
-### 2. Configure Environment
+Compose reads the root `.env`, creates `DB_NAME` (default `goevent`), and grants
+`DB_USER` access to that database. Compose starts MySQL without creating tables;
+Flyway creates and versions the schema when the backend starts.
 
-Copy the example environment file:
-
-```bash
-cp .env.example .env
-```
+Existing volumes are preserved: changing `.env` does not change existing MySQL
+users/passwords or rename a database. Use matching credentials. Databases that
+already contain tables require an explicitly reviewed baseline before starting
+the updated backend; see [database migrations](docs/architecture/database-migrations.md).
+Do not delete an existing volume to adopt Flyway.
 
 ### 3. Run Backend
 
-Navigate to `backend/` and run the Spring Boot application:
-
 ```bash
 cd backend
-./mvnw spring-boot:run
+mvn spring-boot:run
 ```
 
-The backend server will start on `http://localhost:8080`.
-OpenAPI documentation is available at `http://localhost:8080/swagger-ui/index.html`.
+Spring imports the root `.env` automatically when launched from `backend/` or
+the repository root; no shell sourcing is needed. Exported environment variables
+can override the file. IDE runs should use one of those working directories.
+The datasource uses `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, and `DB_PASSWORD`;
+the backend does not use the MySQL root account. `DB_HOST=localhost` and the
+published `DB_PORT` are for a backend running on the host.
+
+The backend listens on `http://localhost:8081/goevent` by default (`PORT` can
+override the port). Its test endpoint is `/goevent/api/test`. The separate gateway
+uses port 8080; OpenAPI is not currently installed in the backend.
 
 ### 4. Run Frontend
 
@@ -124,8 +139,14 @@ The frontend application will start on `http://localhost:3000`.
 
 ```bash
 cd backend
-./mvnw verify
+mvn clean verify
 ```
+
+Backend verification requires a running Docker daemon. The Flyway integration
+tests create an isolated MySQL 8.4 Testcontainers instance; they do not use the
+Compose database or local `.env` credentials. Tests cover startup migration,
+repeat execution, constraints, checksum mismatch, explicit baselining, and failed
+DDL recovery. Docker availability is required rather than silently skipping tests.
 
 ### Frontend Tests & Typecheck
 

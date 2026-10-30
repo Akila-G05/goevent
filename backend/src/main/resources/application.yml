@@ -1,18 +1,33 @@
 # Server
 server:
-  port: 8081
+  port: ${PORT}
   servlet:
     context-path: /goevent
 
 spring:
+  # Supports launches from either the repository root or backend/.
+  config:
+    import: optional:file:.env[.properties]
   application:
     name: goevent-backend
 
-  # Configure DB COnnection
+  # Flyway exclusively owns schema creation and evolution.
+  sql:
+    init:
+      mode: never
+  flyway:
+    enabled: ${STATE}
+    locations: classpath:db/migration
+    baseline-on-migrate: false
+    clean-disabled: true
+    validate-on-migrate: true
+    validate-migration-naming: true
+
+  # Credentials come from environment variables or the local root .env.
   datasource:
-    url: jdbc:mysql://localhost:3306/goevent_db?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC&characterEncoding=UTF-8
-    username: root
-    password: "akila@2005"
+    url: jdbc:mysql://${DB_HOST}:${DB_PORT}/${DB_NAME}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC&characterEncoding=UTF-8
+    username: ${DB_USER}
+    password: ${DB_PASSWORD}
     driver-class-name: com.mysql.cj.jdbc.Driver
     hikari:
       maximum-pool-size: 10
@@ -40,6 +55,9 @@ logging:
       max-file-size: 10MB
       max-history: 30
       total-size-cap: 1GB
+
+google:
+  client-id: ${GOOGLE_CLIENT_ID}
 
 
 #app:
