@@ -1,18 +1,21 @@
 
 # Server
 server:
-  port: 8080
+  port: ${SERVER_PORT:8080}
 
 spring:
+  config:
+    import: optional:file:.env[.properties]
+
   application:
     name: goevent-gateway
 
   # Redis connection
   data:
     redis:
-      host: localhost
-      port: 6379
-      timeout: 2s
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      timeout: ${REDIS_TIMEOUT:2s}
 
   # Gateway routing
   cloud:
@@ -35,7 +38,7 @@ spring:
 
             # 2. Normal rate limit
             - id: test-normal
-              uri: http://localhost:8081
+              uri: ${BACKEND_URL}
               order: -2
               predicates:
                 - Path=/goevent/api/test/normal
@@ -48,7 +51,7 @@ spring:
 
             # 3. Relaxed rate limit
             - id: test-relaxed
-              uri: http://localhost:8081
+              uri: ${BACKEND_URL}
               order: -1
               predicates:
                 - Path=/goevent/api/test/relaxed
@@ -61,7 +64,7 @@ spring:
 
             # 4. Default rate limit for other API routes
             - id: goevent-backend
-              uri: http://localhost:8081
+              uri: ${BACKEND_URL}
               order: 0
               predicates:
                 - Path=/goevent/api/**
