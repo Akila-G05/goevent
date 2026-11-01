@@ -27,7 +27,7 @@ import static org.junit.jupiter.api.Assertions.*;
 class FlywayMigrationTest {
     @Container
     static final MySQLContainer<?> MYSQL = new MySQLContainer<>("mysql:8.4")
-            .withDatabaseName("goevent_test")
+            .withDatabaseName("goevent_db")
             .withCommand("--character-set-server=utf8mb4", "--collation-server=utf8mb4_unicode_ci");
 
     @DynamicPropertySource
