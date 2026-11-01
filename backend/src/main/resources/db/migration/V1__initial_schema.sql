@@ -22,7 +22,7 @@ CREATE TABLE IF NOT EXISTS `audience` (
   `id` int NOT NULL AUTO_INCREMENT,
   `type` varchar(45) NOT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb3;
+) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4;
 
 -- Dumping data for table goevent_db.audience: ~3 rows (approximately)
 INSERT INTO `audience` (`id`, `type`) VALUES
@@ -35,7 +35,7 @@ CREATE TABLE IF NOT EXISTS `auth_type` (
   `id` int NOT NULL AUTO_INCREMENT,
   `type` varchar(45) NOT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb3;
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4;
 
 -- Dumping data for table goevent_db.auth_type: ~2 rows (approximately)
 INSERT INTO `auth_type` (`id`, `type`) VALUES
@@ -56,7 +56,7 @@ CREATE TABLE IF NOT EXISTS `booking` (
   KEY `fk_user_has_event_user2_idx` (`user_id`),
   CONSTRAINT `fk_user_has_event_event2` FOREIGN KEY (`event_id`) REFERENCES `event` (`id`),
   CONSTRAINT `fk_user_has_event_user2` FOREIGN KEY (`user_id`) REFERENCES `user` (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Dumping data for table goevent_db.booking: ~0 rows (approximately)
 
@@ -72,7 +72,7 @@ CREATE TABLE IF NOT EXISTS `booking_item` (
   KEY `fk_booking_item_ticket1_idx` (`ticket_id`),
   CONSTRAINT `fk_booking_item_booking1` FOREIGN KEY (`booking_id`) REFERENCES `booking` (`id`),
   CONSTRAINT `fk_booking_item_ticket1` FOREIGN KEY (`ticket_id`) REFERENCES `ticket` (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Dumping data for table goevent_db.booking_item: ~0 rows (approximately)
 
@@ -81,7 +81,7 @@ CREATE TABLE IF NOT EXISTS `category` (
   `id` int NOT NULL AUTO_INCREMENT,
   `name` varchar(45) NOT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=17 DEFAULT CHARSET=utf8mb3;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Dumping data for table goevent_db.category: ~16 rows (approximately)
 INSERT INTO `category` (`id`, `name`) VALUES
@@ -135,7 +135,7 @@ CREATE TABLE IF NOT EXISTS `event` (
   CONSTRAINT `fk_event_user1` FOREIGN KEY (`published_by`) REFERENCES `user` (`id`),
   CONSTRAINT `fk_event_user2` FOREIGN KEY (`aproved_by`) REFERENCES `user` (`id`),
   CONSTRAINT `fk_event_venue1` FOREIGN KEY (`venue_id`) REFERENCES `venue` (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Dumping data for table goevent_db.event: ~0 rows (approximately)
 
@@ -148,7 +148,7 @@ CREATE TABLE IF NOT EXISTS `event_dates` (
   PRIMARY KEY (`id`),
   KEY `fk_event_dates_event1_idx` (`event_id`),
   CONSTRAINT `fk_event_dates_event1` FOREIGN KEY (`event_id`) REFERENCES `event` (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Dumping data for table goevent_db.event_dates: ~0 rows (approximately)
 
@@ -162,7 +162,7 @@ CREATE TABLE IF NOT EXISTS `event_has_tags` (
   KEY `fk_event_has_tags_event1_idx` (`event_id`),
   CONSTRAINT `fk_event_has_tags_event1` FOREIGN KEY (`event_id`) REFERENCES `event` (`id`),
   CONSTRAINT `fk_event_has_tags_tags1` FOREIGN KEY (`tags_id`) REFERENCES `tags` (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Dumping data for table goevent_db.event_has_tags: ~0 rows (approximately)
 
@@ -171,7 +171,7 @@ CREATE TABLE IF NOT EXISTS `event_level` (
   `id` int NOT NULL AUTO_INCREMENT,
   `name` varchar(45) NOT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb3;
+) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4;
 
 -- Dumping data for table goevent_db.event_level: ~3 rows (approximately)
 INSERT INTO `event_level` (`id`, `name`) VALUES
@@ -189,7 +189,7 @@ CREATE TABLE IF NOT EXISTS `event_verification` (
   KEY `fk_event_verification_user1_idx` (`user_id`),
   CONSTRAINT `fk_event_verification_event1` FOREIGN KEY (`event_id`) REFERENCES `event` (`id`),
   CONSTRAINT `fk_event_verification_user1` FOREIGN KEY (`user_id`) REFERENCES `user` (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Dumping data for table goevent_db.event_verification: ~0 rows (approximately)
 
@@ -201,7 +201,7 @@ CREATE TABLE IF NOT EXISTS `featured_events` (
   PRIMARY KEY (`id`),
   KEY `fk_featured_events_event1_idx` (`event_id`),
   CONSTRAINT `fk_featured_events_event1` FOREIGN KEY (`event_id`) REFERENCES `event` (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Dumping data for table goevent_db.featured_events: ~0 rows (approximately)
 
@@ -211,7 +211,7 @@ CREATE TABLE IF NOT EXISTS `img` (
   `path` varchar(200) NOT NULL,
   `bannerpath` varchar(200) DEFAULT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Dumping data for table goevent_db.img: ~0 rows (approximately)
 
@@ -221,7 +221,7 @@ CREATE TABLE IF NOT EXISTS `link` (
   `link_name` varchar(45) NOT NULL,
   `link` varchar(200) NOT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Dumping data for table goevent_db.link: ~0 rows (approximately)
 
@@ -235,7 +235,7 @@ CREATE TABLE IF NOT EXISTS `offer` (
   PRIMARY KEY (`id`),
   KEY `fk_offer_audience1_idx` (`audience_id`),
   CONSTRAINT `fk_offer_audience1` FOREIGN KEY (`audience_id`) REFERENCES `audience` (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Dumping data for table goevent_db.offer: ~0 rows (approximately)
 
@@ -244,7 +244,7 @@ CREATE TABLE IF NOT EXISTS `org_type` (
   `id` int NOT NULL AUTO_INCREMENT,
   `type` varchar(45) NOT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb3;
+) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4;
 
 -- Dumping data for table goevent_db.org_type: ~3 rows (approximately)
 INSERT INTO `org_type` (`id`, `type`) VALUES
@@ -260,7 +260,7 @@ CREATE TABLE IF NOT EXISTS `organization` (
   PRIMARY KEY (`id`),
   KEY `fk_organization_org_type1_idx` (`org_type_id`),
   CONSTRAINT `fk_organization_org_type1` FOREIGN KEY (`org_type_id`) REFERENCES `org_type` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8mb3;
+) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8mb4;
 
 -- Dumping data for table goevent_db.organization: ~3 rows (approximately)
 INSERT INTO `organization` (`id`, `name`, `org_type_id`) VALUES
@@ -273,7 +273,7 @@ CREATE TABLE IF NOT EXISTS `p_status` (
   `id` int NOT NULL AUTO_INCREMENT,
   `name` varchar(45) NOT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb3;
+) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4;
 
 -- Dumping data for table goevent_db.p_status: ~5 rows (approximately)
 INSERT INTO `p_status` (`id`, `name`) VALUES
@@ -299,7 +299,7 @@ CREATE TABLE IF NOT EXISTS `payment` (
   CONSTRAINT `fk_payment_booking1` FOREIGN KEY (`booking_id`) REFERENCES `booking` (`id`),
   CONSTRAINT `fk_payment_p_status1` FOREIGN KEY (`p_status_id`) REFERENCES `p_status` (`id`),
   CONSTRAINT `fk_payment_payment_method1` FOREIGN KEY (`payment_method_id`) REFERENCES `payment_method` (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Dumping data for table goevent_db.payment: ~0 rows (approximately)
 
@@ -308,7 +308,7 @@ CREATE TABLE IF NOT EXISTS `payment_method` (
   `id` int NOT NULL AUTO_INCREMENT,
   `method` varchar(45) NOT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb3 COMMENT='							';
+) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COMMENT='							';
 
 -- Dumping data for table goevent_db.payment_method: ~4 rows (approximately)
 INSERT INTO `payment_method` (`id`, `method`) VALUES
@@ -320,12 +320,12 @@ INSERT INTO `payment_method` (`id`, `method`) VALUES
 -- Dumping structure for table goevent_db.receipt
 CREATE TABLE IF NOT EXISTS `receipt` (
   `id` int NOT NULL AUTO_INCREMENT,
-  `path` varchar(300) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci DEFAULT NULL,
+  `path` varchar(300) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
   `payment_id` int NOT NULL,
   PRIMARY KEY (`id`),
   KEY `fk_receipt_payment1_idx` (`payment_id`),
   CONSTRAINT `fk_receipt_payment1` FOREIGN KEY (`payment_id`) REFERENCES `payment` (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Dumping data for table goevent_db.receipt: ~0 rows (approximately)
 
@@ -346,7 +346,7 @@ CREATE TABLE IF NOT EXISTS `request` (
   CONSTRAINT `fk_request_status1` FOREIGN KEY (`status_id`) REFERENCES `status` (`id`),
   CONSTRAINT `fk_request_user1` FOREIGN KEY (`user_id`) REFERENCES `user` (`id`),
   CONSTRAINT `fk_request_user2` FOREIGN KEY (`aproved_by`) REFERENCES `user` (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Dumping data for table goevent_db.request: ~0 rows (approximately)
 
@@ -355,7 +355,7 @@ CREATE TABLE IF NOT EXISTS `role` (
   `id` int NOT NULL AUTO_INCREMENT,
   `type` varchar(45) NOT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb3;
+) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4;
 
 -- Dumping data for table goevent_db.role: ~5 rows (approximately)
 INSERT INTO `role` (`id`, `type`) VALUES
@@ -374,7 +374,7 @@ CREATE TABLE IF NOT EXISTS `saved_event` (
   KEY `fk_user_has_event_user1_idx` (`user_id`),
   CONSTRAINT `fk_user_has_event_event1` FOREIGN KEY (`event_id`) REFERENCES `event` (`id`),
   CONSTRAINT `fk_user_has_event_user1` FOREIGN KEY (`user_id`) REFERENCES `user` (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Dumping data for table goevent_db.saved_event: ~0 rows (approximately)
 
@@ -383,7 +383,7 @@ CREATE TABLE IF NOT EXISTS `status` (
   `id` int NOT NULL,
   `name` varchar(45) NOT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Dumping data for table goevent_db.status: ~3 rows (approximately)
 INSERT INTO `status` (`id`, `name`) VALUES
@@ -400,7 +400,7 @@ CREATE TABLE IF NOT EXISTS `student_detail` (
   PRIMARY KEY (`id`,`user_id`),
   KEY `fk_student_detail_user1_idx` (`user_id`),
   CONSTRAINT `fk_student_detail_user1` FOREIGN KEY (`user_id`) REFERENCES `user` (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Dumping data for table goevent_db.student_detail: ~0 rows (approximately)
 
@@ -409,7 +409,7 @@ CREATE TABLE IF NOT EXISTS `tag_types` (
   `id` int NOT NULL AUTO_INCREMENT,
   `name` varchar(45) NOT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=10 DEFAULT CHARSET=utf8mb3;
+) ENGINE=InnoDB AUTO_INCREMENT=10 DEFAULT CHARSET=utf8mb4;
 
 -- Dumping data for table goevent_db.tag_types: ~9 rows (approximately)
 INSERT INTO `tag_types` (`id`, `name`) VALUES
@@ -431,7 +431,7 @@ CREATE TABLE IF NOT EXISTS `tags` (
   PRIMARY KEY (`id`),
   KEY `fk_tags_tag_types1_idx` (`tag_types_id`),
   CONSTRAINT `fk_tags_tag_types1` FOREIGN KEY (`tag_types_id`) REFERENCES `tag_types` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=70 DEFAULT CHARSET=utf8mb3;
+) ENGINE=InnoDB AUTO_INCREMENT=70 DEFAULT CHARSET=utf8mb4;
 
 -- Dumping data for table goevent_db.tags: ~39 rows (approximately)
 INSERT INTO `tags` (`id`, `name`, `tag_types_id`) VALUES
@@ -480,7 +480,7 @@ CREATE TABLE IF NOT EXISTS `test` (
   `id` int NOT NULL AUTO_INCREMENT,
   `name` varchar(45) DEFAULT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb3;
+) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4;
 
 -- Dumping data for table goevent_db.test: ~3 rows (approximately)
 INSERT INTO `test` (`id`, `name`) VALUES
@@ -500,7 +500,7 @@ CREATE TABLE IF NOT EXISTS `ticket` (
   PRIMARY KEY (`id`),
   KEY `fk_ticket_event_dates1_idx` (`event_dates_id`),
   CONSTRAINT `fk_ticket_event_dates1` FOREIGN KEY (`event_dates_id`) REFERENCES `event_dates` (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Dumping data for table goevent_db.ticket: ~0 rows (approximately)
 
@@ -518,7 +518,7 @@ CREATE TABLE IF NOT EXISTS `ticket_code` (
   KEY `fk_ticket_status_ticket_status1_idx` (`ticket_status_id`),
   CONSTRAINT `fk_ticket_code_booking_item1` FOREIGN KEY (`booking_item_id`) REFERENCES `booking_item` (`id`),
   CONSTRAINT `fk_ticket_status_ticket_status1` FOREIGN KEY (`ticket_status_id`) REFERENCES `ticket_status` (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Dumping data for table goevent_db.ticket_code: ~0 rows (approximately)
 
@@ -527,7 +527,7 @@ CREATE TABLE IF NOT EXISTS `ticket_status` (
   `id` int NOT NULL AUTO_INCREMENT,
   `name` varchar(45) NOT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb3;
+) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4;
 
 -- Dumping data for table goevent_db.ticket_status: ~5 rows (approximately)
 INSERT INTO `ticket_status` (`id`, `name`) VALUES
@@ -542,7 +542,7 @@ CREATE TABLE IF NOT EXISTS `university` (
   `id` int NOT NULL AUTO_INCREMENT,
   `name` varchar(45) NOT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=11 DEFAULT CHARSET=utf8mb3;
+) ENGINE=InnoDB AUTO_INCREMENT=11 DEFAULT CHARSET=utf8mb4;
 
 -- Dumping data for table goevent_db.university: ~10 rows (approximately)
 INSERT INTO `university` (`id`, `name`) VALUES
@@ -568,7 +568,7 @@ CREATE TABLE IF NOT EXISTS `university_details` (
   KEY `fk_university_details_user1_idx` (`user_id`),
   CONSTRAINT `fk_university_details_university1` FOREIGN KEY (`university_id`) REFERENCES `university` (`id`),
   CONSTRAINT `fk_university_details_user1` FOREIGN KEY (`user_id`) REFERENCES `user` (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Dumping data for table goevent_db.university_details: ~0 rows (approximately)
 
@@ -582,7 +582,7 @@ CREATE TABLE IF NOT EXISTS `university_has_offer` (
   KEY `fk_university_has_offer_university1_idx` (`university_id`),
   CONSTRAINT `fk_university_has_offer_offer1` FOREIGN KEY (`offer_id`) REFERENCES `offer` (`id`),
   CONSTRAINT `fk_university_has_offer_university1` FOREIGN KEY (`university_id`) REFERENCES `university` (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Dumping data for table goevent_db.university_has_offer: ~0 rows (approximately)
 
@@ -607,7 +607,7 @@ CREATE TABLE IF NOT EXISTS `user` (
   CONSTRAINT `fk_user_auth_type1` FOREIGN KEY (`auth_type_id`) REFERENCES `auth_type` (`id`),
   CONSTRAINT `fk_user_role1` FOREIGN KEY (`role_id`) REFERENCES `role` (`id`),
   CONSTRAINT `fk_User_user_status` FOREIGN KEY (`user_status_id`) REFERENCES `user_status` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb3;
+) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4;
 
 -- Dumping data for table goevent_db.user: ~4 rows (approximately)
 INSERT INTO `user` (`id`, `fname`, `lname`, `email`, `registered_date`, `v_code`, `user_status_id`, `role_id`, `google_sub`, `profile_img_url`, `password`, `auth_type_id`) VALUES
@@ -628,7 +628,7 @@ CREATE TABLE IF NOT EXISTS `user_has_organize` (
   KEY `fk_user_has_organize_organization1_idx` (`organization_id`),
   CONSTRAINT `fk_user_has_organize_organization1` FOREIGN KEY (`organization_id`) REFERENCES `organization` (`id`),
   CONSTRAINT `fk_user_has_organize_user1` FOREIGN KEY (`user_id`) REFERENCES `user` (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Dumping data for table goevent_db.user_has_organize: ~0 rows (approximately)
 
@@ -637,7 +637,7 @@ CREATE TABLE IF NOT EXISTS `user_status` (
   `id` int NOT NULL AUTO_INCREMENT,
   `name` varchar(45) NOT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb3;
+) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4;
 
 -- Dumping data for table goevent_db.user_status: ~3 rows (approximately)
 INSERT INTO `user_status` (`id`, `name`) VALUES
@@ -653,7 +653,7 @@ CREATE TABLE IF NOT EXISTS `venue` (
   `city` varchar(45) NOT NULL,
   `link` varchar(150) DEFAULT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Dumping data for table goevent_db.venue: ~0 rows (approximately)
 
