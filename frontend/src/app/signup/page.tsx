@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useForm } from 'react-hook-form';
@@ -21,6 +21,7 @@ import {
   Ticket,
   Music,
 } from 'lucide-react';
+import { GoogleAuthButton, GoogleAuthResponse, GoogleDecodedUser } from '@/components/auth/google-auth-button';
 
 const signupSchema = z
   .object({
@@ -66,6 +67,44 @@ export default function SignupPage() {
   });
 
   const selectedRole = watch('role');
+
+  const [googleVerifiedUser, setGoogleVerifiedUser] = useState<{
+    email?: string;
+    name?: string;
+    picture?: string;
+  } | null>(null);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('googleVerified') === 'true') {
+        const email = params.get('email');
+        const name = params.get('name');
+        setGoogleVerifiedUser({
+          email: email || undefined,
+          name: name || undefined,
+        });
+        if (email) setValue('email', email, { shouldValidate: true });
+        if (name) setValue('fullName', name, { shouldValidate: true });
+      }
+    }
+  }, [setValue]);
+
+  const handleGoogleSuccess = (data: GoogleAuthResponse, googleUser?: GoogleDecodedUser | null) => {
+    if (data.action === 'REGISTRATION_REQUIRED') {
+      if (googleUser) {
+        setGoogleVerifiedUser({
+          email: googleUser.email,
+          name: googleUser.name,
+          picture: googleUser.picture,
+        });
+        if (googleUser.name) setValue('fullName', googleUser.name, { shouldValidate: true });
+        if (googleUser.email) setValue('email', googleUser.email, { shouldValidate: true });
+      }
+    } else if (data.action === 'LOGIN') {
+      setSignupSuccess(true);
+    }
+  };
 
   const onSubmit = async (data: SignupFormData) => {
     setIsSubmitting(true);
@@ -162,6 +201,33 @@ export default function SignupPage() {
                     Sign in here
                   </Link>
                 </p>
+              </div>
+
+              {/* Google Sign-Up */}
+              <div className="space-y-3">
+                <GoogleAuthButton
+                  mode="signup"
+                  onSuccessCallback={handleGoogleSuccess}
+                />
+
+                {googleVerifiedUser && (
+                  <div className="p-3.5 bg-emerald-950/40 border border-emerald-500/30 rounded-2xl flex items-start space-x-3 text-xs text-emerald-200 animate-in fade-in duration-200">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                    <div className="space-y-0.5">
+                      <span className="font-bold text-white block">Google Identity Verified</span>
+                      <span className="text-[11px] text-emerald-300/80 block">
+                        Verified account: <span className="text-white font-medium">{googleVerifiedUser.email}</span>. Please choose your role and complete your details to finish registration.
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                <div className="relative flex items-center justify-center my-4">
+                  <div className="border-t border-white/10 w-full" />
+                  <span className="bg-[#121216] px-3 text-[10px] uppercase tracking-wider text-zinc-500 font-semibold absolute">
+                    Or register with email
+                  </span>
+                </div>
               </div>
 
               {/* Form */}
