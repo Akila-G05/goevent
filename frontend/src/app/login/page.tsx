@@ -6,6 +6,7 @@ import Image from 'next/image';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
+import { useRouter } from 'next/navigation';
 import {
   Eye,
   EyeOff,
@@ -17,7 +18,9 @@ import {
   Lock,
   Mail,
   Sparkles,
+  Info,
 } from 'lucide-react';
+import { GoogleAuthButton, GoogleAuthResponse, GoogleDecodedUser } from '@/components/auth/google-auth-button';
 
 const loginSchema = z.object({
   email: z.string().min(1, 'Email is required').email('Please enter a valid email address'),
@@ -28,10 +31,27 @@ const loginSchema = z.object({
 type LoginFormData = z.infer<typeof loginSchema>;
 
 export default function LoginPage() {
+  const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [authSuccess, setAuthSuccess] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [redirectNotice, setRedirectNotice] = useState<string | null>(null);
+
+  const handleGoogleSuccess = (data: GoogleAuthResponse, googleUser?: GoogleDecodedUser | null) => {
+    if (data.action === 'REGISTRATION_REQUIRED') {
+      setRedirectNotice(data.message || 'Google account verified. Redirecting to complete your registration...');
+      const params = new URLSearchParams();
+      if (googleUser?.email) params.set('email', googleUser.email);
+      if (googleUser?.name) params.set('name', googleUser.name);
+      params.set('googleVerified', 'true');
+      setTimeout(() => {
+        router.push(`/signup?${params.toString()}`);
+      }, 1200);
+    } else if (data.action === 'LOGIN') {
+      setAuthSuccess(true);
+    }
+  };
 
   const {
     register,
@@ -182,6 +202,28 @@ export default function LoginPage() {
                   >
                     Admin Demo
                   </button>
+                </div>
+              </div>
+
+              {/* Google Sign-In */}
+              <div className="space-y-3">
+                <GoogleAuthButton
+                  mode="signin"
+                  onSuccessCallback={handleGoogleSuccess}
+                />
+
+                {redirectNotice && (
+                  <div className="p-3 bg-blue-950/40 border border-blue-500/30 rounded-2xl text-xs text-blue-200 flex items-center space-x-2.5 animate-in fade-in duration-200">
+                    <Loader2 className="w-4 h-4 animate-spin text-blue-400 shrink-0" />
+                    <span>{redirectNotice}</span>
+                  </div>
+                )}
+
+                <div className="relative flex items-center justify-center my-4">
+                  <div className="border-t border-white/10 w-full" />
+                  <span className="bg-[#121216] px-3 text-[10px] uppercase tracking-wider text-zinc-500 font-semibold absolute">
+                    Or sign in with email
+                  </span>
                 </div>
               </div>
 
