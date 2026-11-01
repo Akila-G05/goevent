@@ -39,3 +39,6 @@ build/
 .DS_Store
 logs/
 .env
+
+# Ignore Flyway migration test
+/src/test/java/com/goevent/FlywayMigrationTest.java
