@@ -22,7 +22,9 @@ import static org.junit.jupiter.api.Assertions.*;
 
 @Testcontainers
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE, properties = {
-        "spring.config.import=", "logging.file.name=target/migration-test.log"
+        "spring.config.import=",
+        "logging.file.name=target/migration-test.log",
+        "google.client-id=test-client-id"
 })
 class FlywayMigrationTest {
     @Container
