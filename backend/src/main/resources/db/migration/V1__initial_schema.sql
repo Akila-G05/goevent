@@ -15,9 +15,7 @@
 /*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
 
 
--- Dumping database structure for goevent_db
-CREATE DATABASE IF NOT EXISTS `goevent_db` /*!40100 DEFAULT CHARACTER SET utf8mb3 */ /*!80016 DEFAULT ENCRYPTION='N' */;
-USE `goevent_db`;
+
 
 -- Dumping structure for table goevent_db.audience
 CREATE TABLE IF NOT EXISTS `audience` (
@@ -248,7 +246,7 @@ CREATE TABLE IF NOT EXISTS `org_type` (
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb3;
 
--- Dumping data for table goevent_db.org_type: ~0 rows (approximately)
+-- Dumping data for table goevent_db.org_type: ~3 rows (approximately)
 INSERT INTO `org_type` (`id`, `type`) VALUES
 	(1, 'Club'),
 	(2, 'Technology Community'),
@@ -264,7 +262,7 @@ CREATE TABLE IF NOT EXISTS `organization` (
   CONSTRAINT `fk_organization_org_type1` FOREIGN KEY (`org_type_id`) REFERENCES `org_type` (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8mb3;
 
--- Dumping data for table goevent_db.organization: ~0 rows (approximately)
+-- Dumping data for table goevent_db.organization: ~3 rows (approximately)
 INSERT INTO `organization` (`id`, `name`, `org_type_id`) VALUES
 	(4, 'Leo', 1),
 	(5, 'VoiceTech', 3),
@@ -387,7 +385,7 @@ CREATE TABLE IF NOT EXISTS `status` (
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
 
--- Dumping data for table goevent_db.status: ~0 rows (approximately)
+-- Dumping data for table goevent_db.status: ~3 rows (approximately)
 INSERT INTO `status` (`id`, `name`) VALUES
 	(1, 'PENDING'),
 	(2, 'APROVED'),
@@ -484,7 +482,7 @@ CREATE TABLE IF NOT EXISTS `test` (
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb3;
 
--- Dumping data for table goevent_db.test: ~2 rows (approximately)
+-- Dumping data for table goevent_db.test: ~3 rows (approximately)
 INSERT INTO `test` (`id`, `name`) VALUES
 	(1, 'GayVinura'),
 	(2, 'GonShehan'),
@@ -609,13 +607,14 @@ CREATE TABLE IF NOT EXISTS `user` (
   CONSTRAINT `fk_user_auth_type1` FOREIGN KEY (`auth_type_id`) REFERENCES `auth_type` (`id`),
   CONSTRAINT `fk_user_role1` FOREIGN KEY (`role_id`) REFERENCES `role` (`id`),
   CONSTRAINT `fk_User_user_status` FOREIGN KEY (`user_status_id`) REFERENCES `user_status` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb3;
+) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb3;
 
--- Dumping data for table goevent_db.user: ~3 rows (approximately)
+-- Dumping data for table goevent_db.user: ~4 rows (approximately)
 INSERT INTO `user` (`id`, `fname`, `lname`, `email`, `registered_date`, `v_code`, `user_status_id`, `role_id`, `google_sub`, `profile_img_url`, `password`, `auth_type_id`) VALUES
 	(1, 'Akila', 'Gimhana', 'akila@gmail.com', '2026-10-28 00:39:25', NULL, 1, 3, NULL, NULL, NULL, 2),
-	(2, 'Akila', 'Gimhana', 'akilagimhana2005@gmail.com', '2026-10-30 17:46:08', NULL, 3, 1, '115277782721731308433', 'https://lh3.googleusercontent.com/a/ACg8ocK8Xrori1A8KWG7huphTwZ0Jp8NbHtGPWrGVqDpf0CyD5_l1A=s96-c', NULL, 1),
-	(3, 'kavishka', 'devinda', 'kavishkadevinda11@gmail.com', '2026-10-30 17:57:52', NULL, 3, 1, '114559325010941934222', 'https://lh3.googleusercontent.com/a/ACg8ocKisOWynTkptdLdWa56yro4DSJT7zVyM4laa6pEzHKB3TDwCRUZ=s96-c', NULL, 1);
+	(2, 'Akila', 'Gimhana', 'akilagimhana2005@gmail.com', '2026-10-30 17:46:08', NULL, 1, 1, '115277782721731308433', 'https://lh3.googleusercontent.com/a/ACg8ocK8Xrori1A8KWG7huphTwZ0Jp8NbHtGPWrGVqDpf0CyD5_l1A=s96-c', NULL, 1),
+	(3, 'kavishka', 'devinda', 'kavishkadevinda11@gmail.com', '2026-10-30 17:57:52', NULL, 3, 1, '114559325010941934222', 'https://lh3.googleusercontent.com/a/ACg8ocKisOWynTkptdLdWa56yro4DSJT7zVyM4laa6pEzHKB3TDwCRUZ=s96-c', NULL, 1),
+	(4, 'Akila', 'Gimhana', 'akilagimhana.work@gmail.com', '2026-11-01 10:01:17', NULL, 2, 1, '100218170757582610107', 'https://lh3.googleusercontent.com/a/ACg8ocLGFCF0WIbZeWOZAb2R5cbyGGv46jRaoi-7Hh_zKgDZ2-MtnQ=s96-c', NULL, 1);
 
 -- Dumping structure for table goevent_db.user_has_organize
 CREATE TABLE IF NOT EXISTS `user_has_organize` (
