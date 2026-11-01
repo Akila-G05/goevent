@@ -1,0 +1,12 @@
+# Dockerfile-specific allowlist, resolved against the ./backend context.
+**
+!pom.xml
+!src/
+!src/main/
+!src/main/**
+# Even inside src/main, do not send local secrets or keys to the builder.
+**/.env*
+**/*.key
+**/*.pem
+**/application-local.*
+**/application-secrets.*

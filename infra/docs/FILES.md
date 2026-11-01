@@ -1,0 +1,46 @@
+# Full affected-path inventory
+
+Includes previously uncommitted infrastructure preparation preserved on this branch.
+
+- `.github/dependabot.yml`
+- `.github/workflows/ci.yml`
+- `.github/workflows/pr-ci.yml`
+- `.github/workflows/promote-production.yml`
+- `.github/workflows/publish-acr.yml`
+- `infra/.gitignore`
+- `infra/README.md`
+- `infra/ci/bootstrap.py`
+- `infra/ci/candidate.py`
+- `infra/ci/generate_workflows.py`
+- `infra/ci/images.sh`
+- `infra/ci/lock_python.py`
+- `infra/ci/promote.py`
+- `infra/ci/publish.sh`
+- `infra/ci/requirements.lock`
+- `infra/ci/requirements.txt`
+- `infra/ci/scan_summary.py`
+- `infra/ci/security.sh`
+- `infra/ci/tools.lock.json`
+- `infra/ci/verify.py`
+- `infra/compatibility.md`
+- `infra/compose/Caddyfile.example`
+- `infra/compose/applications.yml`
+- `infra/compose/redis.conf.example`
+- `infra/deploy/fetch.py`
+- `infra/deploy/health.py`
+- `infra/deploy/manifest.schema.json`
+- `infra/deploy/operator-policy.example.json`
+- `infra/deploy/policy.py`
+- `infra/deploy/pull.py`
+- `infra/docker/backend.Dockerfile`
+- `infra/docker/backend.Dockerfile.dockerignore`
+- `infra/docker/gateway.Dockerfile`
+- `infra/docker/gateway.Dockerfile.dockerignore`
+- `infra/docs/FILES.md`
+- `infra/docs/IMPLEMENTATION.md`
+- `infra/security/semgrep.yml`
+- `infra/systemd/goevent-release.service`
+- `infra/tests/test_policy.py`
+- `infra/validate-images.sh`
+- `infra/validation/CI-CD.md`
+- `infra/validation/README.md`

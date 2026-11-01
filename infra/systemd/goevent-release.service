@@ -1,0 +1,24 @@
+# PROPOSED ONLY: install after owner review; never replace goevent.service.
+[Unit]
+Description=GoEvent approved application digest pull
+Requires=goevent.service
+After=goevent.service network-online.target
+BindsTo=goevent.service
+RequiresMountsFor=/srv/goevent/mysql
+[Service]
+Type=oneshot
+User=root
+UMask=0077
+Environment=AZURE_CONFIG_DIR=/run/goevent-release-azure
+Environment=GH_CONFIG_DIR=/run/goevent-release-gh
+RuntimeDirectory=goevent-release-azure goevent-release-gh
+RuntimeDirectoryMode=0700
+TimeoutStartSec=600
+ExecStartPre=/usr/bin/python3 /opt/goevent/release/fetch.py
+ExecStart=/usr/bin/python3 /opt/goevent/release/pull.py --policy /etc/goevent-release/policy.json --intent /run/goevent-release-intent.json
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ReadWritePaths=/run /var/lib/goevent-release
+ProtectHome=true
+# Docker control makes this unit highly privileged despite these process restrictions.

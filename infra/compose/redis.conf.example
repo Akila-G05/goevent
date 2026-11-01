@@ -1,0 +1,6 @@
+# Proposed private Redis dependency only. Operator must approve image digest,
+# persistence, TLS and memory/eviction policy before creating the service.
+protected-mode yes
+port 6379
+aclfile /run/secrets/redis.acl
+# Do not publish this port. A default user must be disabled in the supplied ACL.

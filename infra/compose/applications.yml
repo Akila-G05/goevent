@@ -1,0 +1,66 @@
+# Application-only project. Never combine with or replace /opt/goevent/compose.yml.
+services:
+  backend:
+    image: ${BACKEND_IMAGE:?digest required}
+    user: '10001:10001'
+    restart: 'no'
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ['no-new-privileges:true']
+    mem_limit: 768m
+    cpus: 1.0
+    tmpfs: ['/tmp:rw,noexec,nosuid,size=64m', '/app/logs:rw,noexec,nosuid,size=32m,uid=10001,gid=10001']
+    environment:
+      SPRING_CONFIG_IMPORT: configtree:/run/secrets/
+      SPRING_CONFIG_ADDITIONAL_LOCATION: file:/run/config/
+    volumes:
+      - type: bind
+        source: /run/goevent/backend
+        target: /run/secrets
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: /opt/goevent/app-config/backend
+        target: /run/config
+        read_only: true
+        bind:
+          create_host_path: false
+    networks: [application, database]
+  gateway:
+    image: ${GATEWAY_IMAGE:?digest required}
+    user: '10001:10001'
+    restart: 'no'
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ['no-new-privileges:true']
+    mem_limit: 512m
+    cpus: 1.0
+    tmpfs: ['/tmp:rw,noexec,nosuid,size=64m', '/app/logs:rw,noexec,nosuid,size=32m,uid=10001,gid=10001']
+    environment:
+      SPRING_CONFIG_IMPORT: configtree:/run/secrets/
+      SPRING_CONFIG_ADDITIONAL_LOCATION: file:/run/config/
+    volumes:
+      - type: bind
+        source: /run/goevent/gateway
+        target: /run/secrets
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: /opt/goevent/app-config/gateway
+        target: /run/config
+        read_only: true
+        bind:
+          create_host_path: false
+    networks: [ingress, application]
+networks:
+  ingress:
+    external: true
+    name: goevent-ingress
+  application:
+    external: true
+    name: goevent-application
+  database:
+    external: true
+    name: goevent-database

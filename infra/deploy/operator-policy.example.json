@@ -1,0 +1,21 @@
+{
+  "enabled": false,
+  "disk_uuid": "OWNER_ACTION_REQUIRED",
+  "mysql_mount": "/srv/goevent/mysql",
+  "mysql_data": "/srv/goevent/mysql/data",
+  "registry": "ownerrequired.azurecr.io",
+  "acr_name": "ownerrequired",
+  "repository": "VinuraY/goevent",
+  "state_dir": "/var/lib/goevent-release",
+  "secrets_dir": "/run/goevent",
+  "required_secrets": ["backend/spring.datasource.password", "gateway/spring.data.redis.password"],
+  "config_dir": "/opt/goevent/app-config",
+  "compose_file": "/opt/goevent/release/applications.yml",
+  "backup_evidence": "/run/goevent/backup-readiness.json",
+  "migration_approval": "/run/goevent/migration-approval.json",
+  "health_hook": "/opt/goevent/protected/check-application-health",
+  "max_backup_age_seconds": 86400,
+  "storage_account": "OWNER_ACTION_REQUIRED",
+  "storage_container": "OWNER_ACTION_REQUIRED",
+  "approved_blob": "OWNER_ACTION_REQUIRED"
+}

@@ -1,0 +1,102 @@
+name: GoEvent gates
+on:
+  pull_request:
+    branches: [main]
+  workflow_call:
+permissions:
+  contents: read
+concurrency:
+  group: gates-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  java:
+    name: Java tests (${{ matrix.module }})
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        module: [backend, gateway]
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3
+        with:
+          distribution: temurin
+          java-version: '21'
+      - run: mvn -B -ntp -Dmaven.compiler.release=21 -f "$MODULE/pom.xml" clean verify
+        env:
+          MODULE: ${{ matrix.module }}
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: java-results-${{ matrix.module }}
+          path: '**/target/surefire-reports/*.xml'
+          retention-days: 3
+  frontend:
+    name: Bun frontend
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
+        with:
+          bun-version: '1.3.1'
+      - working-directory: frontend
+        run: |
+          bun install --frozen-lockfile
+          bun run typecheck
+          bun run lint
+          bun run test
+          bun run build
+        env:
+          NEXT_PUBLIC_API_BASE_URL: /api/v1
+          BACKEND_URL: http://127.0.0.1:8080
+  security:
+    name: Security policy
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.13'
+      - run: |
+          pip install -r infra/ci/requirements.lock
+          python3 infra/ci/bootstrap.py
+          sh infra/ci/security.sh
+        env:
+          GH_TOKEN: ${{ github.token }}
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: security-reports
+          path: infra/validation/reports/
+          retention-days: 3
+  images:
+    name: Container security
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - run: sh infra/ci/images.sh
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: image-reports
+          path: infra/validation/reports/
+          retention-days: 3
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: success() && github.event_name == 'push' && github.ref == 'refs/heads/main'
+        with:
+          name: tested-images
+          path: infra/validation/*-image.tar
+          retention-days: 3
