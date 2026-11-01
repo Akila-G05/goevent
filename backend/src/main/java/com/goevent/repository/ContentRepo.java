@@ -58,11 +58,6 @@ public class ContentRepo {
     // Get all organizations with their types
     public List<Map<String, Object>> getOrganizations() {
 
-//        String query = """
-//                SELECT o.id,o.name,o.org_type_id AS orgTypeId,ot.type AS orgTypeFROM organization o
-//                INNER JOIN org_type ot ON o.org_type_id = ot.id ORDER BY o.name
-//                """;
-
         String query = """
                 SELECT org.id, org.name, org.org_type_id, ot.type FROM organization org 
                 INNER JOIN org_type ot ON ot.id = org.org_type_id ORDER BY org.name

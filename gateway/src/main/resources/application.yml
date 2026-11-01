@@ -62,6 +62,42 @@ spring:
                     redis-rate-limiter.replenishRate: 5
                     redis-rate-limiter.burstCapacity: 10
 
+            # Initial content - 6 hours
+            - id: goevent-initial-content
+              uri: ${BACKEND_URL}
+              order: -10
+              predicates:
+                - Path=/goevent/api/content/initial-data
+              filters:
+                - name: ResponseCache
+                  args:
+                    ttlSeconds: 21600
+                    namespace: goevent-initial
+
+            # Universities - 1 hour
+            - id: goevent-universities
+              uri: ${BACKEND_URL}
+              order: -9
+              predicates:
+                - Path=/goevent/api/content/universities
+              filters:
+                - name: ResponseCache
+                  args:
+                    ttlSeconds: 3600
+                    namespace: goevent-content
+
+            # Organizations - 1 hour
+            - id: goevent-organizations
+              uri: ${BACKEND_URL}
+              order: -8
+              predicates:
+                - Path=/goevent/api/content/organizations
+              filters:
+                - name: ResponseCache
+                  args:
+                    ttlSeconds: 3600
+                    namespace: goevent-content
+
             # 4. Default rate limit for other API routes
             - id: goevent-backend
               uri: ${BACKEND_URL}
