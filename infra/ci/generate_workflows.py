@@ -52,7 +52,7 @@ jobs:
           persist-credentials: false
       - uses: @oven-sh/setup-bun@
         with:
-          bun-version: '1.3.1'
+          bun-version: '1.4.4'
       - working-directory: frontend
         run: |
           bun install --frozen-lockfile
