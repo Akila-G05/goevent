@@ -47,7 +47,7 @@ class FlywayMigrationTest {
     void startupMigratesFreshDatabaseAndPreservesConstraints() {
         assertEquals(1, jdbc.queryForObject(
                 "SELECT COUNT(*) FROM flyway_schema_history WHERE version='1' AND success=1", Integer.class));
-        assertEquals(37, jdbc.queryForObject(
+        assertEquals(38, jdbc.queryForObject(
                 "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema=DATABASE() "
                         + "AND table_name <> 'flyway_schema_history'", Integer.class));
         assertEquals(5, jdbc.queryForObject("SELECT COUNT(*) FROM role", Integer.class));

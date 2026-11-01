@@ -14,9 +14,6 @@
 /*!40101 SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='NO_AUTO_VALUE_ON_ZERO' */;
 /*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
 
-
-
-
 -- Dumping structure for table goevent_db.audience
 CREATE TABLE IF NOT EXISTS `audience` (
   `id` int NOT NULL AUTO_INCREMENT,
@@ -357,7 +354,7 @@ CREATE TABLE IF NOT EXISTS `role` (
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb3;
 
--- Dumping data for table goevent_db.role: ~5 rows (approximately)
+-- Dumping data for table goevent_db.role: ~3 rows (approximately)
 INSERT INTO `role` (`id`, `type`) VALUES
 	(1, 'USER'),
 	(2, 'ORGANIZER'),
@@ -385,7 +382,7 @@ CREATE TABLE IF NOT EXISTS `status` (
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
 
--- Dumping data for table goevent_db.status: ~3 rows (approximately)
+-- Dumping data for table goevent_db.status: ~2 rows (approximately)
 INSERT INTO `status` (`id`, `name`) VALUES
 	(1, 'PENDING'),
 	(2, 'APROVED'),
@@ -482,7 +479,7 @@ CREATE TABLE IF NOT EXISTS `test` (
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb3;
 
--- Dumping data for table goevent_db.test: ~3 rows (approximately)
+-- Dumping data for table goevent_db.test: ~2 rows (approximately)
 INSERT INTO `test` (`id`, `name`) VALUES
 	(1, 'GayVinura'),
 	(2, 'GonShehan'),
@@ -609,7 +606,7 @@ CREATE TABLE IF NOT EXISTS `user` (
   CONSTRAINT `fk_User_user_status` FOREIGN KEY (`user_status_id`) REFERENCES `user_status` (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb3;
 
--- Dumping data for table goevent_db.user: ~4 rows (approximately)
+-- Dumping data for table goevent_db.user: ~3 rows (approximately)
 INSERT INTO `user` (`id`, `fname`, `lname`, `email`, `registered_date`, `v_code`, `user_status_id`, `role_id`, `google_sub`, `profile_img_url`, `password`, `auth_type_id`) VALUES
 	(1, 'Akila', 'Gimhana', 'akila@gmail.com', '2026-10-28 00:39:25', NULL, 1, 3, NULL, NULL, NULL, 2),
 	(2, 'Akila', 'Gimhana', 'akilagimhana2005@gmail.com', '2026-10-30 17:46:08', NULL, 1, 1, '115277782721731308433', 'https://lh3.googleusercontent.com/a/ACg8ocK8Xrori1A8KWG7huphTwZ0Jp8NbHtGPWrGVqDpf0CyD5_l1A=s96-c', NULL, 1),
@@ -639,7 +636,7 @@ CREATE TABLE IF NOT EXISTS `user_status` (
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb3;
 
--- Dumping data for table goevent_db.user_status: ~3 rows (approximately)
+-- Dumping data for table goevent_db.user_status: ~2 rows (approximately)
 INSERT INTO `user_status` (`id`, `name`) VALUES
 	(1, 'ACTIVE'),
 	(2, 'SUSPENDED'),
