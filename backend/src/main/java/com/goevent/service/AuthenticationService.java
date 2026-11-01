@@ -10,6 +10,8 @@ import com.google.api.client.http.javanet.NetHttpTransport;
 import com.google.api.client.json.gson.GsonFactory;
 import com.google.gson.JsonObject;
 
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpSession;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -30,7 +32,7 @@ public class AuthenticationService {
         this.authenticationRepo = authenticationRepo;
     }
 
-    public String handleGoogleAuthentication(String idToken) {
+    public String handleGoogleAuthentication(String idToken, HttpServletRequest httpRequest) {
         JsonObject responseObject = new JsonObject();
 
         boolean status = false;
@@ -84,9 +86,25 @@ public class AuthenticationService {
                             } else {
                                 responseObject.addProperty("action", "LOGIN");
 
-                                //can create login part here
+                                // Create user session
+                                HttpSession session = httpRequest.getSession(true);
 
-                                message = "Google account verified successfully";
+                                session.setAttribute("userId", user.getId());
+                                session.setAttribute("roleId", user.getRoleId());
+                                session.setAttribute("email", user.getEmail());
+
+                                responseObject.addProperty("userId", user.getId());
+                                responseObject.addProperty("roleId", user.getRoleId());
+                                responseObject.addProperty("email", user.getEmail());
+
+//                                // Temporary debugging
+//                                logger.info("Session ID: {}", usession.getId());
+//                                logger.info("Session is new: {}", usession.isNew());
+//                                logger.info("Requested session ID: {}", httpRequest.getRequestedSessionId());
+//                                logger.info("Session ID from cookie: {}",
+//                                        httpRequest.isRequestedSessionIdFromCookie());
+
+                                message = "Google login successful";
                                 status = true;
                             }
                         } else {
@@ -98,13 +116,13 @@ public class AuthenticationService {
                             } else {
                                 // 7. Register Google user with pending status
                                 int result = authenticationRepo.registerGoogleUser(fname,
-                                        lname,
-                                        email,
-                                        3,// PENDING
-                                        1,// USER
-                                        googleSub,
-                                        profileImgUrl,
-                                        1// GOOGLE
+                                    lname,
+                                    email,
+                                    2,// PENDING
+                                    1,// USER
+                                    googleSub,
+                                    profileImgUrl,
+                                    1// GOOGLE
                                 );
 
                                 if (result > 0) {

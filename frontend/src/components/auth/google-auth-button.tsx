@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { GoogleLogin, CredentialResponse } from '@react-oauth/google';
 import { AlertCircle, Info, Loader2 } from 'lucide-react';
+import { includes } from 'zod/v4';
 
 export interface GoogleAuthResponse {
   action?: 'REGISTRATION_REQUIRED' | 'LOGIN' | string;
@@ -71,6 +72,7 @@ export function GoogleAuthButton({
     try {
       const result = await fetch(endpoint, {
         method: 'POST',
+        credentials: "include",
         headers: {
           'Content-Type': 'application/json',
         },
