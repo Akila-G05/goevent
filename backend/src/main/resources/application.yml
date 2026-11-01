@@ -26,6 +26,7 @@ spring:
     init:
       mode: never
   flyway:
+    enabled: ${STATE:true}
     locations: classpath:db/migration
     baseline-on-migrate: false
     clean-disabled: true
