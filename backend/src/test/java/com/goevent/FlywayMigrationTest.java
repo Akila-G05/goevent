@@ -28,7 +28,8 @@ import static org.junit.jupiter.api.Assertions.*;
                 "spring.config.import=",
                 "logging.file.name=target/migration-test.log",
                 "google.client-id=test-client-id",
-                "spring.flyway.enabled=true"
+                "spring.flyway.enabled=true",
+                "AND table_collation NOT LIKE 'utf8mb4%'"
         }
 )
 class FlywayMigrationTest {
