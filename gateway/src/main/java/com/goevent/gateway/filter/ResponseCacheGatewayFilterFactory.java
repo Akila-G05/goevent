@@ -1,7 +1,7 @@
 
 package com.goevent.gateway.filter;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.cloud.gateway.filter.GatewayFilter;
@@ -98,9 +98,9 @@ public class ResponseCacheGatewayFilterFactory
             // Cache only public GET requests.
             if (!"GET".equalsIgnoreCase(
                     request.getMethod().name())
-                    || request.getHeaders().containsKey(
+                    || request.getHeaders().containsHeader(
                     HttpHeaders.AUTHORIZATION)
-                    || request.getHeaders().containsKey(
+                    || request.getHeaders().containsHeader(
                     HttpHeaders.COOKIE)
                     || config.getTtlSeconds() <= 0) {
 

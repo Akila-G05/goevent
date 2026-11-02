@@ -108,6 +108,29 @@ jobs:
           name: tested-images
           path: infra/validation/*-image.tar
           retention-days: 3
+  runtime:
+    name: Isolated application smoke
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: @actions/checkout@
+        with:
+          persist-credentials: false
+      - uses: @actions/setup-java@
+        with:
+          distribution: temurin
+          java-version: '21'
+      - run: |
+          mvn -B -ntp -f backend/pom.xml verify org.springframework.boot:spring-boot-maven-plugin:4.0.9:repackage
+          mvn -B -ntp -f gateway/pom.xml verify
+          mkdir -p infra/validation
+          python3 infra/ci/runtime_smoke.py
+      - uses: @actions/upload-artifact@
+        if: always()
+        with:
+          name: runtime-smoke-logs
+          path: infra/validation/upgrade-runtime-*.log
+          retention-days: 3
 ''')
 write('publish-acr.yml','''name: Trusted ACR publication
 on:
@@ -235,5 +258,5 @@ p.write_text(s)
 p=Path('.github/workflows/publish-acr.yml')
 pr=Path('.github/workflows/pr-ci.yml').read_text()
 gates=pr.split('jobs:\n',1)[1]
-s=p.read_text().replace('jobs:\n  gates:\n    uses: $/.github/workflows/pr-ci.yml\n  publish:', 'jobs:\n'+gates+'  publish:').replace('needs: gates','needs: [java, frontend, security, images]')
+s=p.read_text().replace('jobs:\n  gates:\n    uses: $/.github/workflows/pr-ci.yml\n  publish:', 'jobs:\n'+gates+'  publish:').replace('needs: gates','needs: [java, frontend, security, images, runtime]')
 p.write_text(s)

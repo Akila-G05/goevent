@@ -10,7 +10,7 @@ COPY src/main/ ./src/main/
 # The existing POM builds a plain WAR; this CLI goal adds a Boot launcher without editing it.
 RUN --mount=type=cache,id=goevent-maven-21,target=/root/.m2,sharing=locked \
     mvn -B -ntp -Dmaven.test.skip=true -Dmaven.compiler.release=21 package \
-      org.springframework.boot:spring-boot-maven-plugin:3.5.7:repackage
+      org.springframework.boot:spring-boot-maven-plugin:4.0.9:repackage
 WORKDIR /out
 RUN cp /build/target/goevent-1.0-SNAPSHOT.war /out/app.war \
     && jar xf app.war META-INF/MANIFEST.MF \

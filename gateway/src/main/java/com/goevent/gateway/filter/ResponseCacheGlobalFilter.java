@@ -1,7 +1,7 @@
 
 package com.goevent.gateway.filter;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
@@ -157,7 +157,7 @@ public class ResponseCacheGlobalFilter
                                     if (status == null
                                             || status.value()
                                             != HttpStatus.OK.value()
-                                            || getHeaders().containsKey(
+                                            || getHeaders().containsHeader(
                                             HttpHeaders.SET_COOKIE)) {
 
                                         log.info(
