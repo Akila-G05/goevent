@@ -116,11 +116,15 @@ already contain tables require an explicitly reviewed baseline before starting
 the updated backend; see [database migrations](docs/architecture/database-migrations.md).
 Do not delete an existing volume to adopt Flyway.
 
-### 3. Run Backend
+### 3. Run Backend — terminal 1
+
+Open a terminal at the repository root. MySQL and Redis must already be running.
+Backend and gateway are separate processes; starting one does not start the other.
 
 ```bash
-cd backend
-mvn spring-boot:run
+# Clear stale overrides from earlier troubleshooting; settings come from .env.
+unset DB_NAME SERVER_PORT SPRING_CONFIG_IMPORT REDIS_PORT REDIS_PASSWORD BACKEND_URL
+mvn -f backend/pom.xml spring-boot:run
 ```
 
 Spring imports the root `.env` automatically when launched from `backend/` or
@@ -134,7 +138,33 @@ The backend listens on `http://localhost:8081/goevent` by default (`PORT` can
 override the port). Its test endpoint is `/goevent/api/test`. The separate gateway
 uses port 8080; OpenAPI is not currently installed in the backend.
 
-### 4. Run Frontend
+### 4. Run Gateway — terminal 2
+
+Open a second terminal at the repository root:
+
+```bash
+unset SERVER_PORT SPRING_CONFIG_IMPORT REDIS_PORT REDIS_PASSWORD BACKEND_URL
+mvn -f gateway/pom.xml spring-boot:run
+```
+
+The gateway listens on **8080** and forwards to the backend on **8081**. Root
+`.env` must set `BACKEND_URL=http://localhost:8081` and the same `REDIS_HOST`,
+`REDIS_PORT=6380` and `REDIS_PASSWORD` used by Compose. Compose starts MySQL and
+Redis only; it does not automatically launch either Java application.
+
+In another terminal, verify the services:
+
+```bash
+curl -i http://localhost:8081/goevent/api/test
+curl -i http://localhost:8080/actuator/health
+curl -i http://localhost:8080/goevent/api/test
+```
+
+Expect HTTP 200, API `"status":true` and gateway health `"status":"UP"`.
+Keep both Java terminals open; press Ctrl+C in each to stop that application.
+Run Maven without `-X` when sharing output because debug logs can expose secrets.
+
+### 5. Run Frontend — terminal 3
 
 In another terminal, navigate to `frontend/`:
 
