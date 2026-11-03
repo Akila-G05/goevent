@@ -69,7 +69,7 @@ goevent/
 ├── docs/decisions/
 ├── .github/workflows/         # PR CI, trusted publish, approved promotion
 ├── .github/dependabot.yml
-├── compose.yaml              # Local MySQL only
+├── compose.yaml              # Local MySQL and Redis
 ├── .env.example
 └── AGENTS.md
 ```
@@ -102,7 +102,7 @@ so Docker Compose and Spring's properties importer interpret values consistently
 ### 2. Start Database
 
 ```bash
-docker compose up -d --wait mysql
+docker compose up -d --wait mysql redis
 docker compose ps
 ```
 
@@ -184,8 +184,8 @@ bun run build
 ## Gateway and deployment
 
 The separate gateway uses Spring Cloud 2025.1.4, Redis rate limiting and response
-caching. Start Redis separately for local application work; root Compose supplies
-MySQL only. Backend sessions also use Redis. Gateway forwards `/goevent/api/**` to
+caching. Start Redis with `docker compose up -d --wait mysql redis`; root Compose supplies
+MySQL and authenticated local Redis. Backend sessions also use Redis. Gateway forwards `/goevent/api/**` to
 backend port 8081; Next defaults to `/api/v1`, so the API base/proxy configuration
 must be reconciled before claiming a working end-to-end login.
 
@@ -197,3 +197,5 @@ Azure/GitHub configuration and staging validation remain owner-operated steps.
 See [operator guide](infra/README.md) and [dependency migration](infra/docs/DEPENDENCY-MIGRATION.md).
 Spring Security/JPA and domain features described above remain implementation
 targets; they are not implied by dependency upgrades.
+
+Local service commands and database-volume caveats: [local development guide](infra/docs/LOCAL-DEVELOPMENT.md).

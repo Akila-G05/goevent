@@ -104,7 +104,7 @@ goevent/
 ├── docs/decisions/
 ├── .github/workflows/         # PR CI, trusted publish, approved promotion
 ├── .github/dependabot.yml
-├── compose.yaml              # Local MySQL only
+├── compose.yaml              # Local MySQL and Redis
 ├── .env.example
 └── AGENTS.md
 ```
@@ -122,9 +122,9 @@ The owner approved the Boot 4 dependency migration on 2026-11-02. See [migration
 ### Gateway and API boundaries
 
 - Keep routing, rate limiting, and edge configuration in `gateway/`; keep business rules, ownership checks, inventory, and payment transactions in `backend/`. Gateway filtering does not replace backend authorization.
-- Current gateway configuration listens on port `8080`, forwards `/goevent/api/**` unchanged to backend port `8081`, and requires Redis at `localhost:6379`. The backend combines servlet context `/goevent` with the `/api` controller prefix.
+- Current gateway configuration listens on port `8080`, forwards `/goevent/api/**` unchanged to backend port `8081`, and uses authenticated Redis at `localhost:6380` by default. The backend combines servlet context `/goevent` with the `/api` controller prefix.
 - The frontend Axios client defaults to `/api/v1`; Next.js rewrites that prefix to `BACKEND_URL` (default `http://localhost:8080`). This differs from the configured gateway/backend route prefix. Trace and test the full path before changing any API URL; do not assume these defaults already interoperate.
-- `compose.yaml` currently provisions MySQL only, not Redis or the application processes. Check datasource settings against Compose before running integration work; environment variables are not automatically consumed unless configuration references them.
+- `compose.yaml` provisions MySQL and authenticated Redis (host port 6380); backend and gateway start separately. Check datasource settings against Compose before running integration work; environment variables are not automatically consumed unless configuration references them.
 - Gateway changes must consider route order, downstream paths, Redis availability, rate-limit responses, and trustworthy client address resolution. Keep blocking JDBC/business operations out of reactive gateway code.
 
 ## 4. Object-oriented programming and Java standards
@@ -309,3 +309,5 @@ A change is **done** only when:
 9. Final handoff states **what changed**, **why**, **what was actually tested**, **remaining risks**, and **the branch/PR status**.
 
 **Priority rule:** When instructions conflict, follow system/developer/user instructions, repository safety constraints, and explicit maintainer decisions over this file. If requirements are ambiguous or an operation is risky, do not guess or perform irreversible actions.
+
+Local service commands and database-volume caveats: [local development guide](infra/docs/LOCAL-DEVELOPMENT.md).

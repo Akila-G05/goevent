@@ -23,7 +23,7 @@ jobs:
         image: mysql:8.4
         env:
           MYSQL_ROOT_PASSWORD: root_local_password
-          MYSQL_DATABASE: goevent
+          MYSQL_DATABASE: goevent_db
           MYSQL_USER: goevent
           MYSQL_PASSWORD: goevent_local_password
         ports:
@@ -54,7 +54,7 @@ jobs:
         env:
           DB_HOST: 127.0.0.1
           DB_PORT: 3306
-          DB_NAME: goevent
+          DB_NAME: goevent_db
           DB_USER: goevent
           DB_PASSWORD: goevent_local_password
 

@@ -12,7 +12,7 @@ Production routing is planned as Vercel frontend → Caddy HTTPS → separate Sp
 Cloud Gateway → JDBC backend → MySQL 8.4. Redis supports gateway rate limits/cache
 and backend sessions. The VM's protected MySQL disk, Key Vault/Managed Identity,
 encrypted backup safeguards and approved pull-based digest deployment remain.
-Root Compose starts local MySQL only. Infrastructure implementation and owner
+Root Compose starts local MySQL and authenticated Redis; applications run separately. Infrastructure implementation and owner
 activation steps are in [infra](../../infra/README.md).
 
 The diagram and package responsibilities below describe the target business
