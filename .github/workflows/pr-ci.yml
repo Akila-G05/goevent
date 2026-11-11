@@ -28,7 +28,7 @@ jobs:
       - run: mvn -B -ntp -Dmaven.compiler.release=21 -f "$MODULE/pom.xml" clean verify
         env:
           MODULE: ${{ matrix.module }}
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         if: always()
         with:
           name: java-results-${{ matrix.module }}
@@ -73,7 +73,7 @@ jobs:
           sh infra/ci/security.sh
         env:
           GH_TOKEN: ${{ github.token }}
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         if: always()
         with:
           name: security-reports
@@ -88,13 +88,13 @@ jobs:
         with:
           persist-credentials: false
       - run: sh infra/ci/images.sh
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         if: always()
         with:
           name: image-reports
           path: infra/validation/reports/
           retention-days: 3
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         if: success() && github.event_name == 'push' && github.ref == 'refs/heads/main'
         with:
           name: tested-images
@@ -117,7 +117,7 @@ jobs:
           mvn -B -ntp -f gateway/pom.xml verify
           mkdir -p infra/validation
           python3 infra/ci/runtime_smoke.py
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         if: always()
         with:
           name: runtime-smoke-logs
