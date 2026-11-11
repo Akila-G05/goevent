@@ -50,6 +50,7 @@ export default function LoginPage() {
       }, 1200);
     } else if (data.action === 'LOGIN') {
       setAuthSuccess(true);
+      router.push('/');
     }
   };
 

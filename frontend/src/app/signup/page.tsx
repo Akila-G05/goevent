@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -47,10 +48,12 @@ const signupSchema = z
 type SignupFormData = z.infer<typeof signupSchema>;
 
 export default function SignupPage() {
+  const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [signupSuccess, setSignupSuccess] = useState(false);
+  const [pendingApproval, setPendingApproval] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const {
@@ -123,13 +126,21 @@ export default function SignupPage() {
       // Open the role selection popup modal
       setIsRoleModalOpen(true);
     } else if (data.action === 'LOGIN') {
-      setSignupSuccess(true);
+      router.push('/');
     }
   };
 
   const handleModalSuccess = (data: GoogleAuthResponse) => {
     setIsRoleModalOpen(false);
-    setSignupSuccess(true);
+
+    if (data.action === 'REGISTERED') {
+      // Session is created server-side; go straight to the app
+      router.push('/');
+    } else if (data.status) {
+      // Organizer registrations wait for admin approval
+      setPendingApproval(data.action === 'REGISTRATION_PENDING');
+      setSignupSuccess(true);
+    }
   };
 
   const onSubmit = async (data: SignupFormData) => {
@@ -198,18 +209,20 @@ export default function SignupPage() {
               </div>
               <div className="space-y-2">
                 <h3 className="font-display text-3xl font-black uppercase text-white">
-                  ACCOUNT CREATED!
+                  {pendingApproval ? 'REGISTRATION SUBMITTED' : 'ACCOUNT CREATED!'}
                 </h3>
                 <p className="text-xs text-zinc-400 max-w-sm mx-auto">
-                  Your GoEvent profile is ready. You can now discover concerts and book tickets with real-time inventory holds.
+                  {pendingApproval
+                    ? 'Your organizer account is under review. An admin will approve it shortly, then you can sign in.'
+                    : 'Your GoEvent profile is ready. You can now discover concerts and book tickets with real-time inventory holds.'}
                 </p>
               </div>
               <div className="pt-2 flex justify-center space-x-3">
                 <Link
-                  href="/login"
+                  href={pendingApproval ? '/' : '/login'}
                   className="inline-flex items-center space-x-1.5 bg-white text-black font-semibold text-xs px-6 py-3 rounded-full hover:bg-zinc-200 transition-colors shadow-lg"
                 >
-                  <span>Sign In Now</span>
+                  <span>{pendingApproval ? 'Back to Home' : 'Sign In Now'}</span>
                   <ArrowUpRight className="w-4 h-4" />
                 </Link>
               </div>

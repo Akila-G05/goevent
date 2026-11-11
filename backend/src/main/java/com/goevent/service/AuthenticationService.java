@@ -124,11 +124,7 @@ public class AuthenticationService {
                                     responseObject.addProperty("action", "LOGIN");
 
                                     // Create user session
-                                    HttpSession session = httpRequest.getSession(true);
-
-                                    session.setAttribute("userId", user.getId());
-                                    session.setAttribute("role", Role.fromId(user.getRoleId()).name());
-                                    session.setAttribute("email", user.getEmail());
+                                    createUserSession(httpRequest, user);
 
                                     responseObject.addProperty("userId", user.getId());
                                     responseObject.addProperty("roleId", Role.fromId(user.getRoleId()).name());
@@ -142,7 +138,7 @@ public class AuthenticationService {
                             // 6. Check whether email already exists
                             UserDTO existingUser = authenticationRepo.getUserByEmail(email);
 
-                            if (existingUser != null) {
+                            if (existingUser != null && existingUser.getAuthTypeId() == 2) {
                                 message = "An account with this email already exists. Please use the existing login method.";
                             } else {
                                 if (role == null) {
@@ -153,12 +149,17 @@ public class AuthenticationService {
                                     status = true;
                                 } else if (role != Role.USER && role != Role.STUDENT && role != Role.ORGANIZER) {
                                     message = "Invalid registration role.";
+                                } else if (role == Role.STUDENT && (indexNo == null || indexNo.isBlank() || uniEmail == null || uniEmail.isBlank() || uniId == null)) {
+                                    message = "Student registration details are incomplete.";
+                                } else if (role == Role.ORGANIZER
+                                        && (organizationId == null || position == null || position.isBlank())) {
+                                    message = "Organization registration details are incomplete.";
                                 } else {
                                     int statusId = UserStatus.ACTIVE.getId();
                                     if(role == Role.ORGANIZER){
                                         statusId = UserStatus.PENDING.getId();
                                     }
-                                    // 8. Register Google user with PENDING status
+                                    // 8. Register Google user with the resolved status
                                     int result = authenticationRepo.registerGoogleUser(
                                             fname,
                                             lname,
@@ -170,9 +171,10 @@ public class AuthenticationService {
                                             1 //GOOGLE
                                     );
                                     if (result > 0) {
-                                        UserDTO user2 = authenticationRepo.getUserByEmail(email);
-                                        if (user2 != null) {
-                                            int userId = user2.getId();
+                                        UserDTO registeredUser = authenticationRepo.getUserByEmail(email);
+
+                                        if (registeredUser != null) {
+                                            int userId = registeredUser.getId();
                                             switch (role) {
                                                 case USER  -> {
                                                     // No additional registration data
@@ -185,11 +187,26 @@ public class AuthenticationService {
                                                 }
                                                 default -> {}
                                             }
-                                        }
 
-                                        responseObject.addProperty("action", "REGISTRATION_REQUIRED");
-                                        message = "Google authentication successfully completed.";
-                                        status = true;
+                                            if (statusId == UserStatus.ACTIVE.getId()) {
+                                                // Approved registrations are signed in immediately
+                                                createUserSession(httpRequest, registeredUser);
+
+                                                responseObject.addProperty("action", "REGISTERED");
+                                                responseObject.addProperty("userId", registeredUser.getId());
+                                                responseObject.addProperty("roleId", Role.fromId(registeredUser.getRoleId()).name());
+                                                responseObject.addProperty("email", registeredUser.getEmail());
+
+                                                message = "Google registration successful";
+                                            } else {
+                                                // Pending review: no session until an admin approves the account
+                                                responseObject.addProperty("action", "REGISTRATION_PENDING");
+                                                message = "Your registration was submitted and is waiting for admin approval.";
+                                            }
+                                            status = true;
+                                        } else {
+                                            message = "Failed to register Google user";
+                                        }
                                     } else {
                                         message = "Failed to register Google user";
                                     }
@@ -209,5 +226,13 @@ public class AuthenticationService {
         responseObject.addProperty("message", message);
 
         return AppUtil.gson.toJson(responseObject);
+    }
+
+    private void createUserSession(HttpServletRequest httpRequest, UserDTO user) {
+        HttpSession session = httpRequest.getSession(true);
+
+        session.setAttribute("userId", user.getId());
+        session.setAttribute("role", Role.fromId(user.getRoleId()).name());
+        session.setAttribute("email", user.getEmail());
     }
 }

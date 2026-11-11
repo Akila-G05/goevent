@@ -22,7 +22,6 @@ public class AuthenticationController {
         String idToken = request.get("idToken");
         String roleIdStr = request.get("roleId");
 
-        // Create authentication data map
         Map<String, Object> authData = new HashMap<>();
         authData.put("idToken", idToken);
 

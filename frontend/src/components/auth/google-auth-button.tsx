@@ -27,7 +27,6 @@ interface GoogleAuthButtonProps {
 }
 
 export function GoogleAuthButton({
-  mode = 'signup',
   endpoint = API_ROUTES.AUTH.GOOGLE,
   onCredential,
   onSuccessCallback,
@@ -136,7 +135,7 @@ export function GoogleAuthButton({
             theme="filled_black"
             shape="pill"
             size="large"
-            text={mode === 'signup' ? 'signup_with' : 'signin_with'}
+            text="continue_with"
             width="100%"
           />
         </div>
