@@ -72,14 +72,32 @@ public class AuthenticationRepo {
     public int registerGoogleUser(String fname, String lname,String email,int userStatusId,int roleId,String googleSub,String profileImgUrl,int authTypeId) {
 
         String query = """
-                INSERT INTO `user` (fname, lname, email, registered_date, v_code, user_status_id, role_id, google_sub, profile_img_url, password, auth_type_id, mobile)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """;
+            INSERT INTO `user` (fname, lname, email, registered_date, v_code, user_status_id, role_id, google_sub, profile_img_url, password, auth_type_id, mobile)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """;
 
         return jdbcTemplate.update(
                 query,
                 fname, lname, email, Timestamp.valueOf(LocalDateTime.now()), null, userStatusId, roleId, googleSub, profileImgUrl, null, authTypeId, null
         );
+    }
+
+    public int registerStudentData(int userId, String indexNo,String uniEmail) {
+        String query = """
+            INSERT INTO student_detail(index_no, uni_email, user_id)
+            VALUES (?, ?, ?)
+            """;
+
+        return jdbcTemplate.update(query,indexNo,userId);
+    }
+
+    public int registerOrganizerData(int userId,int organizationId,String position) {
+        String query = """
+            INSERT INTO user_has_organize(user_id,registered_date,organization_id,position)
+            VALUES (?, NOW(), ?, ?)
+            """;
+
+        return jdbcTemplate.update(query,userId,organizationId,position);
     }
 
 }

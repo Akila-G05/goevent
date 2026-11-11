@@ -5,6 +5,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.Map;
 
 @RestController
@@ -19,17 +20,33 @@ public class AuthenticationController {
     @PostMapping("/google")
     public String googleAuthentication(@RequestBody Map<String, String> request, HttpServletRequest httpRequest) {
         String idToken = request.get("idToken");
-    //    int roleid = Integer.valueOf(request.get("roldeId"));
+        int roleId = Integer.parseInt(request.get("roleId"));
 
-    //    if(roleid == 1) { //USER
-    //        //no parameters
-    //    }else if(roleid == 4){
-    //        String index = request.get("index");
-    //    }else if (roleid == 2){
-    //        int orgId = Integer.valueOf(request.get("orgId"));
-    //        String position = request.get("position");
-    //    }
+        // Create authentication data map
+        Map<String, Object> authData = new HashMap<>();
 
-        return authenticationService.handleGoogleAuthentication(idToken, httpRequest);
+        authData.put("idToken", idToken);
+        authData.put("roleId", roleId);
+
+        if (roleId == 1) { // USER
+            // No additional parameters
+        }else if (roleId == 4) { // STUDENT
+            String index = request.get("index");
+            String uniEmail = request.get("uniEmail");
+
+            authData.put("index", index);
+            authData.put("uniEmail", uniEmail);
+        } else if (roleId == 2) { // ORGANIZATION
+            int orgId = Integer.parseInt(request.get("orgId"));
+            String position = request.get("position");
+
+            authData.put("orgId", orgId);
+            authData.put("position", position);
+        }
+
+        return authenticationService.handleGoogleAuthentication(
+                authData,
+                httpRequest
+        );
     }
 }

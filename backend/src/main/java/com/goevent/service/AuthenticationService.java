@@ -2,6 +2,8 @@
 package com.goevent.service;
 
 import com.goevent.dto.UserDTO;
+import com.goevent.enums.Role;
+import com.goevent.enums.UserStatus;
 import com.goevent.repository.AuthenticationRepo;
 import com.goevent.util.AppUtil;
 import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
@@ -32,13 +34,36 @@ public class AuthenticationService {
         this.authenticationRepo = authenticationRepo;
     }
 
-    public String handleGoogleAuthentication(String idToken, HttpServletRequest httpRequest) {
+    public String handleGoogleAuthentication(Map<String, Object> authData, HttpServletRequest httpRequest) {
         JsonObject responseObject = new JsonObject();
 
         boolean status = false;
         String message = "";
 
         try {
+            String idToken = (String) authData.get("idToken");
+            Role role = (Role) authData.get("role");
+
+            String indexNo = null;
+            String uniEmail = null;
+
+            Integer organizationId = null;
+            String position = null;
+
+            switch (role) {
+                case USER -> {
+                    // No additional data
+                }
+                case STUDENT -> {
+                    indexNo = (String) authData.get("index");
+                    uniEmail = (String) authData.get("uniEmail");
+                }
+                case ORGANIZATION -> {
+                    organizationId = (Integer) authData.get("orgId");
+                    position = (String) authData.get("position");
+                }
+            }
+
             // 1. Validate ID token
             if (idToken == null || idToken.isBlank()) {
                 message = "Google ID token is missing";
@@ -74,38 +99,37 @@ public class AuthenticationService {
                         UserDTO user = authenticationRepo.getUserByGoogleSub(googleSub);
 
                         if (user != null) {
-                            int userStatusId = user.getUserStatusId();
+                            // Convert database ID into enum
+                            UserStatus userStatus = UserStatus.fromId(user.getUserStatusId());
 
-                            if (userStatusId == 2) {
-                                message = "Your account is suspended";
-                            } else if (userStatusId == 3) {
-                                responseObject.addProperty("action", "REGISTRATION_REQUIRED");
+                            switch (userStatus) {
+                                case SUSPENDED -> {
+                                    message = "Your account is suspended";
+                                    status = false;
+                                }
+                                case PENDING -> {
+                                    responseObject.addProperty("action", "REGISTRATION_REQUIRED");
 
-                                message = "Please complete your registration";
-                                status = true;
-                            } else {
-                                responseObject.addProperty("action", "LOGIN");
+                                    message = "Please complete your registration";
+                                    status = true;
+                                }
+                                case ACTIVE -> {
+                                    responseObject.addProperty("action", "LOGIN");
 
-                                // Create user session
-                                HttpSession session = httpRequest.getSession(true);
+                                    // Create user session
+                                    HttpSession session = httpRequest.getSession(true);
 
-                                session.setAttribute("userId", user.getId());
-                                session.setAttribute("roleId", user.getRoleId());
-                                session.setAttribute("email", user.getEmail());
+                                    session.setAttribute("userId", user.getId());
+                                    session.setAttribute("role", Role.fromId(user.getRoleId()).name());
+                                    session.setAttribute("email", user.getEmail());
 
-                                responseObject.addProperty("userId", user.getId());
-                                responseObject.addProperty("roleId", user.getRoleId());
-                                responseObject.addProperty("email", user.getEmail());
+                                    responseObject.addProperty("userId", user.getId());
+                                    responseObject.addProperty("roleId", Role.fromId(user.getRoleId()).name());
+                                    responseObject.addProperty("email", user.getEmail());
 
-//                                // Temporary debugging
-//                                logger.info("Session ID: {}", usession.getId());
-//                                logger.info("Session is new: {}", usession.isNew());
-//                                logger.info("Requested session ID: {}", httpRequest.getRequestedSessionId());
-//                                logger.info("Session ID from cookie: {}",
-//                                        httpRequest.isRequestedSessionIdFromCookie());
-
-                                message = "Google login successful";
-                                status = true;
+                                    message = "Google login successful";
+                                    status = true;
+                                }
                             }
                         } else {
                             // 6. Check whether email already exists
@@ -114,23 +138,43 @@ public class AuthenticationService {
                             if (existingUser != null) {
                                 message = "An account with this email already exists. Please use the existing login method.";
                             } else {
-                                // 7. Register Google user with pending status
-                                int result = authenticationRepo.registerGoogleUser(fname,
-                                    lname,
-                                    email,
-                                    2,// PENDING
-                                    1,// USER
-                                    googleSub,
-                                    profileImgUrl,
-                                    1// GOOGLE
-                                );
+                                if (role != Role.USER && role != Role.STUDENT && role != Role.ORGANIZATION) {
+                                    message = "Invalid registration role.";
+                                }else {
+                                    // 8. Register Google user with PENDING status
+                                    int result = authenticationRepo.registerGoogleUser(
+                                            fname,
+                                            lname,
+                                            email,
+                                            UserStatus.PENDING.getId(),
+                                            role.getId(),
+                                            googleSub,
+                                            profileImgUrl,
+                                            1 //GOOGLE
+                                    );
+                                    if (result > 0) {
+                                        UserDTO user2 = authenticationRepo.getUserByEmail(email);
+                                        if(user2 != null){
+                                            int userId = user2.getId();
+                                            switch (role) {
+                                                case USER  -> {
+                                                    // No additional registration data
+                                                }
+                                                case STUDENT -> {
+                                                    authenticationRepo.registerStudentData(userId,indexNo, uniEmail);
+                                                }
+                                                case ORGANIZATION -> {
+                                                    authenticationRepo.registerOrganizerData(userId,organizationId,position);
+                                                }
+                                            }
+                                        }
 
-                                if (result > 0) {
-                                    responseObject.addProperty("action", "REGISTRATION_REQUIRED");
-                                    message = "Google account verified. " + "Please complete your registration.";
-                                    status = true;
-                                } else {
-                                    message = "Failed to register Google user";
+                                        responseObject.addProperty("action", "REGISTRATION_REQUIRED");
+                                        message = "Google account verified. " + "Please complete your registration.";
+                                        status = true;
+                                    } else {
+                                        message = "Failed to register Google user";
+                                    }
                                 }
                             }
                         }
