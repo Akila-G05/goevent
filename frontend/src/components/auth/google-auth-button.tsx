@@ -22,7 +22,7 @@ interface GoogleAuthButtonProps {
   mode?: 'signin' | 'signup';
   endpoint?: string;
   onCredential?: (response: CredentialResponse) => void | Promise<void>;
-  onSuccessCallback?: (data: GoogleAuthResponse, googleUser?: GoogleDecodedUser | null) => void;
+  onSuccessCallback?: (data: GoogleAuthResponse, googleUser?: GoogleDecodedUser | null, idToken?: string) => void;
   className?: string;
 }
 
@@ -95,7 +95,7 @@ export function GoogleAuthButton({
       }
 
       if (onSuccessCallback) {
-        onSuccessCallback(data, googleUser);
+        onSuccessCallback(data, googleUser, idToken);
       }
     } catch (error: any) {
       console.error('Google Sign-In Error:', error);

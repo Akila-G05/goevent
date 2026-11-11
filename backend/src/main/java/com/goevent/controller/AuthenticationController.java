@@ -33,9 +33,11 @@ public class AuthenticationController {
         }else if (roleId == 4) { // STUDENT
             String index = request.get("index");
             String uniEmail = request.get("uniEmail");
+            int uniId = Integer.parseInt(request.get("uniId"));
 
             authData.put("index", index);
             authData.put("uniEmail", uniEmail);
+            authData.put("uniId", uniId);
         } else if (roleId == 2) { // ORGANIZATION
             int orgId = Integer.parseInt(request.get("orgId"));
             String position = request.get("position");

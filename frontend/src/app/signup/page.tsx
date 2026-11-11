@@ -21,7 +21,12 @@ import {
   Ticket,
   Music,
 } from 'lucide-react';
-import { GoogleAuthButton, GoogleAuthResponse, GoogleDecodedUser } from '@/components/auth/google-auth-button';
+import {
+  GoogleAuthButton,
+  GoogleAuthResponse,
+  GoogleDecodedUser,
+  GoogleRoleModal,
+} from '@/components/auth';
 
 const signupSchema = z
   .object({
@@ -74,6 +79,11 @@ export default function SignupPage() {
     picture?: string;
   } | null>(null);
 
+  // Google Role Modal state
+  const [isRoleModalOpen, setIsRoleModalOpen] = useState(false);
+  const [googleIdToken, setGoogleIdToken] = useState<string>('');
+  const [decodedGoogleUser, setDecodedGoogleUser] = useState<GoogleDecodedUser | null>(null);
+
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
@@ -90,7 +100,16 @@ export default function SignupPage() {
     }
   }, [setValue]);
 
-  const handleGoogleSuccess = (data: GoogleAuthResponse, googleUser?: GoogleDecodedUser | null) => {
+  const handleGoogleSuccess = (
+    data: GoogleAuthResponse,
+    googleUser?: GoogleDecodedUser | null,
+    idToken?: string
+  ) => {
+    if (idToken) {
+      setGoogleIdToken(idToken);
+      setDecodedGoogleUser(googleUser || null);
+    }
+
     if (data.action === 'REGISTRATION_REQUIRED') {
       if (googleUser) {
         setGoogleVerifiedUser({
@@ -101,9 +120,16 @@ export default function SignupPage() {
         if (googleUser.name) setValue('fullName', googleUser.name, { shouldValidate: true });
         if (googleUser.email) setValue('email', googleUser.email, { shouldValidate: true });
       }
+      // Open the role selection popup modal
+      setIsRoleModalOpen(true);
     } else if (data.action === 'LOGIN') {
       setSignupSuccess(true);
     }
+  };
+
+  const handleModalSuccess = (data: GoogleAuthResponse) => {
+    setIsRoleModalOpen(false);
+    setSignupSuccess(true);
   };
 
   const onSubmit = async (data: SignupFormData) => {
@@ -442,6 +468,15 @@ export default function SignupPage() {
           )}
         </div>
       </div>
+
+      {/* Google Role Selection Modal Popup */}
+      <GoogleRoleModal
+        isOpen={isRoleModalOpen}
+        onClose={() => setIsRoleModalOpen(false)}
+        idToken={googleIdToken}
+        googleUser={decodedGoogleUser}
+        onSuccess={handleModalSuccess}
+      />
     </div>
   );
 }

@@ -82,13 +82,13 @@ public class AuthenticationRepo {
         );
     }
 
-    public int registerStudentData(int userId, String indexNo,String uniEmail) {
+    public int registerStudentData(int userId, String indexNo,String uniEmail, int uniId) {
         String query = """
             INSERT INTO student_detail(index_no, uni_email, user_id)
             VALUES (?, ?, ?)
             """;
 
-        return jdbcTemplate.update(query,indexNo,userId);
+        return jdbcTemplate.update(query,indexNo, uniEmail, userId, uniId);
     }
 
     public int registerOrganizerData(int userId,int organizationId,String position) {

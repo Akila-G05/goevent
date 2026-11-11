@@ -46,6 +46,7 @@ public class AuthenticationService {
 
             String indexNo = null;
             String uniEmail = null;
+            Integer uniId = null;
 
             Integer organizationId = null;
             String position = null;
@@ -57,6 +58,7 @@ public class AuthenticationService {
                 case STUDENT -> {
                     indexNo = (String) authData.get("index");
                     uniEmail = (String) authData.get("uniEmail");
+                    uniId = (Integer) authData.get("uniId");
                 }
                 case ORGANIZATION -> {
                     organizationId = (Integer) authData.get("orgId");
@@ -161,7 +163,7 @@ public class AuthenticationService {
                                                     // No additional registration data
                                                 }
                                                 case STUDENT -> {
-                                                    authenticationRepo.registerStudentData(userId,indexNo, uniEmail);
+                                                    authenticationRepo.registerStudentData(userId,indexNo, uniEmail, uniId);
                                                 }
                                                 case ORGANIZATION -> {
                                                     authenticationRepo.registerOrganizerData(userId,organizationId,position);
