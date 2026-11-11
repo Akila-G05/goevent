@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema","repository","commit","run_id","created_at","expires_at","images","security_passed","migration_plan","rollback_safe"],
+  "properties": {
+    "schema": {"const": 1},
+    "repository": {"type": "string", "pattern": "^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$"},
+    "commit": {"type": "string", "pattern": "^[a-f0-9]{40}$"},
+    "run_id": {"type": "integer", "minimum": 1},
+    "created_at": {"type": "string", "format": "date-time"},
+    "expires_at": {"type": "string", "format": "date-time"},
+    "images": {"type": "object", "additionalProperties": false,"required": ["backend","gateway"],"properties": {
+      "backend": {"type": "string", "pattern": "^[a-z0-9]+\\.azurecr\\.io/goevent/backend@sha256:[a-f0-9]{64}$"},
+      "gateway": {"type": "string", "pattern": "^[a-z0-9]+\\.azurecr\\.io/goevent/gateway@sha256:[a-f0-9]{64}$"}
+    }},
+    "security_passed": {"const": true},
+    "migration_plan": {"type": "string", "pattern": "^[A-Za-z0-9._-]{1,100}$"},
+    "rollback_safe": {"type": "boolean"}
+  }
+}

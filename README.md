@@ -14,11 +14,11 @@ GoEvent is a high-integrity, modular monolith event planning and ticket booking 
 
 | Layer | Technology |
 | --- | --- |
-| **Backend** | Java 21 LTS, Spring Boot 3.4, Spring Security, Spring Data JPA (Hibernate ORM), Maven |
+| **Backend** | Java 21 LTS, Spring Boot 4.0.9, Spring MVC, JDBC/`JdbcTemplate`, Maven |
 | **Database** | MySQL 8.4 LTS (InnoDB, `utf8mb4`), Flyway versioned migrations |
-| **API Contract** | REST/JSON, OpenAPI (Swagger UI) |
-| **Frontend** | Next.js (App Router), React, TypeScript (strict), TanStack Query, Tailwind CSS |
-| **Validation** | Jakarta Bean Validation (Backend), Zod + React Hook Form (Frontend) |
+| **API Contract** | REST/JSON; OpenAPI is a target, not installed |
+| **Frontend** | Next.js 15.5.28 (App Router), React 19.3.1, TypeScript (strict), TanStack Query, Tailwind CSS |
+| **Validation** | Zod + React Hook Form; backend Bean Validation is a target |
 | **Testing** | JUnit 5, Mockito, Testcontainers (MySQL), Vitest, React Testing Library |
 | **Tooling** | Docker & Docker Compose, GitHub Actions |
 
@@ -28,35 +28,50 @@ GoEvent is a high-integrity, modular monolith event planning and ticket booking 
 
 ```text
 goevent/
-├── frontend/                # Next.js App Router application
-│   ├── src/
-│   │   ├── app/             # App Router layout, pages, route handlers
-│   │   ├── components/ui/   # Reusable UI primitives
-│   │   ├── components/shared/
-│   │   ├── lib/             # API client, HTTP interceptors, utilities
-│   │   └── types/
-│   ├── package.json
-│   └── next.config.mjs
-├── backend/                 # Spring Boot layered architecture
+├── backend/
 │   ├── src/main/java/com/goevent/
 │   │   ├── GoeventApplication.java
-│   │   ├── config/          # OpenAPI, WebConfig
-│   │   ├── security/        # Spring Security, roles
-│   │   ├── common/          # Shared ApiResponse, exception handler
-│   │   ├── controller/      # REST API controllers
-│   │   ├── dto/             # Request & response DTOs
-│   │   ├── service/         # Business logic & transaction boundaries
-│   │   ├── repository/      # Spring Data JPA repositories
-│   │   └── entity/          # JPA entities
-│   ├── src/main/resources/
-│   │   ├── application.yml
-│   │   └── db/migration/    # Flyway versioned SQL migrations
-│   └── pom.xml
-├── docs/                    # Architecture documentation & decisions (ADRs)
-├── .github/workflows/       # CI quality gates
-├── compose.yaml             # Local MySQL 8.4 LTS configuration
-├── .env.example             # Environment configuration template
-└── AGENTS.md                # Engineering instructions and conventions
+│   │   ├── config/
+│   │   ├── controller/
+│   │   ├── dto/
+│   │   ├── service/
+│   │   ├── repository/         # JDBC / JdbcTemplate today
+│   │   └── util/
+│   ├── src/main/resources/    # application.yml, db/migration/
+│   ├── src/test/resources/    # No Java test sources currently
+│   └── pom.xml                # Executable WAR via explicit repackage goal
+├── gateway/
+│   ├── src/main/java/com/goevent/gateway/
+│   │   ├── GatewayApplication.java
+│   │   ├── config/
+│   │   ├── controller/
+│   │   └── filter/            # Redis response caching
+│   ├── src/main/resources/application.yml
+│   └── pom.xml                # Executable JAR
+├── frontend/
+│   ├── src/                   # app/, components/, lib/, types/, test/
+│   ├── package.json
+│   ├── bun.lock
+│   ├── package-lock.json      # Legacy metadata; Bun runs the app
+│   └── next.config.mjs
+├── infra/
+│   ├── docker/                # Dockerfiles and context-specific ignores
+│   ├── ci/                    # Gates, publishing, promotion, runtime smoke
+│   ├── compose/               # Application overlay, Caddy/Redis templates
+│   ├── deploy/                # Manifest schema, pull deployment and guards
+│   ├── systemd/               # Proposed units; not installed automatically
+│   ├── security/              # Static analysis rules
+│   ├── tests/                 # Deployment policy and negative tests
+│   ├── docs/                  # Operator handoff and migration evidence
+│   ├── validation/            # Reports; generated binaries/logs ignored
+│   └── validate-images.sh
+├── docs/architecture/
+├── docs/decisions/
+├── .github/workflows/         # PR CI, trusted publish, approved promotion
+├── .github/dependabot.yml
+├── compose.yaml              # Local MySQL and Redis
+├── .env.example
+└── AGENTS.md
 ```
 
 ---
@@ -67,7 +82,7 @@ goevent/
 
 - **Java 21 LTS**
 - **Maven 3.9+** (no Maven wrapper is currently committed)
-- **Bun 1.1+** (for frontend package management and runtime)
+- **Bun 1.4.4** (for frontend package management and runtime)
 - **Docker & Docker Compose**
 
 ### 1. Configure Environment
@@ -87,11 +102,11 @@ so Docker Compose and Spring's properties importer interpret values consistently
 ### 2. Start Database
 
 ```bash
-docker compose up -d --wait mysql
+docker compose up -d --wait mysql redis
 docker compose ps
 ```
 
-Compose reads the root `.env`, creates `DB_NAME` (default `goevent`), and grants
+Compose reads the root `.env`, creates `DB_NAME` (default `goevent_db`), and grants
 `DB_USER` access to that database. Compose starts MySQL without creating tables;
 Flyway creates and versions the schema when the backend starts.
 
@@ -101,11 +116,15 @@ already contain tables require an explicitly reviewed baseline before starting
 the updated backend; see [database migrations](docs/architecture/database-migrations.md).
 Do not delete an existing volume to adopt Flyway.
 
-### 3. Run Backend
+### 3. Run Backend — terminal 1
+
+Open a terminal at the repository root. MySQL and Redis must already be running.
+Backend and gateway are separate processes; starting one does not start the other.
 
 ```bash
-cd backend
-mvn spring-boot:run
+# Clear stale overrides from earlier troubleshooting; settings come from .env.
+unset DB_NAME SERVER_PORT SPRING_CONFIG_IMPORT REDIS_PORT REDIS_PASSWORD BACKEND_URL
+mvn -f backend/pom.xml spring-boot:run
 ```
 
 Spring imports the root `.env` automatically when launched from `backend/` or
@@ -119,13 +138,39 @@ The backend listens on `http://localhost:8081/goevent` by default (`PORT` can
 override the port). Its test endpoint is `/goevent/api/test`. The separate gateway
 uses port 8080; OpenAPI is not currently installed in the backend.
 
-### 4. Run Frontend
+### 4. Run Gateway — terminal 2
+
+Open a second terminal at the repository root:
+
+```bash
+unset SERVER_PORT SPRING_CONFIG_IMPORT REDIS_PORT REDIS_PASSWORD BACKEND_URL
+mvn -f gateway/pom.xml spring-boot:run
+```
+
+The gateway listens on **8080** and forwards to the backend on **8081**. Root
+`.env` must set `BACKEND_URL=http://localhost:8081` and the same `REDIS_HOST`,
+`REDIS_PORT=6380` and `REDIS_PASSWORD` used by Compose. Compose starts MySQL and
+Redis only; it does not automatically launch either Java application.
+
+In another terminal, verify the services:
+
+```bash
+curl -i http://localhost:8081/goevent/api/test
+curl -i http://localhost:8080/actuator/health
+curl -i http://localhost:8080/goevent/api/test
+```
+
+Expect HTTP 200, API `"status":true` and gateway health `"status":"UP"`.
+Keep both Java terminals open; press Ctrl+C in each to stop that application.
+Run Maven without `-X` when sharing output because debug logs can expose secrets.
+
+### 5. Run Frontend — terminal 3
 
 In another terminal, navigate to `frontend/`:
 
 ```bash
 cd frontend
-bun install
+bun install --frozen-lockfile
 bun run dev
 ```
 
@@ -142,11 +187,19 @@ cd backend
 mvn clean verify
 ```
 
-Backend verification requires a running Docker daemon. The Flyway integration
-tests create an isolated MySQL 8.4 Testcontainers instance; they do not use the
-Compose database or local `.env` credentials. Tests cover startup migration,
-repeat execution, constraints, checksum mismatch, explicit baselining, and failed
-DDL recovery. Docker availability is required rather than silently skipping tests.
+Neither Java module currently has Java test sources. Maven verification checks
+compilation and packaging; it does not demonstrate business regression coverage.
+For the executable backend and isolated service smoke test, from the root run:
+
+```bash
+mvn -B -ntp -f backend/pom.xml verify org.springframework.boot:spring-boot-maven-plugin:4.0.9:repackage
+mvn -B -ntp -f gateway/pom.xml verify
+python3 infra/ci/runtime_smoke.py
+```
+
+The harness requires Docker and uses disposable MySQL/Redis, never the existing
+Compose database. See [migration validation](infra/docs/DEPENDENCY-MIGRATION.md)
+for tested flows and remaining OAuth/end-to-end limitations.
 
 ### Frontend Tests & Typecheck
 
@@ -157,3 +210,22 @@ bun run typecheck
 bun run test
 bun run build
 ```
+
+## Gateway and deployment
+
+The separate gateway uses Spring Cloud 2025.1.4, Redis rate limiting and response
+caching. Start Redis with `docker compose up -d --wait mysql redis`; root Compose supplies
+MySQL and authenticated local Redis. Backend sessions also use Redis. Gateway forwards `/goevent/api/**` to
+backend port 8081; Next defaults to `/api/v1`, so the API base/proxy configuration
+must be reconciled before claiming a working end-to-end login.
+
+The production plan preserves Vercel frontend hosting and Azure VM Compose with
+Caddy, the separate gateway/backend, protected MySQL managed disk, Key Vault and
+Managed Identity. PR CI has no production credentials; trusted main publishes
+scanned digests via OIDC; approved promotion prepares VM-pulled deployment intent.
+Azure/GitHub configuration and staging validation remain owner-operated steps.
+See [operator guide](infra/README.md) and [dependency migration](infra/docs/DEPENDENCY-MIGRATION.md).
+Spring Security/JPA and domain features described above remain implementation
+targets; they are not implied by dependency upgrades.
+
+Local service commands and database-volume caveats: [local development guide](infra/docs/LOCAL-DEVELOPMENT.md).

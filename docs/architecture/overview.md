@@ -2,11 +2,31 @@
 
 GoEvent is an event planning and ticket booking platform built with **Next.js (App Router)** on the frontend and a robust **Layered Architecture Spring Boot backend**.
 
+## Current implementation and deployment boundary
+
+As of the owner-approved 2026-11-02 dependency migration, backend and gateway use
+Spring Boot 4.0.9 / Java 21; gateway uses Cloud 2025.1.4 and Jackson 3. Frontend uses
+Next.js 15.5.28, React 19.3.1 and Bun 1.4.4 with committed bun.lock.
+
+Production routing is planned as Vercel frontend → Caddy HTTPS → separate Spring
+Cloud Gateway → JDBC backend → MySQL 8.4. Redis supports gateway rate limits/cache
+and backend sessions. The VM's protected MySQL disk, Key Vault/Managed Identity,
+encrypted backup safeguards and approved pull-based digest deployment remain.
+Root Compose starts local MySQL and authenticated Redis; applications run separately. Infrastructure implementation and owner
+activation steps are in [infra](../../infra/README.md).
+
+The diagram and package responsibilities below describe the target business
+architecture. Current repositories use JdbcTemplate; JPA/Hibernate, Spring
+Security, Bean Validation and OpenAPI are not installed. No Java test sources
+currently exist; the isolated infrastructure smoke harness provides migration
+and service compatibility checks. Frontend `/api/v1` and gateway `/goevent/api`
+defaults still differ. See [migration evidence](../../infra/docs/DEPENDENCY-MIGRATION.md).
+
 ## High-Level Architecture
 
 ```
                       +-----------------------------+
-                      |    Next.js 14 App Router    |
+                      |    Next.js 15 App Router    |
                       |  (React, Query, Tailwind)   |
                       +--------------+--------------+
                                      |

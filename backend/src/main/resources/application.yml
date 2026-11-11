@@ -1,14 +1,15 @@
 # Server
 server:
-  port: ${PORT}
+  port: ${PORT:8081}
   servlet:
     context-path: /goevent
 
 spring:
   data:
     redis:
-      host: localhost
-      port: 6379
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6380}
+      password: ${REDIS_PASSWORD:}
 
   session:
     timeout: 30m
@@ -17,7 +18,7 @@ spring:
 
   # Supports launches from either the repository root or backend/.
   config:
-    import: optional:file:.env[.properties]
+    import: "optional:file:../.env[.properties],optional:file:.env[.properties]"
   application:
     name: goevent-backend
 
@@ -35,7 +36,7 @@ spring:
 
   # Credentials come from environment variables or the local root .env.
   datasource:
-    url: jdbc:mysql://${DB_HOST}:${DB_PORT}/${DB_NAME}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC&characterEncoding=UTF-8
+    url: jdbc:mysql://${DB_HOST}:${DB_PORT}/${DB_NAME:goevent_db}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC&characterEncoding=UTF-8
     username: ${DB_USER}
     password: ${DB_PASSWORD}
     driver-class-name: com.mysql.cj.jdbc.Driver

@@ -1,0 +1,18 @@
+# Local build/scan output; the reviewed validation report remains visible.
+/validation/*.log
+/validation/*.json
+/validation/*.jar
+/validation/*.war
+/validation/*.tar
+/validation/.cache/
+
+/validation/bin/
+/validation/work/
+/validation/.venv/
+**/__pycache__/
+
+/validation/reports/
+
+/validation/pr46/
+
+/validation/runtime-generated-logs/

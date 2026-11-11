@@ -1,0 +1,14 @@
+rules:
+  - id: java-shell-execution
+    languages: [java]
+    severity: ERROR
+    message: Review process execution; do not pass attacker-controlled commands.
+    patterns:
+      - pattern-either:
+          - pattern: Runtime.getRuntime().exec(...)
+          - pattern: new ProcessBuilder(...)
+  - id: react-raw-html
+    languages: [typescript, javascript]
+    severity: ERROR
+    message: Raw HTML requires explicit sanitization and security review.
+    pattern: <... dangerouslySetInnerHTML={...} ...>

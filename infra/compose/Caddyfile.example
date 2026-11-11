@@ -1,0 +1,10 @@
+# Owner supplies domain, DNS, ACME account and existing certificate storage policy.
+{$GOEVENT_API_DOMAIN} {
+    @api path /goevent/api/*
+    handle @api {
+        reverse_proxy gateway:8080
+    }
+    handle {
+        respond "Not found" 404
+    }
+}

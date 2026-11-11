@@ -52,56 +52,64 @@ Per maintainer decision (ADR 0003), Next.js (App Router) with Bun package manage
 
 - Read [architecture overview](docs/architecture/overview.md) and [ADR 0003](docs/decisions/0003-switch-to-nextjs-and-backend-layered-architecture.md) as the current architecture baseline.
 - ADR 0003 supersedes ADR 0001's Vite/React Router tooling and package-by-feature layering, and ADR 0002's per-module internal package layout. Preserve ADR 0002's separation of ticket catalog/inventory, issued tickets, and check-in responsibilities within the current layers; do not recreate the old module structure.
-- Distinguish approved architecture from installed capabilities. The current backend uses Spring Boot **3.5.7**, Java 21, Spring Web, JDBC/`JdbcTemplate`, and the MySQL driver. Flyway core and its MySQL module are installed, with Spring Boot Test and MySQL Testcontainers covering migration behavior. JPA/Hibernate, Spring Security, Bean Validation, and OpenAPI remain documented targets not currently declared in `backend/pom.xml`. Do not claim their enforcement or endpoints exist; introduce them explicitly with the relevant implementation work.
-- The frontend currently declares Next.js 14, React 18, Tailwind CSS 3, TanStack Query 5, Axios, React Hook Form, Zod, and Zustand. Bun remains the approved tool despite the tracked `package-lock.json`; no Bun lockfile is currently tracked. Do not claim frozen Bun installs are reproducible until a compatible lockfile exists, and do not replace lockfiles as part of unrelated work.
-- The separate `gateway/` application uses Spring Boot 3.5.7 and Spring Cloud 2025.0.3 with WebFlux and Redis rate limiting. This edge component does not authorize splitting business workflows into microservices.
+- Distinguish approved architecture from installed capabilities. The current backend uses Spring Boot **4.0.9**, Java 21, Spring Web, JDBC/`JdbcTemplate`, and the MySQL driver. Flyway core and its MySQL module are installed, with Spring Boot Test and Testcontainers dependencies available; current migration regression coverage is the isolated infrastructure smoke harness. JPA/Hibernate, Spring Security, Bean Validation, and OpenAPI remain documented targets not currently declared in `backend/pom.xml`. Do not claim their enforcement or endpoints exist; introduce them explicitly with the relevant implementation work.
+- The frontend currently declares Next.js 15.5.28, React 19.3.1, Tailwind CSS 3, TanStack Query 5, Axios, React Hook Form, Zod, and Zustand. Bun remains the approved tool despite the tracked `package-lock.json`; `bun.lock` is tracked and CI uses Bun 1.4.4 with frozen installs. Preserve the legacy npm lock as metadata, keep it synchronized for dependency changes, and do not use npm as the application package manager.
+- The separate `gateway/` application uses Spring Boot 4.0.9 and Spring Cloud 2025.1.4 with WebFlux and Redis rate limiting. This edge component does not authorize splitting business workflows into microservices.
 - README setup examples and older ADR version numbers can lag implementation. Verify commands, paths, ports, and dependencies against source before using them; report discrepancies rather than silently changing the stack.
 
 ## 3. Expected repository structure
 
-Use the documented layer layout below. Packages such as `entity`, `security`, and `common` are target additions rather than currently implemented capabilities:
+The tree shows current source directories and infrastructure responsibilities. JPA entities, Spring Security, common error handling and OpenAPI remain target capabilities; do not claim they already exist.
 
 ```text
 goevent/
-├── frontend/
-│   ├── src/
-│   │   ├── app/                 # Next.js App Router (layout, pages, route handlers)
-│   │   ├── components/ui/       # Reusable UI primitives
-│   │   ├── components/shared/   # Cross-feature components
-│   │   ├── hooks/
-│   │   ├── lib/                 # API client, auth integration, utilities
-│   │   └── types/
-│   ├── package.json
-│   └── next.config.mjs
 ├── backend/
 │   ├── src/main/java/com/goevent/
 │   │   ├── GoeventApplication.java
-│   │   ├── config/              # OpenApiConfig, WebConfig, etc.
-│   │   ├── security/            # SecurityConfig, UserRole
-│   │   ├── common/              # ApiResponse, GlobalExceptionHandler
-│   │   ├── controller/          # REST API controllers
-│   │   ├── dto/                 # Request and Response DTOs
-│   │   ├── service/             # Business logic & transaction boundaries
-│   │   ├── repository/          # Spring Data JPA repositories
-│   │   └── entity/              # JPA entity models
-│   ├── src/main/resources/
-│   │   ├── application.yml
-│   │   └── db/migration/        # Flyway V...__...sql files
-│   ├── src/test/
-│   └── pom.xml
-├── gateway/                 # Separate reactive edge application
+│   │   ├── config/
+│   │   ├── controller/
+│   │   ├── dto/
+│   │   ├── service/
+│   │   ├── repository/         # JDBC / JdbcTemplate today
+│   │   └── util/
+│   ├── src/main/resources/    # application.yml, db/migration/
+│   ├── src/test/resources/    # No Java test sources currently
+│   └── pom.xml                # Executable WAR via explicit repackage goal
+├── gateway/
 │   ├── src/main/java/com/goevent/gateway/
 │   │   ├── GatewayApplication.java
-│   │   └── config/          # Redis-backed IP rate limiting
+│   │   ├── config/
+│   │   ├── controller/
+│   │   └── filter/            # Redis response caching
 │   ├── src/main/resources/application.yml
-│   └── pom.xml
+│   └── pom.xml                # Executable JAR
+├── frontend/
+│   ├── src/                   # app/, components/, lib/, types/, test/
+│   ├── package.json
+│   ├── bun.lock
+│   ├── package-lock.json      # Legacy metadata; Bun runs the app
+│   └── next.config.mjs
+├── infra/
+│   ├── docker/                # Dockerfiles and context-specific ignores
+│   ├── ci/                    # Gates, publishing, promotion, runtime smoke
+│   ├── compose/               # Application overlay, Caddy/Redis templates
+│   ├── deploy/                # Manifest schema, pull deployment and guards
+│   ├── systemd/               # Proposed units; not installed automatically
+│   ├── security/              # Static analysis rules
+│   ├── tests/                 # Deployment policy and negative tests
+│   ├── docs/                  # Operator handoff and migration evidence
+│   ├── validation/            # Reports; generated binaries/logs ignored
+│   └── validate-images.sh
 ├── docs/architecture/
 ├── docs/decisions/
-├── .github/workflows/
-├── .env.example             # placeholders only
-├── compose.yaml             # when configured
+├── .github/workflows/         # PR CI, trusted publish, approved promotion
+├── .github/dependabot.yml
+├── compose.yaml              # Local MySQL and Redis
+├── .env.example
 └── AGENTS.md
 ```
+
+The owner approved the Boot 4 dependency migration on 2026-11-02. See [migration evidence](infra/docs/DEPENDENCY-MIGRATION.md) for compatibility edits, checks and limitations. Gateway cache filters use Jackson 3 (`tools.jackson.databind`) and Spring 7 header APIs. Do not undo these edits independently of the dependency migration.
 
 ### Dependency direction and boundaries
 
@@ -114,9 +122,9 @@ goevent/
 ### Gateway and API boundaries
 
 - Keep routing, rate limiting, and edge configuration in `gateway/`; keep business rules, ownership checks, inventory, and payment transactions in `backend/`. Gateway filtering does not replace backend authorization.
-- Current gateway configuration listens on port `8080`, forwards `/goevent/api/**` unchanged to backend port `8081`, and requires Redis at `localhost:6379`. The backend combines servlet context `/goevent` with the `/api` controller prefix.
+- Current gateway configuration listens on port `8080`, forwards `/goevent/api/**` unchanged to backend port `8081`, and uses authenticated Redis at `localhost:6380` by default. The backend combines servlet context `/goevent` with the `/api` controller prefix.
 - The frontend Axios client defaults to `/api/v1`; Next.js rewrites that prefix to `BACKEND_URL` (default `http://localhost:8080`). This differs from the configured gateway/backend route prefix. Trace and test the full path before changing any API URL; do not assume these defaults already interoperate.
-- `compose.yaml` currently provisions MySQL only, not Redis or the application processes. Check datasource settings against Compose before running integration work; environment variables are not automatically consumed unless configuration references them.
+- `compose.yaml` provisions MySQL and authenticated Redis (host port 6380); backend and gateway start separately. Check datasource settings against Compose before running integration work; environment variables are not automatically consumed unless configuration references them.
 - Gateway changes must consider route order, downstream paths, Redis availability, rate-limit responses, and trustworthy client address resolution. Keep blocking JDBC/business operations out of reactive gateway code.
 
 ## 4. Object-oriented programming and Java standards
@@ -224,8 +232,8 @@ bun run build
 mvn verify
 ```
 
-- Current coverage: frontend Vitest/React Testing Library and `src/test/app.test.tsx` exist. Backend `FlywayMigrationTest` uses Spring Boot Test and isolated MySQL 8.4 Testcontainers; Docker is required for `mvn clean verify`. No gateway test sources are currently tracked. Migration tests do not demonstrate business workflow regression coverage.
-- CI currently checks backend and frontend only; gateway changes require explicit verification. CI requests a frozen Bun install although no Bun lockfile is tracked; report this gap rather than claiming CI passes.
+- Current coverage: frontend Vitest/React Testing Library has one test. Neither Java module currently contains Java test sources; Maven verification is not evidence of unit-test coverage. `python3 infra/ci/runtime_smoke.py` uses disposable MySQL 8.4 and authenticated Redis to verify Flyway history, backend/gateway startup, JSON request binding, caching, authenticated cache bypass and HTTP 429; Docker is required for this harness.
+- PR and trusted-main gates include both Java modules, frozen Bun validation, container/security scans and `Isolated application smoke`. Keep publication dependent on every gate. Local results do not prove GitHub CI, Azure delivery or production readiness.
 - Backend: unit-test domain rules and use cases with JUnit/Mockito; integration-test JPA, MySQL migrations, and Spring Security with Spring Boot Test + Testcontainers using **MySQL**, not an incompatible in-memory substitute for critical DB behavior.
 - Frontend: use Vitest/React Testing Library for UI logic and Playwright for purchase and access-control journeys when configured.
 - Add regression tests for bug fixes. High-risk changes need concurrency/race, authorization, retry/idempotency, and failure/recovery coverage.
@@ -271,6 +279,7 @@ The example assumes a clean worktree, an existing `main`, and authorized network
 
 - Review `git diff` and `git status`; stage only files belonging to the task (prefer `git add <paths>`, not unconditional `git add .`).
 - Use Conventional Commits: `feat(tickets): add tier pricing`, `fix(bookings): prevent duplicate reservation`, `test(payments): cover webhook replay`, `docs(repo): update architecture rules`.
+- Every commit must have a concise Conventional Commit subject **and a detailed body accounting for every change included**, not only major changes. Review `git diff --cached` and list every affected file (or explicitly enumerated file group), its change and reason, including dependency/lockfile updates, compatibility edits, tests, workflows, documentation, configuration and minor fixes. Include actual validation results, untested areas, migration/rollback effects and risks. Never describe uncommitted work as committed; preserve this complete change inventory in the PR description and final handoff. This rule does not authorize automatic commits or pushes.
 - Keep commit and PR subjects imperative, concise, and appropriately scoped. Do not include secrets or personal data in commits.
 - Run applicable tests and checks **before pushing**. Never bypass hooks or use `--no-verify` to avoid failures without maintainer approval.
 - On a user-authorized upload/publish request, push **only** the current feature branch, e.g. `git push -u origin amal/event-ticket-pricing`.
@@ -300,3 +309,5 @@ A change is **done** only when:
 9. Final handoff states **what changed**, **why**, **what was actually tested**, **remaining risks**, and **the branch/PR status**.
 
 **Priority rule:** When instructions conflict, follow system/developer/user instructions, repository safety constraints, and explicit maintainer decisions over this file. If requirements are ambiguous or an operation is risky, do not guess or perform irreversible actions.
+
+Local service commands and database-volume caveats: [local development guide](infra/docs/LOCAL-DEVELOPMENT.md).
