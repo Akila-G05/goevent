@@ -18,6 +18,14 @@ RUN cp /build/target/goevent-1.0-SNAPSHOT.war /out/app.war \
     && grep -q '^Start-Class: com.goevent.GoeventApplication' META-INF/MANIFEST.MF
 
 FROM ${JAVA_IMAGE} AS runtime
+ARG APT_SECURITY_VERSION=2.4.15ubuntu0.1
+# CVE-2026-109518: upstream digest predates the Jammy fix. Disable the
+# vulnerable retry behavior while bootstrapping the authenticated package update.
+RUN apt-get -o Acquire::Retries=0 update \
+    && apt-get -o Acquire::Retries=0 install -y --no-install-recommends --only-upgrade apt=${APT_SECURITY_VERSION} libapt-pkg6.0=${APT_SECURITY_VERSION} \
+    && dpkg --compare-versions "$(dpkg-query -W -f='${Version}' apt)" ge 2.4.15ubuntu0.1 \
+    && dpkg --compare-versions "$(dpkg-query -W -f='${Version}' libapt-pkg6.0)" ge 2.4.15ubuntu0.1 \
+    && rm -rf /var/lib/apt/lists/*
 RUN groupadd --system --gid 10001 goevent \
     && useradd --system --uid 10001 --gid goevent --home-dir /app \
       --no-create-home --shell /usr/sbin/nologin goevent \
