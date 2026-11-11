@@ -3,7 +3,6 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -47,14 +46,35 @@ const signupSchema = z
 
 type SignupFormData = z.infer<typeof signupSchema>;
 
+type SuccessState = 'registered' | 'signedin' | 'pending';
+
+const SUCCESS_COPY: Record<SuccessState, { title: string; description: string; cta: string }> = {
+  registered: {
+    title: 'AUTHENTICATION COMPLETED',
+    description:
+      'Your GoEvent profile is ready. You can now discover concerts and book tickets with real-time inventory holds.',
+    cta: 'Visit Site',
+  },
+  signedin: {
+    title: 'AUTHENTICATION COMPLETED',
+    description: 'Welcome back to GoEvent. You are signed in and ready to book your next event.',
+    cta: 'Visit Site',
+  },
+  pending: {
+    title: 'REGISTRATION SUBMITTED',
+    description:
+      'Your organizer account is under review. An admin will approve it shortly, then you can sign in.',
+    cta: 'Back to Home',
+  },
+};
+
 export default function SignupPage() {
-  const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [signupSuccess, setSignupSuccess] = useState(false);
-  const [pendingApproval, setPendingApproval] = useState(false);
+  const [successState, setSuccessState] = useState<SuccessState | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const successCopy = successState ? SUCCESS_COPY[successState] : null;
 
   const {
     register,
@@ -126,20 +146,20 @@ export default function SignupPage() {
       // Open the role selection popup modal
       setIsRoleModalOpen(true);
     } else if (data.action === 'LOGIN') {
-      router.push('/');
+      // Existing account signed in; the success card lets the user continue.
+      setSuccessState('signedin');
     }
   };
 
   const handleModalSuccess = (data: GoogleAuthResponse) => {
     setIsRoleModalOpen(false);
 
-    if (data.action === 'REGISTERED') {
-      // Session is created server-side; go straight to the app
-      router.push('/');
-    } else if (data.status) {
+    if (data.action === 'REGISTRATION_PENDING') {
       // Organizer registrations wait for admin approval
-      setPendingApproval(data.action === 'REGISTRATION_PENDING');
-      setSignupSuccess(true);
+      setSuccessState('pending');
+    } else if (data.status) {
+      // A session is created server-side for approved registrations.
+      setSuccessState('registered');
     }
   };
 
@@ -150,7 +170,7 @@ export default function SignupPage() {
     // Simulated account registration state
     setTimeout(() => {
       setIsSubmitting(false);
-      setSignupSuccess(true);
+      setSuccessState('registered');
     }, 1400);
   };
 
@@ -202,27 +222,25 @@ export default function SignupPage() {
 
         {/* Right Side: Registration Form */}
         <div className="lg:col-span-7 p-6 sm:p-10 lg:p-12 flex flex-col justify-center">
-          {signupSuccess ? (
+          {successCopy ? (
             <div className="text-center py-10 space-y-5 animate-in fade-in duration-300">
               <div className="w-16 h-16 bg-emerald-500/10 border border-emerald-500/30 rounded-full flex items-center justify-center mx-auto text-emerald-400">
                 <CheckCircle2 className="w-8 h-8" />
               </div>
               <div className="space-y-2">
                 <h3 className="font-display text-3xl font-black uppercase text-white">
-                  {pendingApproval ? 'REGISTRATION SUBMITTED' : 'ACCOUNT CREATED!'}
+                  {successCopy.title}
                 </h3>
                 <p className="text-xs text-zinc-400 max-w-sm mx-auto">
-                  {pendingApproval
-                    ? 'Your organizer account is under review. An admin will approve it shortly, then you can sign in.'
-                    : 'Your GoEvent profile is ready. You can now discover concerts and book tickets with real-time inventory holds.'}
+                  {successCopy.description}
                 </p>
               </div>
               <div className="pt-2 flex justify-center space-x-3">
                 <Link
-                  href={pendingApproval ? '/' : '/login'}
+                  href="/"
                   className="inline-flex items-center space-x-1.5 bg-white text-black font-semibold text-xs px-6 py-3 rounded-full hover:bg-zinc-200 transition-colors shadow-lg"
                 >
-                  <span>{pendingApproval ? 'Back to Home' : 'Sign In Now'}</span>
+                  <span>{successCopy.cta}</span>
                   <ArrowUpRight className="w-4 h-4" />
                 </Link>
               </div>

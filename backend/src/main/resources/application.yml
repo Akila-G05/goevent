@@ -3,6 +3,11 @@ server:
   port: ${PORT:8081}
   servlet:
     context-path: /goevent
+    session:
+      cookie:
+        # Scope the session cookie to the whole origin so it is sent with
+        # /api/v1/** calls that the Next dev proxy forwards to the gateway.
+        path: /
 
 spring:
   data:

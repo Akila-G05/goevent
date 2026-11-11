@@ -49,8 +49,8 @@ export default function LoginPage() {
         router.push(`/signup?${params.toString()}`);
       }, 1200);
     } else if (data.action === 'LOGIN') {
+      // Let the success card show; the user continues via "Visit Site".
       setAuthSuccess(true);
-      router.push('/');
     }
   };
 
@@ -157,7 +157,7 @@ export default function LoginPage() {
                 href="/"
                 className="inline-flex items-center space-x-1.5 bg-white text-black font-semibold text-xs px-6 py-3 rounded-full hover:bg-zinc-200 transition-colors shadow-lg"
               >
-                <span>Go to Live Events</span>
+                <span>Visit Site</span>
                 <ArrowUpRight className="w-4 h-4" />
               </Link>
             </div>
