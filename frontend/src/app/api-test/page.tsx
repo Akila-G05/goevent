@@ -1,38 +1,15 @@
 'use client';
 
-import React, { useState } from 'react';
-import Link from 'next/link';
-import Image from 'next/image';
-import * as z from 'zod';
-import {
-    Eye,
-    EyeOff,
-    ArrowUpRight,
-    ShieldCheck,
-    CheckCircle2,
-    AlertCircle,
-    Loader2,
-    Lock,
-    Mail,
-    Sparkles,
-} from 'lucide-react';
+import React from 'react';
 import { GoogleAuthButton } from '@/components/auth/google-auth-button';
+import { testApi } from '@/api';
 
 export default function TestPage() {
 
     async function clearCache() {
         try {
-            const response = await fetch(
-                "http://localhost:8080/gateway/cache/clear",
-                {
-                    method: "DELETE"
-                }
-            );
-
-            const data = await response.text();
-
+            const data = await testApi.clearGatewayCache();
             console.log(data);
-
         } catch (error) {
             console.error("Cache clearing failed:", error);
         }
@@ -41,22 +18,14 @@ export default function TestPage() {
     async function testConnection(){
         //start Loadin animation
         try {
-            const response = await fetch("http://localhost:8080/goevent/api/test", {
-                method: "GET"
-            });
-
-            if(response.ok){
-                const data = await response.json();
-                if(data.status){
-                    console.log(data)
-                }else{
-                    console.log(data.message);
-                }
+            const data = await testApi.getTestConnection();
+            if(data.status){
+                console.log(data);
             }else{
-                console.log("Request failed! Please try again");
+                console.log(data.message);
             }
         }catch (e) {
-            console.log(e);
+            console.log("Request failed! Please try again", e);
         }finally {
             //stop Loadin animation
         }

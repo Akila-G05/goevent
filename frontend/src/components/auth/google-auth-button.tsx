@@ -3,14 +3,9 @@
 import React, { useState } from 'react';
 import { GoogleLogin, CredentialResponse } from '@react-oauth/google';
 import { AlertCircle, Info, Loader2 } from 'lucide-react';
-import { includes } from 'zod/v4';
+import { authApi, GoogleAuthResponse, API_ROUTES } from '@/api';
 
-export interface GoogleAuthResponse {
-  action?: 'REGISTRATION_REQUIRED' | 'LOGIN' | string;
-  status: boolean;
-  message?: string;
-  [key: string]: any;
-}
+export type { GoogleAuthResponse };
 
 export interface GoogleDecodedUser {
   sub?: string;
@@ -33,7 +28,7 @@ interface GoogleAuthButtonProps {
 
 export function GoogleAuthButton({
   mode = 'signup',
-  endpoint = 'http://localhost:8080/goevent/api/auth/google',
+  endpoint = API_ROUTES.AUTH.GOOGLE,
   onCredential,
   onSuccessCallback,
   className = '',
@@ -70,19 +65,10 @@ export function GoogleAuthButton({
     setNoticeMessage(null);
 
     try {
-      const result = await fetch(endpoint, {
-        method: 'POST',
-        credentials: "include",
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ idToken }),
-      });
-
-      const data: GoogleAuthResponse = await result.json();
+      const data: GoogleAuthResponse = await authApi.authenticateGoogle({ idToken });
       console.log('Google Auth Response:', data);
 
-      if (!result.ok || !data.status) {
+      if (!data.status) {
         throw new Error(data.message || 'Google authentication failed');
       }
 
