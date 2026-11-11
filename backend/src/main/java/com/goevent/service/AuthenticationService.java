@@ -42,7 +42,13 @@ public class AuthenticationService {
 
         try {
             String idToken = (String) authData.get("idToken");
-            Role role = (Role) authData.get("role");
+            Object roleObj = authData.get("roleId");
+            Role role = null;
+            if (roleObj instanceof Integer rId) {
+                try {
+                    role = Role.fromId(rId);
+                } catch (Exception ignored) {}
+            }
 
             String indexNo = null;
             String uniEmail = null;
@@ -51,18 +57,21 @@ public class AuthenticationService {
             Integer organizationId = null;
             String position = null;
 
-            switch (role) {
-                case USER -> {
-                    // No additional data
-                }
-                case STUDENT -> {
-                    indexNo = (String) authData.get("index");
-                    uniEmail = (String) authData.get("uniEmail");
-                    uniId = (Integer) authData.get("uniId");
-                }
-                case ORGANIZATION -> {
-                    organizationId = (Integer) authData.get("orgId");
-                    position = (String) authData.get("position");
+            if (role != null) {
+                switch (role) {
+                    case USER -> {
+                        // No additional data
+                    }
+                    case STUDENT -> {
+                        indexNo = (String) authData.get("index");
+                        uniEmail = (String) authData.get("uniEmail");
+                        uniId = (Integer) authData.get("uniId");
+                    }
+                    case ORGANIZATION -> {
+                        organizationId = (Integer) authData.get("orgId");
+                        position = (String) authData.get("position");
+                    }
+                    default -> {}
                 }
             }
 
@@ -140,9 +149,15 @@ public class AuthenticationService {
                             if (existingUser != null) {
                                 message = "An account with this email already exists. Please use the existing login method.";
                             } else {
-                                if (role != Role.USER && role != Role.STUDENT && role != Role.ORGANIZATION) {
+                                if (role == null) {
+                                    // Initial Google sign-in/verification: user does not exist yet.
+                                    // Return REGISTRATION_REQUIRED so the frontend opens the Role Selection popup.
+                                    responseObject.addProperty("action", "REGISTRATION_REQUIRED");
+                                    message = "Google account verified. Please complete your registration.";
+                                    status = true;
+                                } else if (role != Role.USER && role != Role.STUDENT && role != Role.ORGANIZATION) {
                                     message = "Invalid registration role.";
-                                }else {
+                                } else {
                                     // 8. Register Google user with PENDING status
                                     int result = authenticationRepo.registerGoogleUser(
                                             fname,
@@ -156,18 +171,19 @@ public class AuthenticationService {
                                     );
                                     if (result > 0) {
                                         UserDTO user2 = authenticationRepo.getUserByEmail(email);
-                                        if(user2 != null){
+                                        if (user2 != null) {
                                             int userId = user2.getId();
                                             switch (role) {
                                                 case USER  -> {
                                                     // No additional registration data
                                                 }
                                                 case STUDENT -> {
-                                                    authenticationRepo.registerStudentData(userId,indexNo, uniEmail, uniId);
+                                                    authenticationRepo.registerStudentData(userId, indexNo, uniEmail, uniId);
                                                 }
                                                 case ORGANIZATION -> {
-                                                    authenticationRepo.registerOrganizerData(userId,organizationId,position);
+                                                    authenticationRepo.registerOrganizerData(userId, organizationId, position);
                                                 }
+                                                default -> {}
                                             }
                                         }
 
