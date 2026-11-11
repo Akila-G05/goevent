@@ -25,7 +25,6 @@ public class AuthenticationController {
     //        //no parameters
     //    }else if(roleid == 4){
     //        String index = request.get("index");
-    //        String uniEmail = request.get("unimail");
     //    }else if (roleid == 2){
     //        int orgId = Integer.valueOf(request.get("orgId"));
     //        String position = request.get("position");

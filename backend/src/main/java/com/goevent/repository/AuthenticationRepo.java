@@ -39,6 +39,7 @@ public class AuthenticationRepo {
         user.setProfileImgUrl(rs.getString("profile_img_url"));
         user.setPassword(rs.getString("password"));
         user.setAuthTypeId(rs.getInt("auth_type_id"));
+        user.setMobile("mobile");
 
         return user;
     };
@@ -71,13 +72,13 @@ public class AuthenticationRepo {
     public int registerGoogleUser(String fname, String lname,String email,int userStatusId,int roleId,String googleSub,String profileImgUrl,int authTypeId) {
 
         String query = """
-                INSERT INTO `user` (fname, lname, email, registered_date, v_code, user_status_id, role_id, google_sub, profile_img_url, password, auth_type_id)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO `user` (fname, lname, email, registered_date, v_code, user_status_id, role_id, google_sub, profile_img_url, password, auth_type_id, mobile)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """;
 
         return jdbcTemplate.update(
                 query,
-                fname, lname, email, Timestamp.valueOf(LocalDateTime.now()), null, userStatusId, roleId, googleSub, profileImgUrl, null, authTypeId
+                fname, lname, email, Timestamp.valueOf(LocalDateTime.now()), null, userStatusId, roleId, googleSub, profileImgUrl, null, authTypeId, null
         );
     }
 
