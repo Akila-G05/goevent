@@ -3,9 +3,9 @@
 import React, { useState, useEffect } from 'react';
 import {
   X,
-  User,
+  Ticket,
   GraduationCap,
-  Building2,
+  Music,
   CheckCircle2,
   AlertCircle,
   Loader2,
@@ -41,7 +41,7 @@ export function GoogleRoleModal({
   googleUser,
   onSuccess,
 }: GoogleRoleModalProps) {
-  const [selectedRole, setSelectedRole] = useState<SelectedRole>('USER');
+  const [selectedRole, setSelectedRole] = useState<SelectedRole | null>(null);
 
   // Student Fields
   const [indexNo, setIndexNo] = useState('');
@@ -61,9 +61,18 @@ export function GoogleRoleModal({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
-  // Fetch dropdowns when modal opens
+  // Fetch dropdowns + reset form when modal opens
   useEffect(() => {
     if (!isOpen) return;
+
+    // Every open starts from a clean, unselected state
+    setSelectedRole(null);
+    setIndexNo('');
+    setUniEmail('');
+    setSelectedUniId('');
+    setSelectedOrgId('');
+    setPosition('');
+    setFormError(null);
 
     let isMounted = true;
     const fetchContent = async () => {
@@ -100,6 +109,9 @@ export function GoogleRoleModal({
 
   // Validation logic
   const isFormValid = (): boolean => {
+    if (selectedRole === null) {
+      return false;
+    }
     if (selectedRole === 'USER') {
       return true;
     }
@@ -119,6 +131,11 @@ export function GoogleRoleModal({
 
   const handleCompleteRegistration = async () => {
     setFormError(null);
+
+    if (selectedRole === null) {
+      setFormError('Please select a role to continue.');
+      return;
+    }
 
     // Validate fields
     if (selectedRole === 'STUDENT') {
@@ -233,33 +250,7 @@ export function GoogleRoleModal({
           <label className="text-xs font-semibold text-zinc-300 block">
             I want to join as:
           </label>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-            {/* User Role */}
-            <button
-              type="button"
-              onClick={() => {
-                setSelectedRole('USER');
-                setFormError(null);
-              }}
-              className={`p-3 rounded-2xl border text-left flex flex-col justify-between transition-all ${
-                selectedRole === 'USER'
-                  ? 'border-white bg-white/10 text-white shadow-lg ring-1 ring-white/20'
-                  : 'border-white/10 bg-white/5 text-zinc-400 hover:border-white/20 hover:bg-white/[0.07]'
-              }`}
-            >
-              <div className="flex items-center space-x-2 mb-1.5">
-                <User
-                  className={`w-4 h-4 ${
-                    selectedRole === 'USER' ? 'text-red-400' : 'text-zinc-500'
-                  }`}
-                />
-                <span className="text-xs font-bold text-white">User</span>
-              </div>
-              <span className="text-[10px] text-zinc-400 leading-tight">
-                Discover concerts & book ticket passes
-              </span>
-            </button>
-
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             {/* Student Role */}
             <button
               type="button"
@@ -267,23 +258,23 @@ export function GoogleRoleModal({
                 setSelectedRole('STUDENT');
                 setFormError(null);
               }}
-              className={`p-3 rounded-2xl border text-left flex flex-col justify-between transition-all ${
+              className={`p-3 rounded-2xl border text-left flex items-start space-x-2.5 transition-all ${
                 selectedRole === 'STUDENT'
-                  ? 'border-white bg-white/10 text-white shadow-lg ring-1 ring-white/20'
-                  : 'border-white/10 bg-white/5 text-zinc-400 hover:border-white/20 hover:bg-white/[0.07]'
+                  ? 'border-white bg-white/10 text-white shadow-md'
+                  : 'border-white/10 bg-white/5 text-zinc-400 hover:border-white/20'
               }`}
             >
-              <div className="flex items-center space-x-2 mb-1.5">
-                <GraduationCap
-                  className={`w-4 h-4 ${
-                    selectedRole === 'STUDENT' ? 'text-blue-400' : 'text-zinc-500'
-                  }`}
-                />
-                <span className="text-xs font-bold text-white">Student</span>
+              <GraduationCap
+                className={`w-4 h-4 mt-0.5 shrink-0 ${
+                  selectedRole === 'STUDENT' ? 'text-red-400' : 'text-zinc-500'
+                }`}
+              />
+              <div>
+                <span className="text-xs font-bold block">Student</span>
+                <span className="text-[10px] text-zinc-400 block leading-tight">
+                  University events & student pricing
+                </span>
               </div>
-              <span className="text-[10px] text-zinc-400 leading-tight">
-                Student privileges & university events
-              </span>
             </button>
 
             {/* Organizer Role */}
@@ -293,29 +284,61 @@ export function GoogleRoleModal({
                 setSelectedRole('ORGANIZER');
                 setFormError(null);
               }}
-              className={`p-3 rounded-2xl border text-left flex flex-col justify-between transition-all ${
+              className={`p-3 rounded-2xl border text-left flex items-start space-x-2.5 transition-all ${
                 selectedRole === 'ORGANIZER'
-                  ? 'border-white bg-white/10 text-white shadow-lg ring-1 ring-white/20'
-                  : 'border-white/10 bg-white/5 text-zinc-400 hover:border-white/20 hover:bg-white/[0.07]'
+                  ? 'border-white bg-white/10 text-white shadow-md'
+                  : 'border-white/10 bg-white/5 text-zinc-400 hover:border-white/20'
               }`}
             >
-              <div className="flex items-center space-x-2 mb-1.5">
-                <Building2
-                  className={`w-4 h-4 ${
-                    selectedRole === 'ORGANIZER' ? 'text-amber-400' : 'text-zinc-500'
-                  }`}
-                />
-                <span className="text-xs font-bold text-white">Organizer</span>
+              <Music
+                className={`w-4 h-4 mt-0.5 shrink-0 ${
+                  selectedRole === 'ORGANIZER' ? 'text-red-400' : 'text-zinc-500'
+                }`}
+              />
+              <div>
+                <span className="text-xs font-bold block">Organizer</span>
+                <span className="text-[10px] text-zinc-400 block leading-tight">
+                  Create & manage live events
+                </span>
               </div>
-              <span className="text-[10px] text-zinc-400 leading-tight">
-                Publish events, clubs & manage sales
-              </span>
+            </button>
+
+            {/* User Role */}
+            <button
+              type="button"
+              onClick={() => {
+                setSelectedRole('USER');
+                setFormError(null);
+              }}
+              className={`p-3 rounded-2xl border text-left flex items-start space-x-2.5 transition-all ${
+                selectedRole === 'USER'
+                  ? 'border-white bg-white/10 text-white shadow-md'
+                  : 'border-white/10 bg-white/5 text-zinc-400 hover:border-white/20'
+              }`}
+            >
+              <Ticket
+                className={`w-4 h-4 mt-0.5 shrink-0 ${
+                  selectedRole === 'USER' ? 'text-red-400' : 'text-zinc-500'
+                }`}
+              />
+              <div>
+                <span className="text-xs font-bold block">User</span>
+                <span className="text-[10px] text-zinc-400 block leading-tight">
+                  Book tickets & receive QR passes
+                </span>
+              </div>
             </button>
           </div>
         </div>
 
         {/* Dynamic Fields Section */}
         <div className="space-y-4 mb-6">
+          {selectedRole === null && (
+            <div className="p-4 rounded-2xl bg-white/5 border border-dashed border-white/15 text-xs text-zinc-400 text-center">
+              Select a role above to continue.
+            </div>
+          )}
+
           {selectedRole === 'USER' && (
             <div className="p-4 rounded-2xl bg-white/5 border border-white/10 text-xs text-zinc-300 flex items-center space-x-3">
               <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />

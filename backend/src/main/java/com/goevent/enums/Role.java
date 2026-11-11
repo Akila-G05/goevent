@@ -2,7 +2,7 @@ package com.goevent.enums;
 
 public enum Role {
     USER(1),
-    ORGANIZATION(2),
+    ORGANIZER(2),
     CONTRIBUTOR(5),
     STUDENT(4);
 

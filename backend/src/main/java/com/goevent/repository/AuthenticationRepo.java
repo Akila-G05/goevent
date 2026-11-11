@@ -84,8 +84,8 @@ public class AuthenticationRepo {
 
     public int registerStudentData(int userId, String indexNo,String uniEmail, int uniId) {
         String query = """
-            INSERT INTO student_detail(index_no, uni_email, user_id)
-            VALUES (?, ?, ?)
+            INSERT INTO student_detail(index_no, uni_email, user_id, university_id)
+            VALUES (?, ?, ?, ?)
             """;
 
         return jdbcTemplate.update(query,indexNo, uniEmail, userId, uniId);

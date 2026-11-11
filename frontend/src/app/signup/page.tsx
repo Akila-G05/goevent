@@ -259,44 +259,6 @@ export default function SignupPage() {
               {/* Form */}
               <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
                 {/* Role Selector Tabs */}
-                <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-zinc-300 block">
-                    I want to join as:
-                  </label>
-                  <div className="grid grid-cols-2 gap-3">
-                    <button
-                      type="button"
-                      onClick={() => setValue('role', 'ROLE_VIEWER')}
-                      className={`p-3 rounded-2xl border text-left flex items-start space-x-2.5 transition-all ${
-                        selectedRole === 'ROLE_VIEWER'
-                          ? 'border-white bg-white/10 text-white shadow-md'
-                          : 'border-white/10 bg-white/5 text-zinc-400 hover:border-white/20'
-                      }`}
-                    >
-                      <Ticket className={`w-4 h-4 mt-0.5 ${selectedRole === 'ROLE_VIEWER' ? 'text-red-400' : 'text-zinc-500'}`} />
-                      <div>
-                        <span className="text-xs font-bold block">Attendee / Fan</span>
-                        <span className="text-[10px] text-zinc-400 block leading-tight">Book tickets & receive QR passes</span>
-                      </div>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => setValue('role', 'ROLE_CREATOR')}
-                      className={`p-3 rounded-2xl border text-left flex items-start space-x-2.5 transition-all ${
-                        selectedRole === 'ROLE_CREATOR'
-                          ? 'border-white bg-white/10 text-white shadow-md'
-                          : 'border-white/10 bg-white/5 text-zinc-400 hover:border-white/20'
-                      }`}
-                    >
-                      <Music className={`w-4 h-4 mt-0.5 ${selectedRole === 'ROLE_CREATOR' ? 'text-red-400' : 'text-zinc-500'}`} />
-                      <div>
-                        <span className="text-xs font-bold block">Organizer / Creator</span>
-                        <span className="text-[10px] text-zinc-400 block leading-tight">Create & manage live events</span>
-                      </div>
-                    </button>
-                  </div>
-                </div>
 
                 {/* Full name field */}
                 <div className="space-y-1.5">

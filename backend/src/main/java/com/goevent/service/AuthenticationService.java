@@ -67,7 +67,7 @@ public class AuthenticationService {
                         uniEmail = (String) authData.get("uniEmail");
                         uniId = (Integer) authData.get("uniId");
                     }
-                    case ORGANIZATION -> {
+                    case ORGANIZER -> {
                         organizationId = (Integer) authData.get("orgId");
                         position = (String) authData.get("position");
                     }
@@ -116,13 +116,9 @@ public class AuthenticationService {
                             switch (userStatus) {
                                 case SUSPENDED -> {
                                     message = "Your account is suspended";
-                                    status = false;
                                 }
                                 case PENDING -> {
-                                    responseObject.addProperty("action", "REGISTRATION_REQUIRED");
-
-                                    message = "Please complete your registration";
-                                    status = true;
+                                    message = "Your account under the review. Please contact the admin";
                                 }
                                 case ACTIVE -> {
                                     responseObject.addProperty("action", "LOGIN");
@@ -155,15 +151,19 @@ public class AuthenticationService {
                                     responseObject.addProperty("action", "REGISTRATION_REQUIRED");
                                     message = "Google account verified. Please complete your registration.";
                                     status = true;
-                                } else if (role != Role.USER && role != Role.STUDENT && role != Role.ORGANIZATION) {
+                                } else if (role != Role.USER && role != Role.STUDENT && role != Role.ORGANIZER) {
                                     message = "Invalid registration role.";
                                 } else {
+                                    int statusId = UserStatus.ACTIVE.getId();
+                                    if(role == Role.ORGANIZER){
+                                        statusId = UserStatus.PENDING.getId();
+                                    }
                                     // 8. Register Google user with PENDING status
                                     int result = authenticationRepo.registerGoogleUser(
                                             fname,
                                             lname,
                                             email,
-                                            UserStatus.PENDING.getId(),
+                                            statusId,
                                             role.getId(),
                                             googleSub,
                                             profileImgUrl,
@@ -180,7 +180,7 @@ public class AuthenticationService {
                                                 case STUDENT -> {
                                                     authenticationRepo.registerStudentData(userId, indexNo, uniEmail, uniId);
                                                 }
-                                                case ORGANIZATION -> {
+                                                case ORGANIZER -> {
                                                     authenticationRepo.registerOrganizerData(userId, organizationId, position);
                                                 }
                                                 default -> {}
@@ -188,7 +188,7 @@ public class AuthenticationService {
                                         }
 
                                         responseObject.addProperty("action", "REGISTRATION_REQUIRED");
-                                        message = "Google account verified. " + "Please complete your registration.";
+                                        message = "Google authentication successfully completed.";
                                         status = true;
                                     } else {
                                         message = "Failed to register Google user";
