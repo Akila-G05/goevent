@@ -22,6 +22,8 @@ import {
 } from 'lucide-react';
 import { GoogleAuthButton, GoogleAuthResponse, GoogleDecodedUser } from '@/components/auth/google-auth-button';
 import { authApi } from '@/api';
+import { loading } from '@/lib/loading-store';
+import { getErrorMessage, toast } from '@/lib/toast-store';
 
 const loginSchema = z.object({
   email: z.string().min(1, 'Email is required').email('Please enter a valid email address'),
@@ -36,7 +38,6 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [authSuccess, setAuthSuccess] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [redirectNotice, setRedirectNotice] = useState<string | null>(null);
 
   const handleGoogleSuccess = (data: GoogleAuthResponse, googleUser?: GoogleDecodedUser | null) => {
@@ -71,7 +72,7 @@ export default function LoginPage() {
 
   const onSubmit = async (data: LoginFormData) => {
     setIsSubmitting(true);
-    setErrorMessage(null);
+    loading.open();
 
     try {
       const response = await authApi.authenticateManual({
@@ -80,17 +81,20 @@ export default function LoginPage() {
       });
 
       if (response.status) {
+        toast.success('Authentication successful');
         // The backend created the session; the success card offers "Visit Site".
         setAuthSuccess(true);
       } else {
-        setErrorMessage(response.message || 'Invalid email or password');
+        toast.error(response.message || 'Invalid email or password', {
+          title: 'Login failed',
+        });
       }
     } catch (e) {
       // Network/HTTP failures are normalised by the API client.
-      const message = (e as { message?: string })?.message;
-      setErrorMessage(message || 'Request failed! Please try again.');
+      toast.error(getErrorMessage(e), { title: 'Login failed' });
     } finally {
       setIsSubmitting(false);
+      loading.close(500);
     }
   };
 
@@ -318,14 +322,6 @@ export default function LoginPage() {
                     Remember this device for 30 days
                   </label>
                 </div>
-
-                {/* Error Banner */}
-                {errorMessage && (
-                  <div className="p-3 bg-red-950/40 border border-red-500/30 rounded-xl text-xs text-red-300 flex items-center space-x-2">
-                    <AlertCircle className="w-4 h-4 shrink-0 text-red-400" />
-                    <span>{errorMessage}</span>
-                  </div>
-                )}
 
                 {/* Submit button */}
                 <button

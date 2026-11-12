@@ -7,7 +7,6 @@ import {
   GraduationCap,
   Music,
   CheckCircle2,
-  AlertCircle,
   Loader2,
   Mail,
   Hash,
@@ -24,6 +23,8 @@ import {
   ManualRegistrationData,
 } from '@/api';
 import { GoogleDecodedUser } from './google-auth-button';
+import { loading } from '@/lib/loading-store';
+import { getErrorMessage, toast } from '@/lib/toast-store';
 
 export interface GoogleRoleModalProps {
   isOpen: boolean;
@@ -64,7 +65,6 @@ export function GoogleRoleModal({
 
   // Submission state
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [formError, setFormError] = useState<string | null>(null);
 
   // Fetch dropdowns + reset form when modal opens
   useEffect(() => {
@@ -77,7 +77,6 @@ export function GoogleRoleModal({
     setSelectedUniId('');
     setSelectedOrgId('');
     setPosition('');
-    setFormError(null);
 
     let isMounted = true;
     const fetchContent = async () => {
@@ -138,39 +137,38 @@ export function GoogleRoleModal({
   };
 
   const handleCompleteRegistration = async () => {
-    setFormError(null);
-
     if (selectedRole === null) {
-      setFormError('Please select a role to continue.');
+      toast.info('Please select a role to continue.');
       return;
     }
 
     // Validate fields
     if (selectedRole === 'STUDENT') {
       if (!indexNo.trim()) {
-        setFormError('University Registration Number is required.');
+        toast.info('University Registration Number is required.');
         return;
       }
       if (!uniEmail.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(uniEmail)) {
-        setFormError('Please enter a valid university email address.');
+        toast.info('Please enter a valid university email address.');
         return;
       }
       if (!selectedUniId) {
-        setFormError('Please select your university.');
+        toast.info('Please select your university.');
         return;
       }
     } else if (selectedRole === 'ORGANIZER') {
       if (!selectedOrgId) {
-        setFormError('Please select your organization.');
+        toast.info('Please select your organization.');
         return;
       }
       if (!position.trim()) {
-        setFormError('Please enter your position / role in the organization.');
+        toast.info('Please enter your position / role in the organization.');
         return;
       }
     }
 
     setIsSubmitting(true);
+    loading.open();
 
     try {
       // Role data shared by both flows:
@@ -202,17 +200,25 @@ export function GoogleRoleModal({
           })
         : await authApi.authenticateGoogle({ idToken: idToken ?? '', ...roleFields });
 
-      if (response.status) {
-        onSuccess(response);
-      } else {
-        setFormError(response.message || 'Registration failed. Please try again.');
+      if (!response.status) {
+        // Registration failures are validation/business messages, not system errors.
+        toast.info(response.message || 'Registration failed. Please try again.');
+        return;
       }
-    } catch (err: any) {
+
+      if (response.action === 'REGISTRATION_PENDING') {
+        toast.info(response.message || 'Registration submitted and waiting for admin approval.');
+      } else {
+        toast.success('Registration completed');
+      }
+
+      onSuccess(response);
+    } catch (err) {
       // Network/HTTP failures are normalised by the API client.
-      console.error('Registration completion error:', err);
-      setFormError(err.message || 'Request failed! Please try again.');
+      toast.error(getErrorMessage(err), { title: 'Registration failed' });
     } finally {
       setIsSubmitting(false);
+      loading.close(500);
     }
   };
 
@@ -273,7 +279,6 @@ export function GoogleRoleModal({
               type="button"
               onClick={() => {
                 setSelectedRole('STUDENT');
-                setFormError(null);
               }}
               className={`p-3 rounded-2xl border text-left flex items-start space-x-2.5 transition-all ${
                 selectedRole === 'STUDENT'
@@ -299,7 +304,6 @@ export function GoogleRoleModal({
               type="button"
               onClick={() => {
                 setSelectedRole('ORGANIZER');
-                setFormError(null);
               }}
               className={`p-3 rounded-2xl border text-left flex items-start space-x-2.5 transition-all ${
                 selectedRole === 'ORGANIZER'
@@ -325,7 +329,6 @@ export function GoogleRoleModal({
               type="button"
               onClick={() => {
                 setSelectedRole('USER');
-                setFormError(null);
               }}
               className={`p-3 rounded-2xl border text-left flex items-start space-x-2.5 transition-all ${
                 selectedRole === 'USER'
@@ -472,14 +475,6 @@ export function GoogleRoleModal({
             </div>
           )}
         </div>
-
-        {/* Error message */}
-        {formError && (
-          <div className="mb-5 p-3.5 bg-red-950/50 border border-red-500/40 rounded-xl text-xs text-red-300 flex items-center space-x-2.5 animate-in fade-in duration-150">
-            <AlertCircle className="w-4 h-4 shrink-0 text-red-400" />
-            <span>{formError}</span>
-          </div>
-        )}
 
         {/* Action Button */}
         <div className="pt-2">

@@ -3,6 +3,9 @@ import { create } from 'zustand';
 /** Default fade-out duration used by `loading.close()`. */
 export const DEFAULT_CLOSE_MS = 500;
 
+/** Safety net: force-close the overlay if a handler forgets `loading.close()`. */
+export const MAX_OPEN_MS = 20000;
+
 interface LoadingState {
   /** Whether the overlay is mounted. */
   visible: boolean;
@@ -17,6 +20,21 @@ interface LoadingState {
 }
 
 let closeTimer: ReturnType<typeof setTimeout> | null = null;
+let watchdogTimer: ReturnType<typeof setTimeout> | null = null;
+
+const clearCloseTimer = () => {
+  if (closeTimer) {
+    clearTimeout(closeTimer);
+    closeTimer = null;
+  }
+};
+
+const clearWatchdog = () => {
+  if (watchdogTimer) {
+    clearTimeout(watchdogTimer);
+    watchdogTimer = null;
+  }
+};
 
 export const useLoadingStore = create<LoadingState>((set, get) => ({
   visible: false,
@@ -26,16 +44,33 @@ export const useLoadingStore = create<LoadingState>((set, get) => ({
 
   /** Show the overlay immediately. Every call must be paired with a `close()`. */
   open: () => {
-    if (closeTimer) {
-      clearTimeout(closeTimer);
-      closeTimer = null;
-    }
+    clearCloseTimer();
 
     set((state) => ({
       visible: true,
       closing: false,
       pending: state.pending + 1,
     }));
+
+    if (!watchdogTimer) {
+      watchdogTimer = setTimeout(() => {
+        watchdogTimer = null;
+
+        if (process.env.NODE_ENV !== 'production') {
+          console.warn(
+            '[loading] Overlay was still open after 20s and was closed automatically. ' +
+              'Did every loading.open() get a loading.close()?'
+          );
+        }
+
+        set({ pending: 0, closing: true, closeDuration: DEFAULT_CLOSE_MS });
+
+        closeTimer = setTimeout(() => {
+          closeTimer = null;
+          set({ visible: false, closing: false });
+        }, DEFAULT_CLOSE_MS);
+      }, MAX_OPEN_MS);
+    }
   },
 
   /**
@@ -51,12 +86,20 @@ export const useLoadingStore = create<LoadingState>((set, get) => ({
       set({ pending: nextPending });
     }
 
-    // Requests are still in flight, or a fade-out is already running.
-    if (nextPending > 0 || closing) {
+    // Requests are still in flight.
+    if (nextPending > 0) {
+      return;
+    }
+
+    clearWatchdog();
+
+    // A fade-out is already running (e.g. triggered by the watchdog).
+    if (closing) {
       return;
     }
 
     set({ closing: true, closeDuration: durationMs });
+    clearCloseTimer();
 
     closeTimer = setTimeout(() => {
       closeTimer = null;
@@ -66,10 +109,14 @@ export const useLoadingStore = create<LoadingState>((set, get) => ({
 }));
 
 /**
- * Imperative API usable outside React (axios interceptors, helpers, etc.):
+ * Imperative API usable outside React (handlers, helpers, etc.):
  *
- *   loading.open();        // show the overlay
- *   loading.close(500);    // fade out over 500 ms, then unmount
+ *   loading.open();
+ *   try {
+ *     ...
+ *   } finally {
+ *     loading.close(500); // fades out over 500 ms, then unmounts
+ *   }
  */
 export const loading = {
   open: () => useLoadingStore.getState().open(),

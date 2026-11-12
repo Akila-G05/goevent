@@ -3,47 +3,38 @@
 import React from 'react';
 import { GoogleAuthButton } from '@/components/auth/google-auth-button';
 import { testApi } from '@/api';
+import { loading } from '@/lib/loading-store';
+import { getErrorMessage, toast } from '@/lib/toast-store';
 
 export default function TestPage() {
 
     async function clearCache() {
+        loading.open();
         try {
-            const data = await testApi.clearGatewayCache();
-            console.log(data);
+            const response = await testApi.clearGatewayCache();
+            toast.success(typeof response === 'string' ? response : 'Gateway cache cleared');
         } catch (e) {
             console.log("Request failed! Please try again", e);
+            toast.error(getErrorMessage(e));
+        } finally {
+            loading.close(500);
         }
     }
 
     async function testConnection(){
-        // The global loading overlay opens automatically for every request
-        // and closes 500 ms after the response arrives.
-        try {
-            const data = await testApi.getTestConnection();
-            if(data.status){
-                console.log(data);
-            }else{
-                console.log(data.message);
-            }
-        }catch (e) {
-            console.log("Request failed! Please try again", e);
-        }
-    }
-
-    async function testConnection(){
-        //start loadin animation
+        loading.open();
         try {
             const response = await testApi.getTestConnection();
             if(response.status){
-                //success toast
+                toast.success('Backend connection successful');
             }else{
-                //warnning toast wth response.messege
+                toast.warning(response.message || 'Unexpected response from the backend');
             }
         }catch (e) {
             console.log("Request failed! Please try again", e);
-            //error toast     
+            toast.error(getErrorMessage(e));
         }finally{
-            //cloase loading animation
+            loading.close(500);
         }
     }
 

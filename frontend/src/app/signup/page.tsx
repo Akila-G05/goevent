@@ -87,7 +87,6 @@ export default function SignupPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [successState, setSuccessState] = useState<SuccessState | null>(null);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [manualForm, setManualForm] = useState<ManualRegistrationData | null>(null);
   const successCopy = successState ? SUCCESS_COPY[successState] : null;
 
@@ -199,8 +198,6 @@ export default function SignupPage() {
   };
 
   const onSubmit = (data: SignupFormData) => {
-    setErrorMessage(null);
-
     // Step 1: keep the form values and ask the user to pick a role.
     // The actual /auth/register request is sent from the role modal.
     setManualForm({
@@ -487,14 +484,6 @@ export default function SignupPage() {
                     </p>
                   )}
                 </div>
-
-                {/* Error Banner */}
-                {errorMessage && (
-                  <div className="p-3 bg-red-950/40 border border-red-500/30 rounded-xl text-xs text-red-300 flex items-center space-x-2">
-                    <AlertCircle className="w-4 h-4 shrink-0 text-red-400" />
-                    <span>{errorMessage}</span>
-                  </div>
-                )}
 
                 {/* Submit button */}
                 <button
