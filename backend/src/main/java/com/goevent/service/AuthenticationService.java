@@ -148,8 +148,9 @@ public class AuthenticationService {
                             // 6. Check whether email already exists
                             UserDTO existingUser = authenticationRepo.getUserByEmail(email);
 
-                            if (existingUser != null && existingUser.getAuthTypeId() == 2) {
-                                message = "An account with this email already exists. Please use the existing login method.";
+                            if (existingUser != null && existingUser.getAuthTypeId() == AuthType.MANUAL.getId()) {
+                                // Point the user at the login method they actually registered with.
+                                message = "This email is already registered with a password. Please sign in with your email and password.";
                             } else {
                                 if (role == null) {
                                     // Initial Google sign-in/verification: user does not exist yet.
@@ -366,12 +367,13 @@ public class AuthenticationService {
             } else {
                 UserDTO user = authenticationRepo.getUserByEmail(email.toLowerCase(Locale.ROOT));
 
-                // Google accounts have no password, and unknown emails must not be
-                // distinguishable from a wrong password.
-                if (user == null
-                        || user.getAuthTypeId() != AuthType.MANUAL.getId()
+                if (user != null && user.getAuthTypeId() == AuthType.GOOGLE.getId()) {
+                    // Point the user at the login method they actually registered with.
+                    message = "This email is already registered with Google. Please sign in with Google.";
+                } else if (user == null
                         || user.getPassword() == null
                         || !passwordEncoder.matches(password, user.getPassword())) {
+                    // Unknown emails stay indistinguishable from a wrong password.
                     message = "Invalid email or password";
                 } else {
                     switch (UserStatus.fromId(user.getUserStatusId())) {
