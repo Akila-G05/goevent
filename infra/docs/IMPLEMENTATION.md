@@ -76,6 +76,27 @@ Next-generated files appear in read-only application directories.
 
 ## Azure OWNER ACTION REQUIRED (no automated setup)
 
+Publishing preflight (`infra/ci/acr_tags.py`) treats only the exact requested
+repository's not-found diagnostic as an empty tag list, including the Azure CLI
+timestamp/correlation-ID format observed on first publication. Authentication,
+authorization, connectivity, partial output and unrecognized responses stop
+publication. Existing commit tags remain rejected; malformed tag lists and
+post-push digests also stop candidate creation.
+
+Both `show-tags` and `repository show --image` use repository metadata-read
+permission. ABAC Repository Writer supports these operations when its conditions
+cover `goevent/backend` and `goevent/gateway`; catalog-list access is unnecessary.
+OIDC login, mandatory workflow gates, SHA tags, SBOMs, attestations and candidate
+metadata remain unchanged. The preflight is not an atomic registry tag lock.
+Failure after a push can leave an image published without a candidate; inspect
+that image before retrying, since existing commit tags deliberately block retries.
+
+`python3 -m unittest discover -s infra/tests -v` includes isolated publisher
+regressions with CLI doubles, including the observed first-publication error,
+existing tags, access failures, unexpected responses and digest failures. These
+tests do not verify live OIDC credentials or Azure ABAC conditions; a subsequent
+authorized trusted-main publication must verify those in Azure.
+
 1. Verify existing encrypted managed disk UUID, mount guards and data directory;
    preserve existing systemd/database/Key Vault orchestration. Do not format disks,
    use resource disks, publish 3306, initialize replacement volumes or run down -v.
