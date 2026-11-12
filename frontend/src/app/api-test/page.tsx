@@ -30,6 +30,23 @@ export default function TestPage() {
         }
     }
 
+    async function testConnection(){
+        //start loadin animation
+        try {
+            const response = await testApi.getTestConnection();
+            if(response.status){
+                //success toast
+            }else{
+                //warnning toast wth response.messege
+            }
+        }catch (e) {
+            console.log("Request failed! Please try again", e);
+            //error toast     
+        }finally{
+            //cloase loading animation
+        }
+    }
+
     async function test() {
         console.log("hi");
     }
