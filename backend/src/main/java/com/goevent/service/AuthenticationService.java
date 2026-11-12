@@ -239,6 +239,7 @@ public class AuthenticationService {
         return AppUtil.gson.toJson(responseObject);
     }
 
+    //register manual user
     public String handleManualRegistration(Map<String, String> authData, HttpServletRequest httpRequest) {
         JsonObject responseObject = new JsonObject();
 
@@ -352,6 +353,7 @@ public class AuthenticationService {
         return AppUtil.gson.toJson(responseObject);
     }
 
+    //signin manual user
     public String handleManualAuthentication(Map<String, String> authData, HttpServletRequest httpRequest) {
         JsonObject responseObject = new JsonObject();
 

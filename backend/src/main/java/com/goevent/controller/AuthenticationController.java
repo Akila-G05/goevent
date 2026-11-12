@@ -17,6 +17,19 @@ public class AuthenticationController {
         this.authenticationService = authenticationService;
     }
 
+    //Manual Registeration
+    @PostMapping("/register")
+    public String manualRegistration(@RequestBody Map<String, String> request, HttpServletRequest httpRequest) {
+        return authenticationService.handleManualRegistration(request, httpRequest);
+    }
+
+    //Manual Signin
+    @PostMapping("/manual")
+    public String manualAuthentication(@RequestBody Map<String, String> request, HttpServletRequest httpRequest) {
+        return authenticationService.handleManualAuthentication(request, httpRequest);
+    }
+
+    // Google REgisteration & Sigin
     @PostMapping("/google")
     public String googleAuthentication(@RequestBody Map<String, String> request, HttpServletRequest httpRequest) {
         String idToken = request.get("idToken");
@@ -62,9 +75,5 @@ public class AuthenticationController {
                 httpRequest
         );
     }
-
-    @PostMapping("/manual")
-    public String manualAuthentication(@RequestBody Map<String, String> request, HttpServletRequest httpRequest) {
-        return authenticationService.handleManualAuthentication(request, httpRequest);
-    }
+    
 }
