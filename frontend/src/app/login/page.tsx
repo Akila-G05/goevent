@@ -21,6 +21,7 @@ import {
   Info,
 } from 'lucide-react';
 import { GoogleAuthButton, GoogleAuthResponse, GoogleDecodedUser } from '@/components/auth/google-auth-button';
+import { authApi } from '@/api';
 
 const loginSchema = z.object({
   email: z.string().min(1, 'Email is required').email('Please enter a valid email address'),
@@ -72,11 +73,24 @@ export default function LoginPage() {
     setIsSubmitting(true);
     setErrorMessage(null);
 
-    // Simulated authenticating state
-    setTimeout(() => {
+    try {
+      const response = await authApi.authenticateManual({
+        email: data.email,
+        password: data.password,
+      });
+
+      if (response.status) {
+        // The backend created the session; the success card offers "Visit Site".
+        setAuthSuccess(true);
+      } else {
+        setErrorMessage(response.message || 'Invalid email or password');
+      }
+    } catch (err) {
+      const message = (err as { message?: string })?.message;
+      setErrorMessage(message || 'Unable to sign in. Please try again.');
+    } finally {
       setIsSubmitting(false);
-      setAuthSuccess(true);
-    }, 1200);
+    }
   };
 
   const handleQuickDemoFill = (role: 'viewer' | 'creator' | 'admin') => {
@@ -147,7 +161,7 @@ export default function LoginPage() {
               </div>
               <div className="space-y-2">
                 <h3 className="font-display text-3xl font-black uppercase text-white">
-                  AUTHENTICATED SUCCESSFULLY
+                  AUTHENTICATION COMPLETED
                 </h3>
                 <p className="text-xs text-zinc-400 max-w-sm mx-auto">
                   Welcome back to GoEvent. You are now logged in with verified ticket ownership.

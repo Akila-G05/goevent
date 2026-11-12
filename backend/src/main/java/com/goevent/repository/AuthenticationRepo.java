@@ -1,6 +1,7 @@
 package com.goevent.repository;
 
 import com.goevent.dto.UserDTO;
+import com.goevent.enums.AuthType;
 import com.goevent.service.AuthenticationService;
 import com.goevent.util.AppUtil;
 import org.slf4j.Logger;
@@ -79,6 +80,20 @@ public class AuthenticationRepo {
         return jdbcTemplate.update(
                 query,
                 fname, lname, email, Timestamp.valueOf(LocalDateTime.now()), null, userStatusId, roleId, googleSub, profileImgUrl, null, authTypeId, null
+        );
+    }
+
+    // Register new manual (email/password) user
+    public int registerManualUser(String fname, String lname, String email, String passwordHash, int userStatusId, int roleId) {
+
+        String query = """
+            INSERT INTO `user` (fname, lname, email, registered_date, v_code, user_status_id, role_id, google_sub, profile_img_url, password, auth_type_id)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """;
+
+        return jdbcTemplate.update(
+                query,
+                fname, lname, email, Timestamp.valueOf(LocalDateTime.now()), null, userStatusId, roleId, null, null, passwordHash, AuthType.MANUAL.getId()
         );
     }
 

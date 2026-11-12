@@ -21,14 +21,18 @@ import {
   UniversityItem,
   OrganizationItem,
   GoogleAuthResponse,
+  ManualRegistrationData,
 } from '@/api';
 import { GoogleDecodedUser } from './google-auth-button';
 
 export interface GoogleRoleModalProps {
   isOpen: boolean;
   onClose: () => void;
-  idToken: string;
+  /** Google ID token; required for the Google flow, absent for manual signup. */
+  idToken?: string;
   googleUser?: GoogleDecodedUser | null;
+  /** When present, the modal finishes a manual email/password registration. */
+  manualRegistration?: ManualRegistrationData | null;
   onSuccess: (data: GoogleAuthResponse) => void;
 }
 
@@ -39,6 +43,7 @@ export function GoogleRoleModal({
   onClose,
   idToken,
   googleUser,
+  manualRegistration,
   onSuccess,
 }: GoogleRoleModalProps) {
   const [selectedRole, setSelectedRole] = useState<SelectedRole | null>(null);
@@ -107,6 +112,9 @@ export function GoogleRoleModal({
 
   if (!isOpen) return null;
 
+  // Manual signup shows the name typed into the form; Google uses the decoded profile.
+  const displayName = manualRegistration?.fname || googleUser?.name;
+
   // Validation logic
   const isFormValid = (): boolean => {
     if (selectedRole === null) {
@@ -165,26 +173,34 @@ export function GoogleRoleModal({
     setIsSubmitting(true);
 
     try {
-      // Build request body according to AuthenticationController:
-      // roleId: 1 for USER, 4 for STUDENT, 2 for ORGANIZATION
-      const payload: Record<string, string> = {
-        idToken,
-      };
+      // Role data shared by both flows:
+      // roleId: 1 for USER, 4 for STUDENT, 2 for ORGANIZER
+      const roleFields: Record<string, string> = {};
 
       if (selectedRole === 'USER') {
-        payload.roleId = '1';
+        roleFields.roleId = '1';
       } else if (selectedRole === 'STUDENT') {
-        payload.roleId = '4';
-        payload.index = indexNo.trim();
-        payload.uniEmail = uniEmail.trim();
-        payload.uniId = selectedUniId;
+        roleFields.roleId = '4';
+        roleFields.index = indexNo.trim();
+        roleFields.uniEmail = uniEmail.trim();
+        roleFields.uniId = selectedUniId;
       } else if (selectedRole === 'ORGANIZER') {
-        payload.roleId = '2';
-        payload.orgId = selectedOrgId;
-        payload.position = position.trim();
+        roleFields.roleId = '2';
+        roleFields.orgId = selectedOrgId;
+        roleFields.position = position.trim();
       }
 
-      const response = await authApi.authenticateGoogle(payload);
+      const response = manualRegistration
+        ? await authApi.registerManual({
+            ...manualRegistration,
+            roleId: roleFields.roleId,
+            index: roleFields.index,
+            uniEmail: roleFields.uniEmail,
+            uniId: roleFields.uniId,
+            orgId: roleFields.orgId,
+            position: roleFields.position,
+          })
+        : await authApi.authenticateGoogle({ idToken: idToken ?? '', ...roleFields });
 
       if (!response.status) {
         throw new Error(response.message || 'Registration failed. Please try again.');
@@ -235,9 +251,9 @@ export function GoogleRoleModal({
             Select Your Role
           </h3>
           <p className="text-xs text-zinc-400">
-            {googleUser?.name ? (
+            {displayName ? (
               <>
-                Welcome, <span className="text-white font-medium">{googleUser.name}</span>! Select how you plan to use GoEvent.
+                Welcome, <span className="text-white font-medium">{displayName}</span>! Select how you plan to use GoEvent.
               </>
             ) : (
               'Choose your role to finish your GoEvent registration.'

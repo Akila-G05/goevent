@@ -72,6 +72,12 @@
             <artifactId>spring-boot-starter-session-data-redis</artifactId>
         </dependency>
 
+        <!-- Password hashing only (BCrypt); no security filter chain is added -->
+        <dependency>
+            <groupId>org.springframework.security</groupId>
+            <artifactId>spring-security-crypto</artifactId>
+        </dependency>
+
         <!-- Vinura Testing-->
         <!-- Spring Boot Testing -->
         <dependency>

@@ -62,4 +62,9 @@ public class AuthenticationController {
                 httpRequest
         );
     }
+
+    @PostMapping("/manual")
+    public String manualAuthentication(@RequestBody Map<String, String> request, HttpServletRequest httpRequest) {
+        return authenticationService.handleManualAuthentication(request, httpRequest);
+    }
 }

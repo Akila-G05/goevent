@@ -16,6 +16,8 @@ export const API_ROUTES = {
   // Authentication endpoints
   AUTH: {
     GOOGLE: `${API_PREFIX}/auth/google`,
+    REGISTER: `${API_PREFIX}/auth/register`,
+    MANUAL: `${API_PREFIX}/auth/manual`,
   },
 
   // Content endpoints (cached via gateway)
