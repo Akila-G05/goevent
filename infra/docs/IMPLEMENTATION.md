@@ -60,7 +60,10 @@ Action SHAs and upstream commit URLs are recorded in `infra/ci/tools.lock.json`.
 Binary tooling is downloaded from explicit upstream releases and checked against
 GitHub's published asset SHA256; missing digest fails. Python tooling and transitives are pinned in requirements.lock with PyPI artifact
 SHA256 verification; requirements.txt is the reviewed direct-input constraint file.
-Dependabot watches Actions. Review tooling lock updates, do not silently accept
+Dependabot Actions version-update PRs are temporarily paused with
+`open-pull-requests-limit: 0` in `.github/dependabot.yml`. Remove that setting to
+resume the preserved weekly schedule. This does not disable separately configured
+GitHub security updates/alerts or close existing PRs. Review tooling lock updates, do not silently accept
 new rules/actions. Bootstrap currently supports Linux x86_64. CI uses Python 3.13.
 
 Maven tests run without skip flags in CI; image packaging skips tests only after
