@@ -2,5 +2,7 @@ version: 2
 updates:
   - package-ecosystem: github-actions
     directory: /
+    # Temporarily pause version-update PRs; remove this line to resume weekly updates.
+    open-pull-requests-limit: 0
     schedule:
       interval: weekly
