@@ -18,6 +18,8 @@ export const API_ROUTES = {
     GOOGLE: `${API_PREFIX}/auth/google`,
     REGISTER: `${API_PREFIX}/auth/register`,
     MANUAL: `${API_PREFIX}/auth/manual`,
+    SESSION: `${API_PREFIX}/auth/session`,
+    LOGOUT: `${API_PREFIX}/auth/logout`,
   },
 
   // Content endpoints (cached via gateway)

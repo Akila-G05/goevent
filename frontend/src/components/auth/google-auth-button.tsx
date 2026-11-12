@@ -5,6 +5,7 @@ import { GoogleLogin, CredentialResponse } from '@react-oauth/google';
 import { Loader2 } from 'lucide-react';
 import { authApi, GoogleAuthResponse, API_ROUTES } from '@/api';
 import { loading } from '@/lib/loading-store';
+import { useSessionStore } from '@/lib/session-store';
 import { getErrorMessage, toast } from '@/lib/toast-store';
 
 export type { GoogleAuthResponse };
@@ -94,8 +95,18 @@ export function GoogleAuthButton({
       } else if (data.action === 'REGISTRATION_PENDING') {
         toast.info(data.message || 'Registration submitted and waiting for admin approval.');
       } else if (data.action === 'REGISTERED') {
+        useSessionStore.getState().setAuthenticated({
+          userId: data.userId,
+          roleId: data.roleId,
+          email: data.email,
+        });
         toast.success('Registration completed');
       } else {
+        useSessionStore.getState().setAuthenticated({
+          userId: data.userId,
+          roleId: data.roleId,
+          email: data.email,
+        });
         toast.success('Authentication successful');
       }
 

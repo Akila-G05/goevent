@@ -61,6 +61,15 @@ export interface ManualLoginPayload {
   password: string;
 }
 
+export interface SessionResponse {
+  status: boolean;
+  authenticated?: boolean;
+  userId?: number;
+  roleId?: string;
+  email?: string;
+  message?: string;
+}
+
 const parseAuthResponse = (data: GoogleAuthResponse | string): GoogleAuthResponse => {
   if (typeof data === 'string') {
     try {
@@ -114,6 +123,28 @@ export const authApi = {
     const response = await apiClient.post<GoogleAuthResponse | string>(
       API_ROUTES.AUTH.MANUAL,
       payload
+    );
+
+    return parseAuthResponse(response.data);
+  },
+
+  /**
+   * Check whether the browser already holds a valid server-side session.
+   */
+  getSession: async (): Promise<SessionResponse> => {
+    const response = await apiClient.get<SessionResponse | string>(
+      API_ROUTES.AUTH.SESSION
+    );
+
+    return parseAuthResponse(response.data) as SessionResponse;
+  },
+
+  /**
+   * Invalidate the current session.
+   */
+  logout: async (): Promise<GoogleAuthResponse> => {
+    const response = await apiClient.post<GoogleAuthResponse | string>(
+      API_ROUTES.AUTH.LOGOUT
     );
 
     return parseAuthResponse(response.data);

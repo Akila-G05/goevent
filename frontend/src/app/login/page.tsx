@@ -23,6 +23,7 @@ import {
 import { GoogleAuthButton, GoogleAuthResponse, GoogleDecodedUser } from '@/components/auth/google-auth-button';
 import { authApi } from '@/api';
 import { loading } from '@/lib/loading-store';
+import { useSessionStore } from '@/lib/session-store';
 import { getErrorMessage, toast } from '@/lib/toast-store';
 
 const loginSchema = z.object({
@@ -82,6 +83,11 @@ export default function LoginPage() {
 
       if (response.status) {
         toast.success('Authentication successful');
+        useSessionStore.getState().setAuthenticated({
+          userId: response.userId,
+          roleId: response.roleId,
+          email: response.email ?? data.email,
+        });
         // The backend created the session; the success card offers "Visit Site".
         setAuthSuccess(true);
       } else {

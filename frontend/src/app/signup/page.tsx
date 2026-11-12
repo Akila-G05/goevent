@@ -27,6 +27,7 @@ import {
   GoogleRoleModal,
 } from '@/components/auth';
 import type { ManualRegistrationData } from '@/api';
+import { useSessionStore } from '@/lib/session-store';
 
 const signupSchema = z
   .object({
@@ -193,6 +194,14 @@ export default function SignupPage() {
       // Organizer registrations wait for admin approval
       setSuccessState('pending');
     } else if (data.status) {
+      if (!wasManualSignup) {
+        useSessionStore.getState().setAuthenticated({
+          userId: data.userId,
+          roleId: data.roleId,
+          email: data.email,
+        });
+      }
+
       setSuccessState(wasManualSignup ? 'registeredManual' : 'registered');
     }
   };

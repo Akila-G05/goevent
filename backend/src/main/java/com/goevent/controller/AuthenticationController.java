@@ -29,7 +29,7 @@ public class AuthenticationController {
         return authenticationService.handleManualAuthentication(request, httpRequest);
     }
 
-    // Google REgisteration & Sigin
+    // Google REgisteration & Signin
     @PostMapping("/google")
     public String googleAuthentication(@RequestBody Map<String, String> request, HttpServletRequest httpRequest) {
         String idToken = request.get("idToken");
@@ -74,6 +74,18 @@ public class AuthenticationController {
                 authData,
                 httpRequest
         );
+    }
+
+    // Current session check (used by the navbar to decide what to render)
+    @GetMapping("/session")
+    public String sessionCheck(HttpServletRequest httpRequest) {
+        return authenticationService.handleSessionCheck(httpRequest);
+    }
+
+    // Sign out: invalidates the server-side session
+    @PostMapping("/logout")
+    public String logout(HttpServletRequest httpRequest) {
+        return authenticationService.handleLogout(httpRequest);
     }
 
 }

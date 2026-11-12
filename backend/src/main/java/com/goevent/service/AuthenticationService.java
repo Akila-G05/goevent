@@ -445,7 +445,53 @@ public class AuthenticationService {
         HttpSession session = httpRequest.getSession(true);
 
         session.setAttribute("userId", user.getId());
+        session.setAttribute("name", user.getFname() + " " + user.getLname());
         session.setAttribute("role", Role.fromId(user.getRoleId()).name());
         session.setAttribute("email", user.getEmail());
+    }
+
+    /**
+     * Reports whether the caller already has a valid session.
+     * `getSession(false)` is used so simply checking never creates a session.
+     */
+    public String handleSessionCheck(HttpServletRequest httpRequest) {
+        JsonObject responseObject = new JsonObject();
+
+        HttpSession session = httpRequest.getSession(false);
+
+        Object userId = session != null ? session.getAttribute("userId") : null;
+        Object role = session != null ? session.getAttribute("role") : null;
+        Object email = session != null ? session.getAttribute("email") : null;
+
+        boolean authenticated = userId instanceof Integer;
+
+        responseObject.addProperty("status", true);
+        responseObject.addProperty("authenticated", authenticated);
+
+        if (authenticated) {
+            responseObject.addProperty("userId", (Integer) userId);
+            responseObject.addProperty("roleId", role != null ? role.toString() : null);
+            responseObject.addProperty("email", email != null ? email.toString() : null);
+        }
+
+        return AppUtil.gson.toJson(responseObject);
+    }
+
+    /**
+     * Invalidates the current session. Spring Session also expires the cookie.
+     */
+    public String handleLogout(HttpServletRequest httpRequest) {
+        JsonObject responseObject = new JsonObject();
+
+        HttpSession session = httpRequest.getSession(false);
+
+        if (session != null) {
+            session.invalidate();
+        }
+
+        responseObject.addProperty("status", true);
+        responseObject.addProperty("message", "Logged out successfully");
+
+        return AppUtil.gson.toJson(responseObject);
     }
 }
