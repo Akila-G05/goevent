@@ -60,7 +60,10 @@ Action SHAs and upstream commit URLs are recorded in `infra/ci/tools.lock.json`.
 Binary tooling is downloaded from explicit upstream releases and checked against
 GitHub's published asset SHA256; missing digest fails. Python tooling and transitives are pinned in requirements.lock with PyPI artifact
 SHA256 verification; requirements.txt is the reviewed direct-input constraint file.
-Dependabot watches Actions. Review tooling lock updates, do not silently accept
+Dependabot Actions version-update PRs are temporarily paused with
+`open-pull-requests-limit: 0` in `.github/dependabot.yml`. Remove that setting to
+resume the preserved weekly schedule. This does not disable separately configured
+GitHub security updates/alerts or close existing PRs. Review tooling lock updates, do not silently accept
 new rules/actions. Bootstrap currently supports Linux x86_64. CI uses Python 3.13.
 
 Maven tests run without skip flags in CI; image packaging skips tests only after
@@ -72,6 +75,27 @@ and safe dummy API values. Local checks must copy developer sources under
 Next-generated files appear in read-only application directories.
 
 ## Azure OWNER ACTION REQUIRED (no automated setup)
+
+Publishing preflight (`infra/ci/acr_tags.py`) treats only the exact requested
+repository's not-found diagnostic as an empty tag list, including the Azure CLI
+timestamp/correlation-ID format observed on first publication. Authentication,
+authorization, connectivity, partial output and unrecognized responses stop
+publication. Existing commit tags remain rejected; malformed tag lists and
+post-push digests also stop candidate creation.
+
+Both `show-tags` and `repository show --image` use repository metadata-read
+permission. ABAC Repository Writer supports these operations when its conditions
+cover `goevent/backend` and `goevent/gateway`; catalog-list access is unnecessary.
+OIDC login, mandatory workflow gates, SHA tags, SBOMs, attestations and candidate
+metadata remain unchanged. The preflight is not an atomic registry tag lock.
+Failure after a push can leave an image published without a candidate; inspect
+that image before retrying, since existing commit tags deliberately block retries.
+
+`python3 -m unittest discover -s infra/tests -v` includes isolated publisher
+regressions with CLI doubles, including the observed first-publication error,
+existing tags, access failures, unexpected responses and digest failures. These
+tests do not verify live OIDC credentials or Azure ABAC conditions; a subsequent
+authorized trusted-main publication must verify those in Azure.
 
 1. Verify existing encrypted managed disk UUID, mount guards and data directory;
    preserve existing systemd/database/Key Vault orchestration. Do not format disks,
