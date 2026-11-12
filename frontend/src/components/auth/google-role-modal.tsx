@@ -202,14 +202,15 @@ export function GoogleRoleModal({
           })
         : await authApi.authenticateGoogle({ idToken: idToken ?? '', ...roleFields });
 
-      if (!response.status) {
-        throw new Error(response.message || 'Registration failed. Please try again.');
+      if (response.status) {
+        onSuccess(response);
+      } else {
+        setFormError(response.message || 'Registration failed. Please try again.');
       }
-
-      onSuccess(response);
     } catch (err: any) {
+      // Network/HTTP failures are normalised by the API client.
       console.error('Registration completion error:', err);
-      setFormError(err.message || 'An unexpected error occurred during registration.');
+      setFormError(err.message || 'Request failed! Please try again.');
     } finally {
       setIsSubmitting(false);
     }

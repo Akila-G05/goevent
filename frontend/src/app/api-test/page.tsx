@@ -10,13 +10,14 @@ export default function TestPage() {
         try {
             const data = await testApi.clearGatewayCache();
             console.log(data);
-        } catch (error) {
-            console.error("Cache clearing failed:", error);
+        } catch (e) {
+            console.log("Request failed! Please try again", e);
         }
     }
 
     async function testConnection(){
-        //start Loadin animation
+        // The global loading overlay opens automatically for every request
+        // and closes 500 ms after the response arrives.
         try {
             const data = await testApi.getTestConnection();
             if(data.status){
@@ -26,8 +27,6 @@ export default function TestPage() {
             }
         }catch (e) {
             console.log("Request failed! Please try again", e);
-        }finally {
-            //stop Loadin animation
         }
     }
 

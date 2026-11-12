@@ -85,9 +85,10 @@ export default function LoginPage() {
       } else {
         setErrorMessage(response.message || 'Invalid email or password');
       }
-    } catch (err) {
-      const message = (err as { message?: string })?.message;
-      setErrorMessage(message || 'Unable to sign in. Please try again.');
+    } catch (e) {
+      // Network/HTTP failures are normalised by the API client.
+      const message = (e as { message?: string })?.message;
+      setErrorMessage(message || 'Request failed! Please try again.');
     } finally {
       setIsSubmitting(false);
     }
