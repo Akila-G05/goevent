@@ -30,6 +30,7 @@ it('posts login credentials to the same API prefix with cookies', async () => {
     baseURL: apiClient.defaults.baseURL, url: '/goevent/api/auth/google', method: 'post',
     withCredentials: true, data: JSON.stringify({ idToken: 'test-credential' }),
   })));
+  expect(apiClient.getUri(adapter.mock.calls[0][0])).toBe('/goevent/api/auth/google');
 });
 
 it('maps current and legacy browser prefixes to the real backend prefix', async () => {
