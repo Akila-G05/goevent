@@ -13,7 +13,6 @@ import {
   ShieldCheck,
   CheckCircle2,
   AlertCircle,
-  Loader2,
   Lock,
   Mail,
   User,
@@ -21,13 +20,20 @@ import {
   Ticket,
   Music,
 } from 'lucide-react';
-import { GoogleAuthButton, GoogleAuthResponse, GoogleDecodedUser } from '@/components/auth/google-auth-button';
+import {
+  GoogleAuthButton,
+  GoogleAuthResponse,
+  GoogleDecodedUser,
+  GoogleRoleModal,
+} from '@/components/auth';
+import type { ManualRegistrationData } from '@/api';
+import { useSessionStore } from '@/lib/session-store';
 
 const signupSchema = z
   .object({
-    fullName: z.string().min(2, 'Full name must be at least 2 characters'),
+    firstName: z.string().min(2, 'First name must be at least 2 characters'),
+    lastName: z.string().min(2, 'Last name must be at least 2 characters'),
     email: z.string().min(1, 'Email is required').email('Please enter a valid email address'),
-    role: z.enum(['ROLE_VIEWER', 'ROLE_CREATOR']),
     password: z.string().min(8, 'Password must be at least 8 characters'),
     confirmPassword: z.string().min(1, 'Please confirm your password'),
     agreeTerms: z.boolean().refine((val) => val === true, {
@@ -41,38 +47,77 @@ const signupSchema = z
 
 type SignupFormData = z.infer<typeof signupSchema>;
 
+type SuccessState = 'registered' | 'registeredManual' | 'signedin' | 'pending';
+
+const SUCCESS_COPY: Record<
+  SuccessState,
+  { title: string; description: string; cta: string; href: string }
+> = {
+  // Google signup: the backend created a session.
+  registered: {
+    title: 'AUTHENTICATION COMPLETED',
+    description:
+      'Your GoEvent profile is ready. You can now discover concerts and book tickets with real-time inventory holds.',
+    cta: 'Visit Site',
+    href: '/',
+  },
+  // Manual signup: no session yet, so the user signs in next.
+  registeredManual: {
+    title: 'REGISTRATION COMPLETED',
+    description:
+      'Your account has been created. Sign in with your email and password to continue.',
+    cta: 'Sign In',
+    href: '/login',
+  },
+  signedin: {
+    title: 'AUTHENTICATION COMPLETED',
+    description: 'Welcome back to GoEvent. You are signed in and ready to book your next event.',
+    cta: 'Visit Site',
+    href: '/',
+  },
+  pending: {
+    title: 'REGISTRATION SUBMITTED',
+    description:
+      'Your organizer account is under review. An admin will approve it shortly, then you can sign in.',
+    cta: 'Back to Home',
+    href: '/',
+  },
+};
+
 export default function SignupPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [signupSuccess, setSignupSuccess] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [successState, setSuccessState] = useState<SuccessState | null>(null);
+  const [manualForm, setManualForm] = useState<ManualRegistrationData | null>(null);
+  const successCopy = successState ? SUCCESS_COPY[successState] : null;
 
   const {
     register,
     handleSubmit,
-    watch,
     setValue,
     formState: { errors },
   } = useForm<SignupFormData>({
     resolver: zodResolver(signupSchema),
     defaultValues: {
-      fullName: '',
+      firstName: '',
+      lastName: '',
       email: '',
-      role: 'ROLE_VIEWER',
       password: '',
       confirmPassword: '',
       agreeTerms: false,
     },
   });
 
-  const selectedRole = watch('role');
-
   const [googleVerifiedUser, setGoogleVerifiedUser] = useState<{
     email?: string;
     name?: string;
     picture?: string;
   } | null>(null);
+
+  // Google Role Modal state
+  const [isRoleModalOpen, setIsRoleModalOpen] = useState(false);
+  const [googleIdToken, setGoogleIdToken] = useState<string>('');
+  const [decodedGoogleUser, setDecodedGoogleUser] = useState<GoogleDecodedUser | null>(null);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -85,36 +130,94 @@ export default function SignupPage() {
           name: name || undefined,
         });
         if (email) setValue('email', email, { shouldValidate: true });
-        if (name) setValue('fullName', name, { shouldValidate: true });
+        if (name) {
+          const parts = name.trim().split(/\s+/);
+          const first = parts[0] || '';
+          const last = parts.slice(1).join(' ') || '';
+          setValue('firstName', first, { shouldValidate: true });
+          if (last) setValue('lastName', last, { shouldValidate: true });
+        }
       }
     }
   }, [setValue]);
 
-  const handleGoogleSuccess = (data: GoogleAuthResponse, googleUser?: GoogleDecodedUser | null) => {
+  const handleGoogleSuccess = (
+    data: GoogleAuthResponse,
+    googleUser?: GoogleDecodedUser | null,
+    idToken?: string
+  ) => {
+    if (idToken) {
+      setGoogleIdToken(idToken);
+      setDecodedGoogleUser(googleUser || null);
+    }
+
     if (data.action === 'REGISTRATION_REQUIRED') {
+      // Google flow: make sure no stale manual form data is used by the modal.
+      setManualForm(null);
       if (googleUser) {
         setGoogleVerifiedUser({
           email: googleUser.email,
           name: googleUser.name,
           picture: googleUser.picture,
         });
-        if (googleUser.name) setValue('fullName', googleUser.name, { shouldValidate: true });
+        if (googleUser.given_name) {
+          setValue('firstName', googleUser.given_name, { shouldValidate: true });
+        } else if (googleUser.name) {
+          const parts = googleUser.name.trim().split(/\s+/);
+          setValue('firstName', parts[0] || '', { shouldValidate: true });
+        }
+        if (googleUser.family_name) {
+          setValue('lastName', googleUser.family_name, { shouldValidate: true });
+        } else if (googleUser.name) {
+          const parts = googleUser.name.trim().split(/\s+/);
+          const last = parts.slice(1).join(' ');
+          if (last) setValue('lastName', last, { shouldValidate: true });
+        }
         if (googleUser.email) setValue('email', googleUser.email, { shouldValidate: true });
       }
+      // Open the role selection popup modal
+      setIsRoleModalOpen(true);
     } else if (data.action === 'LOGIN') {
-      setSignupSuccess(true);
+      // Existing account signed in; the success card lets the user continue.
+      setSuccessState('signedin');
     }
   };
 
-  const onSubmit = async (data: SignupFormData) => {
-    setIsSubmitting(true);
-    setErrorMessage(null);
+  const handleModalSuccess = (data: GoogleAuthResponse) => {
+    // Manual signup never opens a session, unlike Google signup/sign-in.
+    const wasManualSignup = manualForm !== null;
 
-    // Simulated account registration state
-    setTimeout(() => {
-      setIsSubmitting(false);
-      setSignupSuccess(true);
-    }, 1400);
+    setIsRoleModalOpen(false);
+    setManualForm(null);
+
+    if (data.action === 'REGISTRATION_PENDING') {
+      // Organizer registrations wait for admin approval
+      setSuccessState('pending');
+    } else if (data.status) {
+      if (!wasManualSignup) {
+        useSessionStore.getState().setAuthenticated({
+          userId: data.userId,
+          roleId: data.roleId,
+          email: data.email,
+        });
+        void useSessionStore.getState().refresh();
+      }
+
+      setSuccessState(wasManualSignup ? 'registeredManual' : 'registered');
+    }
+  };
+
+  const onSubmit = (data: SignupFormData) => {
+    // Step 1: keep the form values and ask the user to pick a role.
+    // The actual /auth/register request is sent from the role modal.
+    setManualForm({
+      fname: data.firstName,
+      lname: data.lastName,
+      email: data.email,
+      password: data.password,
+      confirmPassword: data.confirmPassword,
+    });
+    setIsRoleModalOpen(true);
   };
 
   return (
@@ -165,25 +268,25 @@ export default function SignupPage() {
 
         {/* Right Side: Registration Form */}
         <div className="lg:col-span-7 p-6 sm:p-10 lg:p-12 flex flex-col justify-center">
-          {signupSuccess ? (
+          {successCopy ? (
             <div className="text-center py-10 space-y-5 animate-in fade-in duration-300">
               <div className="w-16 h-16 bg-emerald-500/10 border border-emerald-500/30 rounded-full flex items-center justify-center mx-auto text-emerald-400">
                 <CheckCircle2 className="w-8 h-8" />
               </div>
               <div className="space-y-2">
                 <h3 className="font-display text-3xl font-black uppercase text-white">
-                  ACCOUNT CREATED!
+                  {successCopy.title}
                 </h3>
                 <p className="text-xs text-zinc-400 max-w-sm mx-auto">
-                  Your GoEvent profile is ready. You can now discover concerts and book tickets with real-time inventory holds.
+                  {successCopy.description}
                 </p>
               </div>
               <div className="pt-2 flex justify-center space-x-3">
                 <Link
-                  href="/login"
+                  href={successCopy.href}
                   className="inline-flex items-center space-x-1.5 bg-white text-black font-semibold text-xs px-6 py-3 rounded-full hover:bg-zinc-200 transition-colors shadow-lg"
                 >
-                  <span>Sign In Now</span>
+                  <span>{successCopy.cta}</span>
                   <ArrowUpRight className="w-4 h-4" />
                 </Link>
               </div>
@@ -233,67 +336,54 @@ export default function SignupPage() {
               {/* Form */}
               <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
                 {/* Role Selector Tabs */}
-                <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-zinc-300 block">
-                    I want to join as:
-                  </label>
-                  <div className="grid grid-cols-2 gap-3">
-                    <button
-                      type="button"
-                      onClick={() => setValue('role', 'ROLE_VIEWER')}
-                      className={`p-3 rounded-2xl border text-left flex items-start space-x-2.5 transition-all ${
-                        selectedRole === 'ROLE_VIEWER'
-                          ? 'border-white bg-white/10 text-white shadow-md'
-                          : 'border-white/10 bg-white/5 text-zinc-400 hover:border-white/20'
-                      }`}
-                    >
-                      <Ticket className={`w-4 h-4 mt-0.5 ${selectedRole === 'ROLE_VIEWER' ? 'text-red-400' : 'text-zinc-500'}`} />
-                      <div>
-                        <span className="text-xs font-bold block">Attendee / Fan</span>
-                        <span className="text-[10px] text-zinc-400 block leading-tight">Book tickets & receive QR passes</span>
-                      </div>
-                    </button>
 
-                    <button
-                      type="button"
-                      onClick={() => setValue('role', 'ROLE_CREATOR')}
-                      className={`p-3 rounded-2xl border text-left flex items-start space-x-2.5 transition-all ${
-                        selectedRole === 'ROLE_CREATOR'
-                          ? 'border-white bg-white/10 text-white shadow-md'
-                          : 'border-white/10 bg-white/5 text-zinc-400 hover:border-white/20'
-                      }`}
-                    >
-                      <Music className={`w-4 h-4 mt-0.5 ${selectedRole === 'ROLE_CREATOR' ? 'text-red-400' : 'text-zinc-500'}`} />
-                      <div>
-                        <span className="text-xs font-bold block">Organizer / Creator</span>
-                        <span className="text-[10px] text-zinc-400 block leading-tight">Create & manage live events</span>
-                      </div>
-                    </button>
+                {/* Name fields (First Name & Last Name) */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-zinc-300 block">
+                      First Name
+                    </label>
+                    <div className="relative">
+                      <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
+                      <input
+                        type="text"
+                        {...register('firstName')}
+                        placeholder="e.g. Alex"
+                        className={`w-full bg-white/5 hover:bg-white/10 focus:bg-white/10 border ${
+                          errors.firstName ? 'border-red-500' : 'border-white/15'
+                        } rounded-xl pl-11 pr-4 py-3 text-sm text-white placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-white/40 transition-all`}
+                      />
+                    </div>
+                    {errors.firstName && (
+                      <p className="text-[11px] text-red-400 flex items-center space-x-1 mt-1">
+                        <AlertCircle className="w-3.5 h-3.5" />
+                        <span>{errors.firstName.message}</span>
+                      </p>
+                    )}
                   </div>
-                </div>
 
-                {/* Full name field */}
-                <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-zinc-300 block">
-                    Full Name
-                  </label>
-                  <div className="relative">
-                    <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
-                    <input
-                      type="text"
-                      {...register('fullName')}
-                      placeholder="e.g. Alex Morgan"
-                      className={`w-full bg-white/5 hover:bg-white/10 focus:bg-white/10 border ${
-                        errors.fullName ? 'border-red-500' : 'border-white/15'
-                      } rounded-xl pl-11 pr-4 py-3 text-sm text-white placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-white/40 transition-all`}
-                    />
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-zinc-300 block">
+                      Last Name
+                    </label>
+                    <div className="relative">
+                      <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
+                      <input
+                        type="text"
+                        {...register('lastName')}
+                        placeholder="e.g. Morgan"
+                        className={`w-full bg-white/5 hover:bg-white/10 focus:bg-white/10 border ${
+                          errors.lastName ? 'border-red-500' : 'border-white/15'
+                        } rounded-xl pl-11 pr-4 py-3 text-sm text-white placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-white/40 transition-all`}
+                      />
+                    </div>
+                    {errors.lastName && (
+                      <p className="text-[11px] text-red-400 flex items-center space-x-1 mt-1">
+                        <AlertCircle className="w-3.5 h-3.5" />
+                        <span>{errors.lastName.message}</span>
+                      </p>
+                    )}
                   </div>
-                  {errors.fullName && (
-                    <p className="text-[11px] text-red-400 flex items-center space-x-1 mt-1">
-                      <AlertCircle className="w-3.5 h-3.5" />
-                      <span>{errors.fullName.message}</span>
-                    </p>
-                  )}
                 </div>
 
                 {/* Email field */}
@@ -405,31 +495,13 @@ export default function SignupPage() {
                   )}
                 </div>
 
-                {/* Error Banner */}
-                {errorMessage && (
-                  <div className="p-3 bg-red-950/40 border border-red-500/30 rounded-xl text-xs text-red-300 flex items-center space-x-2">
-                    <AlertCircle className="w-4 h-4 shrink-0 text-red-400" />
-                    <span>{errorMessage}</span>
-                  </div>
-                )}
-
                 {/* Submit button */}
                 <button
                   type="submit"
-                  disabled={isSubmitting}
-                  className="w-full bg-white text-black hover:bg-zinc-200 font-semibold text-sm py-3.5 px-6 rounded-full flex items-center justify-center space-x-2 transition-all active:scale-[0.98] shadow-lg disabled:opacity-60 disabled:cursor-not-allowed mt-2"
+                  className="w-full bg-white text-black hover:bg-zinc-200 font-semibold text-sm py-3.5 px-6 rounded-full flex items-center justify-center space-x-2 transition-all active:scale-[0.98] shadow-lg mt-2"
                 >
-                  {isSubmitting ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      <span>Creating Account...</span>
-                    </>
-                  ) : (
-                    <>
-                      <span>Create Account</span>
-                      <ArrowUpRight className="w-4 h-4 stroke-[2.5]" />
-                    </>
-                  )}
+                  <span>Create Account</span>
+                  <ArrowUpRight className="w-4 h-4 stroke-[2.5]" />
                 </button>
               </form>
 
@@ -442,6 +514,19 @@ export default function SignupPage() {
           )}
         </div>
       </div>
+
+      {/* Google Role Selection Modal Popup */}
+      <GoogleRoleModal
+        isOpen={isRoleModalOpen}
+        onClose={() => {
+          setIsRoleModalOpen(false);
+          setManualForm(null);
+        }}
+        idToken={googleIdToken}
+        googleUser={decodedGoogleUser}
+        manualRegistration={manualForm}
+        onSuccess={handleModalSuccess}
+      />
     </div>
   );
 }

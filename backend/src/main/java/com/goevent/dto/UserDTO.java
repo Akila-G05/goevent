@@ -16,6 +16,15 @@ public class UserDTO {
     private String profileImgUrl;
     private String password;
     private int authTypeId;
+    private String mobile;
+
+    public String getMobile() {
+        return mobile;
+    }
+
+    public void setMobile(String mobile) {
+        this.mobile = mobile;
+    }
 
     public int getId() {
         return id;

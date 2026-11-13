@@ -1,20 +1,21 @@
 import axios, { AxiosInstance, AxiosResponse } from 'axios';
-
-const API_URL = process.env.API_URL || process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_API_BASE_URL || '/goevent/api';
+import { API_BASE_URL } from '@/api/routes';
 
 export const apiClient: AxiosInstance = axios.create({
-  baseURL: API_URL,
+  baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
   },
   withCredentials: true,
 });
 
+// Normalise failures so call sites receive a predictable `{ message }` shape.
+// Loading state and toasts are managed explicitly by each request handler.
 apiClient.interceptors.response.use(
   (response: AxiosResponse) => response,
   (error) => {
     const customError = {
-      message: error.response?.data?.message || 'An unexpected error occurred',
+      message: error.response?.data?.message || error.message || 'An unexpected error occurred',
       errorCode: error.response?.data?.errorCode || 'NETWORK_ERROR',
       status: error.response?.status,
     };

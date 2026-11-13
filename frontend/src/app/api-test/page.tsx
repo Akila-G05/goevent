@@ -1,64 +1,40 @@
 'use client';
 
-import React, { useState } from 'react';
-import Link from 'next/link';
-import Image from 'next/image';
-import * as z from 'zod';
-import {
-    Eye,
-    EyeOff,
-    ArrowUpRight,
-    ShieldCheck,
-    CheckCircle2,
-    AlertCircle,
-    Loader2,
-    Lock,
-    Mail,
-    Sparkles,
-} from 'lucide-react';
+import React from 'react';
 import { GoogleAuthButton } from '@/components/auth/google-auth-button';
+import { testApi } from '@/api';
+import { loading } from '@/lib/loading-store';
+import { getErrorMessage, toast } from '@/lib/toast-store';
 
 export default function TestPage() {
 
     async function clearCache() {
+        loading.open();
         try {
-            const response = await fetch(
-                "http://localhost:8080/gateway/cache/clear",
-                {
-                    method: "DELETE"
-                }
-            );
-
-            const data = await response.text();
-
-            console.log(data);
-
-        } catch (error) {
-            console.error("Cache clearing failed:", error);
+            const response = await testApi.clearGatewayCache();
+            toast.success(typeof response === 'string' ? response : 'Gateway cache cleared');
+        } catch (e) {
+            console.log("Request failed! Please try again", e);
+            toast.error(getErrorMessage(e));
+        } finally {
+            loading.close(500);
         }
     }
 
     async function testConnection(){
-        //start Loadin animation
+        loading.open();
         try {
-            const response = await fetch("http://localhost:8080/goevent/api/test", {
-                method: "GET"
-            });
-
-            if(response.ok){
-                const data = await response.json();
-                if(data.status){
-                    console.log(data)
-                }else{
-                    console.log(data.message);
-                }
+            const response = await testApi.getTestConnection();
+            if(response.status){
+                toast.success('Backend connection successful');
             }else{
-                console.log("Request failed! Please try again");
+                toast.warning(response.message || 'Unexpected response from the backend');
             }
         }catch (e) {
-            console.log(e);
-        }finally {
-            //stop Loadin animation
+            console.log("Request failed! Please try again", e);
+            toast.error(getErrorMessage(e));
+        }finally{
+            loading.close(500);
         }
     }
 

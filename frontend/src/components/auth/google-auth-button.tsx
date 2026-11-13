@@ -4,15 +4,13 @@ import { apiClient } from '@/lib/api-client';
 
 import React, { useState } from 'react';
 import { GoogleLogin, CredentialResponse } from '@react-oauth/google';
-import { AlertCircle, Info, Loader2 } from 'lucide-react';
-import { includes } from 'zod/v4';
+import { Loader2 } from 'lucide-react';
+import { authApi, GoogleAuthResponse, API_ROUTES } from '@/api';
+import { loading } from '@/lib/loading-store';
+import { useSessionStore } from '@/lib/session-store';
+import { getErrorMessage, toast } from '@/lib/toast-store';
 
-export interface GoogleAuthResponse {
-  action?: 'REGISTRATION_REQUIRED' | 'LOGIN' | string;
-  status: boolean;
-  message?: string;
-  [key: string]: any;
-}
+export type { GoogleAuthResponse };
 
 export interface GoogleDecodedUser {
   sub?: string;
@@ -29,38 +27,34 @@ interface GoogleAuthButtonProps {
   mode?: 'signin' | 'signup';
   endpoint?: string;
   onCredential?: (response: CredentialResponse) => void | Promise<void>;
-  onSuccessCallback?: (data: GoogleAuthResponse, googleUser?: GoogleDecodedUser | null) => void;
+  onSuccessCallback?: (data: GoogleAuthResponse, googleUser?: GoogleDecodedUser | null, idToken?: string) => void;
   className?: string;
 }
 
 export function GoogleAuthButton({
-  mode = 'signup',
-  endpoint = `${apiClient.defaults.baseURL}/auth/google`,
+  endpoint = API_ROUTES.AUTH.GOOGLE,
   onCredential,
   onSuccessCallback,
   className = '',
 }: GoogleAuthButtonProps) {
   const [isLoading, setIsLoading] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [noticeMessage, setNoticeMessage] = useState<string | null>(null);
 
   const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
 
   const handleGoogleSuccess = async (response: CredentialResponse) => {
     const idToken = response.credential;
     if (!idToken) {
-      setErrorMessage('No Google credential received. Please try again.');
+      toast.error('No Google credential received. Please try again.');
       return;
     }
 
     if (onCredential) {
+      setIsLoading(true);
+
       try {
-        setIsLoading(true);
-        setErrorMessage(null);
-        setNoticeMessage(null);
         await onCredential(response);
-      } catch (err: any) {
-        setErrorMessage(err.message || 'Google authentication failed.');
+      } catch (err) {
+        toast.error(getErrorMessage(err, 'Google authentication failed.'));
       } finally {
         setIsLoading(false);
       }
@@ -68,24 +62,16 @@ export function GoogleAuthButton({
     }
 
     setIsLoading(true);
-    setErrorMessage(null);
-    setNoticeMessage(null);
+    loading.open();
 
     try {
-      const result = await fetch(endpoint, {
-        method: 'POST',
-        credentials: "include",
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ idToken }),
-      });
+      const data: GoogleAuthResponse = await authApi.authenticateGoogle({ idToken });
 
-      const data: GoogleAuthResponse = await result.json();
-
-
-      if (!result.ok || !data.status) {
-        throw new Error(data.message || 'Google authentication failed');
+      if (!data.status) {
+        toast.error(data.message || 'Google authentication failed', {
+          title: 'Google sign-in failed',
+        });
+        return;
       }
 
       // Decode Google ID Token (client-side only for prefilling name, email, avatar)
@@ -107,23 +93,42 @@ export function GoogleAuthButton({
       }
 
       if (data.action === 'REGISTRATION_REQUIRED') {
-        setNoticeMessage(data.message || 'Google account verified. Please complete your registration.');
+        toast.info(data.message || 'Google account verified. Please complete your registration.');
+      } else if (data.action === 'REGISTRATION_PENDING') {
+        toast.info(data.message || 'Registration submitted and waiting for admin approval.');
+      } else if (data.action === 'REGISTERED') {
+        useSessionStore.getState().setAuthenticated({
+          userId: data.userId,
+          roleId: data.roleId,
+          email: data.email,
+        });
+        void useSessionStore.getState().refresh();
+        toast.success('Registration completed');
+      } else {
+        useSessionStore.getState().setAuthenticated({
+          userId: data.userId,
+          roleId: data.roleId,
+          email: data.email,
+        });
+        void useSessionStore.getState().refresh();
+        toast.success('Authentication successful');
       }
 
       if (onSuccessCallback) {
-        onSuccessCallback(data, googleUser);
+        onSuccessCallback(data, googleUser, idToken);
       }
-    } catch (error: any) {
-      console.error('Google Sign-In Error:', error);
-      setErrorMessage(error.message || 'Failed to authenticate with Google.');
+    } catch (error) {
+      toast.error(getErrorMessage(error, 'Failed to authenticate with Google.'), {
+        title: 'Google sign-in failed',
+      });
     } finally {
+      loading.close(500);
       setIsLoading(false);
     }
   };
 
   const handleGoogleError = () => {
-    console.log('Google Sign-In Failed');
-    setErrorMessage('Google Sign-In was cancelled or failed.');
+    toast.error('Google Sign-In was cancelled or failed.');
   };
 
   if (!clientId) {
@@ -152,26 +157,9 @@ export function GoogleAuthButton({
             theme="filled_black"
             shape="pill"
             size="large"
-            text={mode === 'signup' ? 'signup_with' : 'signin_with'}
+            text="continue_with"
             width="100%"
           />
-        </div>
-      )}
-
-      {noticeMessage && (
-        <div className="w-full p-3 bg-blue-950/40 border border-blue-500/30 rounded-2xl text-xs text-blue-200 flex items-start space-x-2 animate-in fade-in duration-200">
-          <Info className="w-4 h-4 shrink-0 text-blue-400 mt-0.5" />
-          <div className="space-y-0.5">
-            <span className="font-semibold text-white block">Registration Pending</span>
-            <span className="text-[11px] text-blue-300/90 leading-tight block">{noticeMessage}</span>
-          </div>
-        </div>
-      )}
-
-      {errorMessage && (
-        <div className="w-full p-3 bg-red-950/40 border border-red-500/30 rounded-xl text-xs text-red-300 flex items-center space-x-2 animate-in fade-in duration-200">
-          <AlertCircle className="w-3.5 h-3.5 shrink-0 text-red-400" />
-          <span>{errorMessage}</span>
         </div>
       )}
     </div>

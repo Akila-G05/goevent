@@ -55,3 +55,6 @@ structure.md
 # Local database data
 mysql-data/
 .docker/
+
+# Uploaded profile images
+uploads/

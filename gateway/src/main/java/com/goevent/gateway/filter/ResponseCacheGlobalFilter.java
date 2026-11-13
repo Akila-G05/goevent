@@ -23,6 +23,7 @@ import java.time.Duration;
 import java.util.Base64;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 @Component
@@ -152,13 +153,12 @@ public class ResponseCacheGlobalFilter
 
                                     var status = getStatusCode();
 
-                                    // Cache only HTTP 200 responses
-                                    // that do not set cookies.
+                                    // Cache only HTTP 200 responses that
+                                    // are safe to share between callers.
                                     if (status == null
                                             || status.value()
                                             != HttpStatus.OK.value()
-                                            || getHeaders().containsHeader(
-                                            HttpHeaders.SET_COOKIE)) {
+                                            || !isShareable(getHeaders())) {
 
                                         log.info(
                                                 "Response not cacheable; status={}",
@@ -277,5 +277,55 @@ public class ResponseCacheGlobalFilter
                         .response(decorated)
                         .build()
         );
+    }
+
+    /**
+     * A response may only enter the shared cache when it does not set
+     * cookies and does not opt out of shared caching through
+     * Cache-Control or Vary. Session or user-specific responses must
+     * never be reused for another caller.
+     */
+    private static boolean isShareable(HttpHeaders headers) {
+
+        if (headers.containsHeader(HttpHeaders.SET_COOKIE)) {
+            return false;
+        }
+
+        for (String value : headers.getOrDefault(
+                HttpHeaders.CACHE_CONTROL, List.of())) {
+
+            for (String directive : value.split(",")) {
+
+                String token = directive.trim()
+                        .toLowerCase(Locale.ROOT);
+
+                // "private" may carry field names: private="set-cookie".
+                if (token.equals("no-store")
+                        || token.equals("private")
+                        || token.startsWith("private=")) {
+
+                    return false;
+                }
+            }
+        }
+
+        for (String value : headers.getOrDefault(
+                HttpHeaders.VARY, List.of())) {
+
+            for (String field : value.split(",")) {
+
+                String token = field.trim()
+                        .toLowerCase(Locale.ROOT);
+
+                if (token.equals("cookie")
+                        || token.equals("authorization")
+                        || token.equals("*")) {
+
+                    return false;
+                }
+            }
+        }
+
+        return true;
     }
 }

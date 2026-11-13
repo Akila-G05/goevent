@@ -3,18 +3,30 @@ server:
   port: ${PORT:8081}
   servlet:
     context-path: /goevent
+    session:
+      cookie:
+        # Scope the session cookie to the whole origin so it is sent with
+        # /api/v1/** calls that the Next dev proxy forwards to the gateway.
+        path: /
 
 spring:
   data:
     redis:
       host: ${REDIS_HOST:localhost}
-      port: ${REDIS_PORT:6380}
+      port: ${REDIS_PORT:6379}
       password: ${REDIS_PASSWORD:}
 
   session:
     timeout: 30m
     redis:
       namespace: goevent:session
+
+  # Image uploads. The global limit must cover the largest policy (8 MB event
+  # banners); each image type is validated again against its own limit.
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 12MB
 
   # Supports launches from either the repository root or backend/.
   config:
@@ -69,6 +81,17 @@ logging:
 
 google:
   client-id: ${GOOGLE_CLIENT_ID}
+
+# Uploaded images. The default root sits outside the repository and build
+# output so cleaning the project never deletes files; point STORAGE_ROOT at a
+# mounted volume or cloud directory in production.
+app:
+  storage:
+    root: ${STORAGE_ROOT:${user.home}/goevent/uploads}
+    # Base of the public URL stored in MySQL (one folder per owner, e.g.
+    # /goevent/api/images/profile/13/<uuid>.png). Replace with a CDN base when
+    # images move to cloud storage; the local route then stops being used.
+    public-base-url: ${STORAGE_PUBLIC_BASE_URL:/goevent/api/images}
 
 
 #app:

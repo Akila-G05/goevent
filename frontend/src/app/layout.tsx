@@ -3,6 +3,8 @@ import { Bebas_Neue, Plus_Jakarta_Sans } from 'next/font/google';
 import './globals.css';
 import { Providers } from './providers';
 import { Navbar } from '@/components/shared/navbar';
+import { LoadingOverlay } from '@/components/ui/loading-overlay';
+import { Toaster } from '@/components/ui/toaster';
 
 const bebasNeue = Bebas_Neue({
   weight: '400',
@@ -35,6 +37,8 @@ export default function RootLayout({
           <main className="flex-1">
             {children}
           </main>
+          <LoadingOverlay />
+          <Toaster />
         </Providers>
       </body>
     </html>

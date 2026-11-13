@@ -60,6 +60,17 @@ changing `.env` cannot change users already stored in the volume.
 
 ## Adding migrations and operating safely
 
+V3 adds nullable `user.mobile` and `student_detail.university_id`, with an index
+and foreign key to `university`. It contains no sample inserts or database
+creation/selection. Older students may keep a null university until their profile
+is completed; no guessed assignment or table deletion is performed. V2's
+255-character password column remains unchanged. The isolated smoke checks these
+columns and the foreign key after migrating V1 through V3.
+
+V3 replaces an unmerged full-dump draft. Any database that already executed that
+draft requires explicit schema/history review before adopting this version;
+do not automatically repair checksums, baseline, clean or rerun it.
+
 Add `V2__description.sql`, `V3__description.sql`, etc. in
 `backend/src/main/resources/db/migration/`. Never change applied migrations:
 checksum validation is enabled, as is migration filename validation. Avoid

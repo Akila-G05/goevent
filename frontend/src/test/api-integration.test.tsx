@@ -1,4 +1,5 @@
 import React from 'react';
+import type { AxiosAdapter } from 'axios';
 import { afterEach, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { apiClient } from '@/lib/api-client';
@@ -10,16 +11,25 @@ vi.mock('@react-oauth/google', () => ({
     <button onClick={() => onSuccess({ credential: 'test-credential' })}>Google test login</button>
   ),
 }));
-afterEach(() => vi.unstubAllGlobals());
+const originalAdapter = apiClient.defaults.adapter;
+afterEach(() => {
+  apiClient.defaults.adapter = originalAdapter;
+  vi.unstubAllEnvs();
+});
 
 it('posts login credentials to the same API prefix with cookies', async () => {
   vi.stubEnv('NEXT_PUBLIC_GOOGLE_CLIENT_ID', 'test.apps.googleusercontent.com');
-  const fetch = vi.fn().mockResolvedValue({ json: async () => ({ status: false, message: 'Rejected' }) });
-  vi.stubGlobal('fetch', fetch);
+  const adapter = vi.fn<AxiosAdapter>().mockImplementation(async config => ({
+    data: { status: false, message: 'Rejected' },
+    status: 200, statusText: 'OK', headers: {}, config,
+  }));
+  apiClient.defaults.adapter = adapter;
   render(<GoogleAuthButton />);
   fireEvent.click(screen.getByText('Google test login'));
-  await waitFor(() => expect(fetch).toHaveBeenCalledWith(`${apiClient.defaults.baseURL}/auth/google`,
-    expect.objectContaining({ method: 'POST', credentials: 'include', body: JSON.stringify({ idToken: 'test-credential' }) })));
+  await waitFor(() => expect(adapter).toHaveBeenCalledWith(expect.objectContaining({
+    baseURL: apiClient.defaults.baseURL, url: '/goevent/api/auth/google', method: 'post',
+    withCredentials: true, data: JSON.stringify({ idToken: 'test-credential' }),
+  })));
 });
 
 it('maps current and legacy browser prefixes to the real backend prefix', async () => {

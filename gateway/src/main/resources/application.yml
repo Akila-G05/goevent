@@ -10,6 +10,12 @@ spring:
   application:
     name: goevent-gateway
 
+  # Uploads: the gateway must accept the largest image (8 MB banner).
+  # Spring Boot 4 moved this from spring.codec.* to spring.http.codecs.*.
+  http:
+    codecs:
+      max-in-memory-size: 12MB
+
   # Redis connection
   data:
     redis:
@@ -116,6 +122,16 @@ spring:
                   args:
                     namespace: goevent-test
                     ttlSeconds: 300
+
+# Shared response cache: only these public, non-personalised endpoints
+# are allowed to be stored in Redis and reused for other callers.
+# Leave the list empty to disable shared response caching entirely.
+goevent:
+  cache:
+    public-paths:
+      - /goevent/api/content/universities
+      - /goevent/api/content/organizations
+      - /goevent/api/content/initial-data
 
 # Logging
 logging:

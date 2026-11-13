@@ -21,6 +21,10 @@ import {
   Info,
 } from 'lucide-react';
 import { GoogleAuthButton, GoogleAuthResponse, GoogleDecodedUser } from '@/components/auth/google-auth-button';
+import { authApi } from '@/api';
+import { loading } from '@/lib/loading-store';
+import { useSessionStore } from '@/lib/session-store';
+import { getErrorMessage, toast } from '@/lib/toast-store';
 
 const loginSchema = z.object({
   email: z.string().min(1, 'Email is required').email('Please enter a valid email address'),
@@ -35,7 +39,6 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [authSuccess, setAuthSuccess] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [redirectNotice, setRedirectNotice] = useState<string | null>(null);
 
   const handleGoogleSuccess = (data: GoogleAuthResponse, googleUser?: GoogleDecodedUser | null) => {
@@ -49,6 +52,7 @@ export default function LoginPage() {
         router.push(`/signup?${params.toString()}`);
       }, 1200);
     } else if (data.action === 'LOGIN') {
+      // Let the success card show; the user continues via "Visit Site".
       setAuthSuccess(true);
     }
   };
@@ -69,13 +73,37 @@ export default function LoginPage() {
 
   const onSubmit = async (data: LoginFormData) => {
     setIsSubmitting(true);
-    setErrorMessage(null);
+    loading.open();
 
-    // Simulated authenticating state
-    setTimeout(() => {
+    try {
+      const response = await authApi.authenticateManual({
+        email: data.email,
+        password: data.password,
+      });
+
+      if (response.status) {
+        toast.success('Authentication successful');
+        useSessionStore.getState().setAuthenticated({
+          userId: response.userId,
+          roleId: response.roleId,
+          email: response.email ?? data.email,
+        });
+        // Pull the display name from the session (login response omits it).
+        void useSessionStore.getState().refresh();
+        // The backend created the session; the success card offers "Visit Site".
+        setAuthSuccess(true);
+      } else {
+        toast.error(response.message || 'Invalid email or password', {
+          title: 'Login failed',
+        });
+      }
+    } catch (e) {
+      // Network/HTTP failures are normalised by the API client.
+      toast.error(getErrorMessage(e), { title: 'Login failed' });
+    } finally {
       setIsSubmitting(false);
-      setAuthSuccess(true);
-    }, 1200);
+      loading.close(500);
+    }
   };
 
   const handleQuickDemoFill = (role: 'viewer' | 'creator' | 'admin') => {
@@ -146,7 +174,7 @@ export default function LoginPage() {
               </div>
               <div className="space-y-2">
                 <h3 className="font-display text-3xl font-black uppercase text-white">
-                  AUTHENTICATED SUCCESSFULLY
+                  AUTHENTICATION COMPLETED
                 </h3>
                 <p className="text-xs text-zinc-400 max-w-sm mx-auto">
                   Welcome back to GoEvent. You are now logged in with verified ticket ownership.
@@ -156,7 +184,7 @@ export default function LoginPage() {
                 href="/"
                 className="inline-flex items-center space-x-1.5 bg-white text-black font-semibold text-xs px-6 py-3 rounded-full hover:bg-zinc-200 transition-colors shadow-lg"
               >
-                <span>Go to Live Events</span>
+                <span>Visit Site</span>
                 <ArrowUpRight className="w-4 h-4" />
               </Link>
             </div>
@@ -175,35 +203,6 @@ export default function LoginPage() {
                 </p>
               </div>
 
-              {/* Demo Login Shortcuts */}
-              <div className="p-3 bg-white/5 border border-white/10 rounded-2xl space-y-2">
-                <span className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider block">
-                  Demo Quick Fill:
-                </span>
-                <div className="flex flex-wrap gap-2">
-                  <button
-                    type="button"
-                    onClick={() => handleQuickDemoFill('viewer')}
-                    className="text-[11px] bg-white/10 hover:bg-white/20 text-zinc-200 px-3 py-1 rounded-full border border-white/10 transition-colors"
-                  >
-                    Attendee Demo
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleQuickDemoFill('creator')}
-                    className="text-[11px] bg-white/10 hover:bg-white/20 text-zinc-200 px-3 py-1 rounded-full border border-white/10 transition-colors"
-                  >
-                    Creator Demo
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleQuickDemoFill('admin')}
-                    className="text-[11px] bg-white/10 hover:bg-white/20 text-zinc-200 px-3 py-1 rounded-full border border-white/10 transition-colors"
-                  >
-                    Admin Demo
-                  </button>
-                </div>
-              </div>
 
               {/* Google Sign-In */}
               <div className="space-y-3">
@@ -302,14 +301,6 @@ export default function LoginPage() {
                     Remember this device for 30 days
                   </label>
                 </div>
-
-                {/* Error Banner */}
-                {errorMessage && (
-                  <div className="p-3 bg-red-950/40 border border-red-500/30 rounded-xl text-xs text-red-300 flex items-center space-x-2">
-                    <AlertCircle className="w-4 h-4 shrink-0 text-red-400" />
-                    <span>{errorMessage}</span>
-                  </div>
-                )}
 
                 {/* Submit button */}
                 <button

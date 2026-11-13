@@ -2,6 +2,7 @@
 package com.goevent.gateway.filter;
 
 import tools.jackson.databind.ObjectMapper;
+import com.goevent.gateway.config.CacheProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.cloud.gateway.filter.GatewayFilter;
@@ -43,16 +44,27 @@ public class ResponseCacheGatewayFilterFactory
             ResponseCacheGatewayFilterFactory.class.getName()
                     + ".cacheBypass";
 
+    /**
+     * Endpoints whose response is identical for every caller. Only these
+     * may be stored in the shared response cache, and only when they are
+     * reached with a GET request that carries no Authorization header.
+     *
+     * <p>Configured in application.yml under goevent.cache.public-paths.</p>
+     */
+    private final CacheProperties cacheProperties;
+
     private final ReactiveStringRedisTemplate redis;
     private final ObjectMapper objectMapper;
 
     public ResponseCacheGatewayFilterFactory(
             ReactiveStringRedisTemplate redis,
-            ObjectMapper objectMapper) {
+            ObjectMapper objectMapper,
+            CacheProperties cacheProperties) {
 
         super(Config.class);
         this.redis = redis;
         this.objectMapper = objectMapper;
+        this.cacheProperties = cacheProperties;
     }
 
     public static class Config {
@@ -95,14 +107,23 @@ public class ResponseCacheGatewayFilterFactory
 
             var request = exchange.getRequest();
 
-            // Cache only public GET requests.
+            String path = request.getURI().getRawPath();
+
+            boolean isPublicCacheEndpoint =
+                    cacheProperties.getPublicPaths().contains(path);
+
+            // Only cache GET requests to approved public endpoints.
+            // Authorization headers always bypass the shared cache.
+            // Cookies are allowed for approved public endpoints, so a
+            // logged-in user still gets the shared public response.
             if (!"GET".equalsIgnoreCase(
                     request.getMethod().name())
+                    || !isPublicCacheEndpoint
                     || request.getHeaders().containsHeader(
                     HttpHeaders.AUTHORIZATION)
-                    || request.getHeaders().containsHeader(
-                    HttpHeaders.COOKIE)
                     || config.getTtlSeconds() <= 0) {
+
+                log.debug("CACHE BYPASS: {}", path);
 
                 return chain.filter(exchange);
             }

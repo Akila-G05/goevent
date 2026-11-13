@@ -1,6 +1,7 @@
 package com.goevent.repository;
 
 import com.goevent.dto.UserDTO;
+import com.goevent.enums.AuthType;
 import com.goevent.service.AuthenticationService;
 import com.goevent.util.AppUtil;
 import org.slf4j.Logger;
@@ -39,6 +40,7 @@ public class AuthenticationRepo {
         user.setProfileImgUrl(rs.getString("profile_img_url"));
         user.setPassword(rs.getString("password"));
         user.setAuthTypeId(rs.getInt("auth_type_id"));
+        user.setMobile(rs.getString("mobile"));
 
         return user;
     };
@@ -71,14 +73,46 @@ public class AuthenticationRepo {
     public int registerGoogleUser(String fname, String lname,String email,int userStatusId,int roleId,String googleSub,String profileImgUrl,int authTypeId) {
 
         String query = """
-                INSERT INTO `user` (fname, lname, email, registered_date, v_code, user_status_id, role_id, google_sub, profile_img_url, password, auth_type_id)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """;
+            INSERT INTO `user` (fname, lname, email, registered_date, v_code, user_status_id, role_id, google_sub, profile_img_url, password, auth_type_id, mobile)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """;
 
         return jdbcTemplate.update(
                 query,
-                fname, lname, email, Timestamp.valueOf(LocalDateTime.now()), null, userStatusId, roleId, googleSub, profileImgUrl, null, authTypeId
+                fname, lname, email, Timestamp.valueOf(LocalDateTime.now()), null, userStatusId, roleId, googleSub, profileImgUrl, null, authTypeId, null
         );
+    }
+
+    // Register new manual (email/password) user
+    public int registerManualUser(String fname, String lname, String email, String passwordHash, int userStatusId, int roleId) {
+
+        String query = """
+            INSERT INTO `user` (fname, lname, email, registered_date, v_code, user_status_id, role_id, google_sub, profile_img_url, password, auth_type_id)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """;
+
+        return jdbcTemplate.update(
+                query,
+                fname, lname, email, Timestamp.valueOf(LocalDateTime.now()), null, userStatusId, roleId, null, null, passwordHash, AuthType.MANUAL.getId()
+        );
+    }
+
+    public int registerStudentData(int userId, String indexNo,String uniEmail, int uniId) {
+        String query = """
+            INSERT INTO student_detail(index_no, uni_email, user_id, university_id)
+            VALUES (?, ?, ?, ?)
+            """;
+
+        return jdbcTemplate.update(query,indexNo, uniEmail, userId, uniId);
+    }
+
+    public int registerOrganizerData(int userId,int organizationId,String position) {
+        String query = """
+            INSERT INTO user_has_organize(user_id,registered_date,organization_id,position)
+            VALUES (?, NOW(), ?, ?)
+            """;
+
+        return jdbcTemplate.update(query,userId,organizationId,position);
     }
 
 }

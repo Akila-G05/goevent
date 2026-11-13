@@ -5,33 +5,87 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.Map;
 
 @RestController
 @RequestMapping("/auth")
 public class AuthenticationController {
-    private AuthenticationService authenticationService;
+    private final AuthenticationService authenticationService;
 
     public AuthenticationController(AuthenticationService authenticationService) {
         this.authenticationService = authenticationService;
     }
 
+    //Manual Registeration
+    @PostMapping("/register")
+    public String manualRegistration(@RequestBody Map<String, String> request, HttpServletRequest httpRequest) {
+        return authenticationService.handleManualRegistration(request, httpRequest);
+    }
+
+    //Manual Signin
+    @PostMapping("/manual")
+    public String manualAuthentication(@RequestBody Map<String, String> request, HttpServletRequest httpRequest) {
+        return authenticationService.handleManualAuthentication(request, httpRequest);
+    }
+
+    // Google REgisteration & Signin
     @PostMapping("/google")
     public String googleAuthentication(@RequestBody Map<String, String> request, HttpServletRequest httpRequest) {
         String idToken = request.get("idToken");
-    //    int roleid = Integer.valueOf(request.get("roldeId"));
+        String roleIdStr = request.get("roleId");
 
-    //    if(roleid == 1) { //USER
-    //        //no parameters
-    //    }else if(roleid == 4){
-    //        String index = request.get("index");
-    //        String uniEmail = request.get("unimail");
-    //    }else if (roleid == 2){
-    //        int orgId = Integer.valueOf(request.get("orgId"));
-    //        String position = request.get("position");
-    //    }
+        Map<String, Object> authData = new HashMap<>();
+        authData.put("idToken", idToken);
 
+        // If roleId is supplied (i.e. user completing role selection modal)
+        if (roleIdStr != null && !roleIdStr.isBlank()) {
+            try {
+                int roleId = Integer.parseInt(roleIdStr);
+                authData.put("roleId", roleId);
 
-        return authenticationService.handleGoogleAuthentication(idToken, httpRequest);
+                if (roleId == 1) { // USER
+                    // No additional parameters
+                } else if (roleId == 4) { // STUDENT
+                    String index = request.get("index");
+                    String uniEmail = request.get("uniEmail");
+                    String uniIdStr = request.get("uniId");
+
+                    authData.put("index", index);
+                    authData.put("uniEmail", uniEmail);
+                    if (uniIdStr != null && !uniIdStr.isBlank()) {
+                        authData.put("uniId", Integer.parseInt(uniIdStr));
+                    }
+                } else if (roleId == 2) { // ORGANIZATION
+                    String orgIdStr = request.get("orgId");
+                    String position = request.get("position");
+
+                    if (orgIdStr != null && !orgIdStr.isBlank()) {
+                        authData.put("orgId", Integer.parseInt(orgIdStr));
+                    }
+                    authData.put("position", position);
+                }
+            } catch (NumberFormatException e) {
+                // If invalid role format, proceed without throwing 500
+            }
+        }
+
+        return authenticationService.handleGoogleAuthentication(
+                authData,
+                httpRequest
+        );
     }
+
+    // Current session check (used by the navbar to decide what to render)
+    @GetMapping("/session")
+    public String sessionCheck(HttpServletRequest httpRequest) {
+        return authenticationService.handleSessionCheck(httpRequest);
+    }
+
+    // Sign out: invalidates the server-side session
+    @PostMapping("/logout")
+    public String logout(HttpServletRequest httpRequest) {
+        return authenticationService.handleLogout(httpRequest);
+    }
+
 }
