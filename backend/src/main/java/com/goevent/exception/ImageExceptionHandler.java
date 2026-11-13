@@ -1,10 +1,9 @@
 package com.goevent.exception;
 
+import com.goevent.common.ApiResponse;
 import com.goevent.util.AppUtil;
-import com.google.gson.JsonObject;
 import org.slf4j.Logger;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -12,30 +11,25 @@ import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.multipart.support.MissingServletRequestPartException;
 
 /**
- * Turns image failures into the same {@code {status, message}} JSON used by
- * the rest of the API. Every rejection and failure is also written to the
- * application log so operators can see abuse and disk problems; client
- * responses never include paths, stack traces or storage details.
+ * Turns image failures into the {@code {status, message}} JSON used by the
+ * rest of the API, and writes every rejection or failure to the application
+ * log. Responses never include paths, stack traces or storage details.
  */
 @RestControllerAdvice
 public class ImageExceptionHandler {
 
     private static final Logger logger = AppUtil.getLogger(ImageExceptionHandler.class);
 
-    @ExceptionHandler(InvalidImageException.class)
-    public ResponseEntity<String> handleInvalidImage(InvalidImageException e) {
+    @ExceptionHandler(ImageException.class)
+    public ResponseEntity<String> handleImageException(ImageException e) {
 
-        logger.warn("Image upload rejected: {}", e.getMessage());
+        if (e.status().is5xxServerError()) {
+            logger.error("Image storage failure: {}", e.getMessage(), e);
+        } else {
+            logger.warn("Image upload rejected: {}", e.getMessage());
+        }
 
-        return json(HttpStatus.BAD_REQUEST, e.getMessage());
-    }
-
-    @ExceptionHandler(ImageStorageException.class)
-    public ResponseEntity<String> handleStorageFailure(ImageStorageException e) {
-
-        logger.error("Image storage failure: {}", e.getMessage(), e);
-
-        return json(HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage());
+        return ApiResponse.error(e.status(), e.getMessage());
     }
 
     @ExceptionHandler(MaxUploadSizeExceededException.class)
@@ -43,7 +37,8 @@ public class ImageExceptionHandler {
 
         logger.warn("Upload rejected by the multipart size limit: {}", e.getMessage());
 
-        return json(HttpStatus.CONTENT_TOO_LARGE, "The image is too large. Please choose a smaller file.");
+        return ApiResponse.error(HttpStatus.CONTENT_TOO_LARGE,
+                "The image is too large. Please choose a smaller file.");
     }
 
     @ExceptionHandler(MissingServletRequestPartException.class)
@@ -51,19 +46,6 @@ public class ImageExceptionHandler {
 
         logger.warn("Upload rejected because the file part was missing: {}", e.getMessage());
 
-        return json(HttpStatus.BAD_REQUEST, "Please choose an image file");
-    }
-
-    private ResponseEntity<String> json(HttpStatus status, String message) {
-
-        JsonObject body = new JsonObject();
-
-        body.addProperty("status", false);
-        body.addProperty("message", message);
-
-        return ResponseEntity
-                .status(status)
-                .contentType(MediaType.APPLICATION_JSON)
-                .body(AppUtil.gson.toJson(body));
+        return ApiResponse.error(HttpStatus.BAD_REQUEST, "Please choose an image file");
     }
 }

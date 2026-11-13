@@ -88,8 +88,9 @@ google:
 app:
   storage:
     root: ${STORAGE_ROOT:${user.home}/goevent/uploads}
-    # Base of the URL stored in MySQL. Replace with a CDN base when images move
-    # to cloud storage; the local /api/images route keeps serving legacy files.
+    # Base of the public URL stored in MySQL (one folder per owner, e.g.
+    # /goevent/api/images/profile/13/<uuid>.png). Replace with a CDN base when
+    # images move to cloud storage; the local route then stops being used.
     public-base-url: ${STORAGE_PUBLIC_BASE_URL:/goevent/api/images}
 
 

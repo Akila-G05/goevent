@@ -58,10 +58,7 @@ public class UserRepo {
         }
     }
 
-    /**
-     * Student profile row joined with the university name. Returns null when
-     * the account has no student details yet.
-     */
+
     public Map<String, Object> getStudentDetail(int userId) {
 
         String query = """
@@ -76,10 +73,7 @@ public class UserRepo {
         return rows.isEmpty() ? null : rows.get(0);
     }
 
-    /**
-     * Organizer membership row joined with the organization name. Returns null
-     * when the account has no organizer details yet.
-     */
+
     public Map<String, Object> getOrganizerDetail(int userId) {
 
         String query = """
@@ -105,10 +99,7 @@ public class UserRepo {
         return jdbcTemplate.update(query, fname, lname, mobile, profileImgUrl, userId);
     }
 
-    /**
-     * Student details may be missing for older accounts, so the write is an
-     * upsert rather than a blind UPDATE.
-     */
+
     public void upsertStudentDetail(int userId, String indexNo, String uniEmail, int universityId) {
 
         if (hasStudentDetail(userId)) {
@@ -130,10 +121,7 @@ public class UserRepo {
         jdbcTemplate.update(insert, indexNo, uniEmail, userId, universityId);
     }
 
-    /**
-     * Organizer membership may be missing for older accounts, so the write is
-     * an upsert rather than a blind UPDATE.
-     */
+
     public void upsertOrganizerDetail(int userId, int organizationId, String position) {
 
         if (hasOrganizerDetail(userId)) {
