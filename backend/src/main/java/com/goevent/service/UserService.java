@@ -1,5 +1,6 @@
 package com.goevent.service;
 
+import com.goevent.common.ApiResponse;
 import com.goevent.config.FileStorageConfig;
 import com.goevent.dto.UserDTO;
 import com.goevent.enums.AuthType;
@@ -13,8 +14,6 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -53,17 +52,17 @@ public class UserService {
         Integer userId = currentUserId(httpRequest);
 
         if (userId == null) {
-            return unauthorized("Not authenticated");
+            return ApiResponse.unauthorized("Not authenticated");
         }
 
         JsonObject profile = buildProfileJson(userId);
 
         if (profile == null) {
             // Session points at a user that no longer exists.
-            return unauthorized("Not authenticated");
+            return ApiResponse.unauthorized("Not authenticated");
         }
 
-        return json(HttpStatus.OK, profile);
+        return ApiResponse.ok( profile);
     }
 
     /**
@@ -76,13 +75,13 @@ public class UserService {
         Integer userId = currentUserId(httpRequest);
 
         if (userId == null) {
-            return unauthorized("Not authenticated");
+            return ApiResponse.unauthorized("Not authenticated");
         }
 
         UserDTO user = userRepo.getUserById(userId);
 
         if (user == null) {
-            return unauthorized("Not authenticated");
+            return ApiResponse.unauthorized("Not authenticated");
         }
 
         JsonObject payload;
@@ -91,12 +90,12 @@ public class UserService {
             JsonElement parsed = JsonParser.parseString(body);
 
             if (!parsed.isJsonObject()) {
-                return badRequest("Invalid request body");
+                return ApiResponse.badRequest("Invalid request body");
             }
 
             payload = parsed.getAsJsonObject();
         } catch (RuntimeException e) {
-            return badRequest("Invalid request body");
+            return ApiResponse.badRequest("Invalid request body");
         }
 
         String firstName = stringField(payload, "firstName", user.getFname());
@@ -111,25 +110,25 @@ public class UserService {
         }
 
         if (firstName == null || firstName.isBlank()) {
-            return badRequest("First name is required");
+            return ApiResponse.badRequest("First name is required");
         }
         if (firstName.length() > 45) {
-            return badRequest("First name must be 45 characters or fewer");
+            return ApiResponse.badRequest("First name must be 45 characters or fewer");
         }
         if (lastName == null || lastName.isBlank()) {
-            return badRequest("Last name is required");
+            return ApiResponse.badRequest("Last name is required");
         }
         if (lastName.length() > 45) {
-            return badRequest("Last name must be 45 characters or fewer");
+            return ApiResponse.badRequest("Last name must be 45 characters or fewer");
         }
         if (mobile != null && !mobile.isBlank() && !MOBILE.matcher(mobile).matches()) {
-            return badRequest("Enter a valid mobile number");
+            return ApiResponse.badRequest("Enter a valid mobile number");
         }
         if (profileImgUrl != null && profileImgUrl.length() > 200) {
-            return badRequest("Profile image URL is too long");
+            return ApiResponse.badRequest("Profile image URL is too long");
         }
         if (profileImgUrl != null && !isAllowedImageUrl(profileImgUrl)) {
-            return badRequest("Invalid profile image");
+            return ApiResponse.badRequest("Invalid profile image");
         }
 
         Role role = roleOf(user.getRoleId());
@@ -148,19 +147,19 @@ public class UserService {
             universityId = intField(student, "universityId");
 
             if (indexNo == null || indexNo.isBlank()) {
-                return badRequest("Index number is required");
+                return ApiResponse.badRequest("Index number is required");
             }
             if (indexNo.length() > 45) {
-                return badRequest("Index number must be 45 characters or fewer");
+                return ApiResponse.badRequest("Index number must be 45 characters or fewer");
             }
             if (uniEmail == null || !EMAIL.matcher(uniEmail).matches()) {
-                return badRequest("Enter a valid university email");
+                return ApiResponse.badRequest("Enter a valid university email");
             }
             if (uniEmail.length() > 100) {
-                return badRequest("University email must be 100 characters or fewer");
+                return ApiResponse.badRequest("University email must be 100 characters or fewer");
             }
             if (universityId == null || !userRepo.universityExists(universityId)) {
-                return badRequest("Select a valid university");
+                return ApiResponse.badRequest("Select a valid university");
             }
         }
 
@@ -171,13 +170,13 @@ public class UserService {
             position = stringField(organization, "position", null);
 
             if (organizationId == null || !userRepo.organizationExists(organizationId)) {
-                return badRequest("Select a valid organization");
+                return ApiResponse.badRequest("Select a valid organization");
             }
             if (position == null || position.isBlank()) {
-                return badRequest("Position is required");
+                return ApiResponse.badRequest("Position is required");
             }
             if (position.length() > 45) {
-                return badRequest("Position must be 45 characters or fewer");
+                return ApiResponse.badRequest("Position must be 45 characters or fewer");
             }
         }
 
@@ -202,10 +201,10 @@ public class UserService {
         JsonObject profile = buildProfileJson(userId);
 
         if (profile == null) {
-            return unauthorized("Not authenticated");
+            return ApiResponse.unauthorized("Not authenticated");
         }
 
-        return json(HttpStatus.OK, profile);
+        return ApiResponse.ok( profile);
     }
 
     /**
@@ -217,17 +216,17 @@ public class UserService {
         Integer userId = currentUserId(httpRequest);
 
         if (userId == null) {
-            return unauthorized("Not authenticated");
+            return ApiResponse.unauthorized("Not authenticated");
         }
 
-        String profileImgUrl = imageUploadService.uploadProfilePicture(file);
+        String profileImgUrl = imageUploadService.uploadProfilePicture(userId, file);
 
         JsonObject response = new JsonObject();
 
         response.addProperty("status", true);
         response.addProperty("profileImgUrl", profileImgUrl);
 
-        return json(HttpStatus.OK, response);
+        return ApiResponse.ok( response);
     }
 
     private JsonObject buildProfileJson(int userId) {
@@ -419,30 +418,5 @@ public class UserService {
         } catch (NumberFormatException e) {
             return 0;
         }
-    }
-
-    private ResponseEntity<String> json(HttpStatus status, JsonObject body) {
-        return ResponseEntity
-                .status(status)
-                .contentType(MediaType.APPLICATION_JSON)
-                .body(AppUtil.gson.toJson(body));
-    }
-
-    private ResponseEntity<String> unauthorized(String message) {
-        JsonObject response = new JsonObject();
-
-        response.addProperty("status", false);
-        response.addProperty("message", message);
-
-        return json(HttpStatus.UNAUTHORIZED, response);
-    }
-
-    private ResponseEntity<String> badRequest(String message) {
-        JsonObject response = new JsonObject();
-
-        response.addProperty("status", false);
-        response.addProperty("message", message);
-
-        return json(HttpStatus.BAD_REQUEST, response);
     }
 }

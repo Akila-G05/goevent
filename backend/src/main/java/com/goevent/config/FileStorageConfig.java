@@ -1,6 +1,5 @@
 package com.goevent.config;
 
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -10,13 +9,14 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * Single place for every image storage decision: where files live, which
- * folder and filename prefix each image type uses, which formats are accepted
- * and how large they may be, plus the public URL base stored in MySQL.
+ * Every image storage decision lives here: the root folder, the public URL
+ * base, the accepted formats and the per-scope size limits.
  *
- * <p>Moving to cloud storage later only requires changing this configuration
- * (root and public base URL) and the storage calls inside
- * {@code ImageUploadService}; no controller, service or database change.</p>
+ * <p>Files are grouped per owner ({@code profile/13/<uuid>.png},
+ * {@code event/42/<uuid>.jpg}) so an owner's images can be removed as a unit.
+ * Moving to cloud storage means changing the root/public base here and the
+ * file calls in {@code ImageUploadService}; controllers and MySQL are
+ * untouched.</p>
  */
 @Configuration
 public class FileStorageConfig {
@@ -25,110 +25,65 @@ public class FileStorageConfig {
     public static final String SCOPE_EVENT = "event";
     public static final String SCOPE_BANNER = "banner";
 
-    private static final Set<String> IMAGE_TYPES =
+    public static final Set<String> ALLOWED_CONTENT_TYPES =
             Set.of("image/jpeg", "image/png", "image/webp");
 
-    /**
-     * Per-image-type storage rules. The filename prefix makes stored files
-     * self-describing while the UUID keeps them unguessable.
-     */
-    public record ImagePolicy(
-            String directory,
-            String filenamePrefix,
-            Set<String> allowedContentTypes,
-            long maxSizeBytes
-    ) {
+    private static final long MB = 1024L * 1024L;
 
-        public boolean allows(String contentType) {
-            return contentType != null && allowedContentTypes.contains(contentType);
+    private static final Map<String, Long> MAX_SIZE_BY_SCOPE = Map.of(
+            SCOPE_PROFILE, 2 * MB,
+            SCOPE_EVENT, 5 * MB,
+            SCOPE_BANNER, 8 * MB
+    );
+
+    /** Resolved storage configuration injected into the image service. */
+    public record StorageSettings(Path root, String publicBaseUrl) {
+
+        public boolean isScope(String scope) {
+            return scope != null && MAX_SIZE_BY_SCOPE.containsKey(scope);
         }
 
-        public String maxSizeLabel() {
-            return (maxSizeBytes / (1024 * 1024)) + " MB";
-        }
-    }
+        public long maxSizeBytes(String scope) {
+            Long maxSize = scope != null ? MAX_SIZE_BY_SCOPE.get(scope) : null;
 
-    /**
-     * Resolved storage configuration. Injected wherever images are handled so
-     * no other class needs to know about folders or URL formats.
-     */
-    public record StorageSettings(
-            Path root,
-            String publicBaseUrl,
-            Map<String, ImagePolicy> policies
-    ) {
-
-        public boolean hasScope(String scope) {
-            return scope != null && policies.containsKey(scope);
-        }
-
-        public ImagePolicy policy(String scope) {
-
-            ImagePolicy policy = scope != null ? policies.get(scope) : null;
-
-            if (policy == null) {
+            if (maxSize == null) {
                 throw new IllegalArgumentException("Unknown image scope: " + scope);
             }
 
-            return policy;
+            return maxSize;
+        }
+
+        public String maxSizeLabel(String scope) {
+            return (maxSizeBytes(scope) / MB) + " MB";
         }
 
         /** Public URL prefix for a scope, always ending with a slash. */
-        public String publicScopeUrl(String scope) {
-            return normalize(publicBaseUrl) + "/" + scope + "/";
+        public String publicScopePrefix(String scope) {
+            String base = publicBaseUrl == null ? "" : publicBaseUrl.trim();
+
+            while (base.endsWith("/")) {
+                base = base.substring(0, base.length() - 1);
+            }
+
+            return base + "/" + scope + "/";
         }
 
         /** Public URL persisted in MySQL for a stored file. */
-        public String publicPath(String scope, String filename) {
-            return publicScopeUrl(scope) + filename;
+        public String publicPath(String scope, String owner, String filename) {
+            return publicScopePrefix(scope) + owner + "/" + filename;
         }
-
-        private String normalize(String value) {
-
-            String normalized = value == null ? "" : value.trim();
-
-            while (normalized.endsWith("/")) {
-                normalized = normalized.substring(0, normalized.length() - 1);
-            }
-
-            return normalized;
-        }
-    }
-
-    @Bean
-    public Map<String, ImagePolicy> imagePolicies() {
-
-        return Map.of(
-                // User profile pictures
-                SCOPE_PROFILE,
-                new ImagePolicy("profiles", "profile", IMAGE_TYPES, 2L * 1024 * 1024),
-
-                // Event cover images
-                SCOPE_EVENT,
-                new ImagePolicy("events", "event", IMAGE_TYPES, 5L * 1024 * 1024),
-
-                // Event banners
-                SCOPE_BANNER,
-                new ImagePolicy("banners", "banner", IMAGE_TYPES, 8L * 1024 * 1024)
-        );
     }
 
     /**
-     * Root defaults to a folder outside the repository and build output so
-     * cleaning the project never deletes uploaded images. Production should
-     * point STORAGE_ROOT at a mounted volume or cloud-synced directory.
+     * Root defaults outside the repository and build output so cleaning the
+     * project never deletes uploads. Production should point STORAGE_ROOT at
+     * a mounted volume or cloud-synced directory.
      */
     @Bean
     public StorageSettings storageSettings(
             @Value("${app.storage.root:${user.home}/goevent/uploads}") String root,
-            @Value("${app.storage.public-base-url:/goevent/api/images}") String publicBaseUrl,
-            @Qualifier("imagePolicies") Map<String, ImagePolicy> policies
+            @Value("${app.storage.public-base-url:/goevent/api/images}") String publicBaseUrl
     ) {
-
-        return new StorageSettings(
-                Path.of(root).toAbsolutePath().normalize(),
-                publicBaseUrl,
-                Map.copyOf(policies)
-        );
+        return new StorageSettings(Path.of(root).toAbsolutePath().normalize(), publicBaseUrl);
     }
 }
