@@ -1,5 +1,8 @@
 # Repository CI/CD and Azure handoff
 
+Current disabled-bundle installation contract: [STAGING.md](STAGING.md). It supersedes
+the historical path/network/configuration assumptions below; no activation is authorized.
+
 ## Status and architecture audit
 
 Repository implementation is prepared, not activated in Azure or GitHub. Java 21,

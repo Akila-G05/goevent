@@ -1,8 +1,21 @@
-# Owner supplies domain, DNS, ACME account and existing certificate storage policy.
-{$GOEVENT_API_DOMAIN} {
+{
+    admin off
+    http_port 8080
+    https_port 8443
+    auto_https disable_redirects
+}
+http://{$GOEVENT_API_DOMAIN}:8080 {
+    redir https://{$GOEVENT_API_DOMAIN}{uri} permanent
+}
+https://{$GOEVENT_API_DOMAIN}:8443 {
     @api path /goevent/api/*
     handle @api {
-        reverse_proxy gateway:8080
+        reverse_proxy gateway:8080 {
+            header_up X-Forwarded-For {remote_host}
+            header_up X-Forwarded-Proto https
+            header_up X-Forwarded-Host {host}
+            header_up -Forwarded
+        }
     }
     handle {
         respond "Not found" 404

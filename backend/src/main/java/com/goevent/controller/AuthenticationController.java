@@ -31,7 +31,6 @@ public class AuthenticationController {
     //        String position = request.get("position");
     //    }
 
-        System.out.println("Token received: " + idToken);
 
         return authenticationService.handleGoogleAuthentication(idToken, httpRequest);
     }

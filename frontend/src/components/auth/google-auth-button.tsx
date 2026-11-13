@@ -1,5 +1,7 @@
 'use client';
 
+import { apiClient } from '@/lib/api-client';
+
 import React, { useState } from 'react';
 import { GoogleLogin, CredentialResponse } from '@react-oauth/google';
 import { AlertCircle, Info, Loader2 } from 'lucide-react';
@@ -33,7 +35,7 @@ interface GoogleAuthButtonProps {
 
 export function GoogleAuthButton({
   mode = 'signup',
-  endpoint = 'http://localhost:8080/goevent/api/auth/google',
+  endpoint = `${apiClient.defaults.baseURL}/auth/google`,
   onCredential,
   onSuccessCallback,
   className = '',
@@ -80,7 +82,7 @@ export function GoogleAuthButton({
       });
 
       const data: GoogleAuthResponse = await result.json();
-      console.log('Google Auth Response:', data);
+
 
       if (!result.ok || !data.status) {
         throw new Error(data.message || 'Google authentication failed');

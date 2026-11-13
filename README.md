@@ -216,8 +216,8 @@ bun run build
 The separate gateway uses Spring Cloud 2025.1.4, Redis rate limiting and response
 caching. Start Redis with `docker compose up -d --wait mysql redis`; root Compose supplies
 MySQL and authenticated local Redis. Backend sessions also use Redis. Gateway forwards `/goevent/api/**` to
-backend port 8081; Next defaults to `/api/v1`, so the API base/proxy configuration
-must be reconciled before claiming a working end-to-end login.
+backend port 8081; Next uses `/goevent/api` and retains `/api/v1` as a compatibility rewrite. Google login
+uses the same API base. Production origins/cookies and real login still require staging verification.
 
 The production plan preserves Vercel frontend hosting and Azure VM Compose with
 Caddy, the separate gateway/backend, protected MySQL managed disk, Key Vault and
@@ -229,3 +229,7 @@ Spring Security/JPA and domain features described above remain implementation
 targets; they are not implied by dependency upgrades.
 
 Local service commands and database-volume caveats: [local development guide](infra/docs/LOCAL-DEVELOPMENT.md).
+
+The disabled deployment bundle and exact installation/testing boundary are documented
+in [staging handoff](infra/docs/STAGING.md). Installation does not enable delivery,
+start services or authorize production migrations.

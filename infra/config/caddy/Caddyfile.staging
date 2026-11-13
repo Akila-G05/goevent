@@ -1,0 +1,26 @@
+# Isolated staging only: loopback publication and a private test CA.
+{
+    admin off
+    http_port 8080
+    https_port 8443
+    auto_https disable_redirects
+    skip_install_trust
+}
+http://localhost:8080 {
+    redir https://localhost:18443{uri} permanent
+}
+https://localhost:8443 {
+    tls internal
+    @api path /goevent/api/*
+    handle @api {
+        reverse_proxy gateway:8080 {
+            header_up X-Forwarded-For {remote_host}
+            header_up X-Forwarded-Proto https
+            header_up X-Forwarded-Host {host}
+            header_up -Forwarded
+        }
+    }
+    handle {
+        respond "Not found" 404
+    }
+}

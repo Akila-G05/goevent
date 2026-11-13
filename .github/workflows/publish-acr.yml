@@ -116,6 +116,7 @@ jobs:
           mvn -B -ntp -f gateway/pom.xml verify
           mkdir -p infra/validation
           python3 infra/ci/runtime_smoke.py
+          python3 infra/ci/dependency_smoke.py
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         if: always()
         with:
@@ -170,6 +171,11 @@ jobs:
         with:
           subject-name: ${{ vars.AZURE_ACR_LOGIN_SERVER }}/goevent/gateway
           subject-digest: ${{ steps.publish.outputs.gateway }}
+          push-to-registry: true
+      - uses: actions/attest-build-provenance@977bb373ede98d70efdf65b84cb5f73e068dcc2a
+        with:
+          subject-name: ${{ vars.AZURE_ACR_LOGIN_SERVER }}/goevent/caddy
+          subject-digest: ${{ steps.publish.outputs.caddy }}
           push-to-registry: true
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
