@@ -445,9 +445,33 @@ public class AuthenticationService {
         HttpSession session = httpRequest.getSession(true);
 
         session.setAttribute("userId", user.getId());
-        session.setAttribute("name", user.getFname() + " " + user.getLname());
+        session.setAttribute("name", buildDisplayName(user));
         session.setAttribute("role", Role.fromId(user.getRoleId()).name());
         session.setAttribute("email", user.getEmail());
+    }
+
+    /**
+     * Display name shown in the navbar/profile page. Falls back to the email
+     * when the account has no first/last name.
+     */
+    private String buildDisplayName(UserDTO user) {
+        String firstName = trimToNull(user.getFname());
+        String lastName = trimToNull(user.getLname());
+
+        StringBuilder displayName = new StringBuilder();
+
+        if (firstName != null) {
+            displayName.append(firstName);
+        }
+
+        if (lastName != null) {
+            if (displayName.length() > 0) {
+                displayName.append(' ');
+            }
+            displayName.append(lastName);
+        }
+
+        return displayName.length() > 0 ? displayName.toString() : user.getEmail();
     }
 
     /**
@@ -460,6 +484,7 @@ public class AuthenticationService {
         HttpSession session = httpRequest.getSession(false);
 
         Object userId = session != null ? session.getAttribute("userId") : null;
+        Object name = session != null ? session.getAttribute("name") : null;
         Object role = session != null ? session.getAttribute("role") : null;
         Object email = session != null ? session.getAttribute("email") : null;
 
@@ -470,6 +495,7 @@ public class AuthenticationService {
 
         if (authenticated) {
             responseObject.addProperty("userId", (Integer) userId);
+            responseObject.addProperty("name", name != null ? name.toString() : null);
             responseObject.addProperty("roleId", role != null ? role.toString() : null);
             responseObject.addProperty("email", email != null ? email.toString() : null);
         }

@@ -5,6 +5,7 @@ export type SessionStatus = 'loading' | 'authenticated' | 'guest';
 
 export interface SessionUser {
   userId?: number;
+  name?: string;
   roleId?: string;
   email?: string;
 }
@@ -21,7 +22,7 @@ interface SessionState {
 
 let pendingRefresh: Promise<void> | null = null;
 
-export const useSessionStore = create<SessionState>((set) => ({
+export const useSessionStore = create<SessionState>((set, get) => ({
   status: 'loading',
   user: null,
 
@@ -40,6 +41,7 @@ export const useSessionStore = create<SessionState>((set) => ({
             status: 'authenticated',
             user: {
               userId: data.userId,
+              name: data.name,
               roleId: data.roleId,
               email: data.email,
             },
@@ -48,8 +50,12 @@ export const useSessionStore = create<SessionState>((set) => ({
           set({ status: 'guest', user: null });
         }
       } catch {
-        // A failed check must never block the page.
-        set({ status: 'guest', user: null });
+        // A failed check must never block the page. Only an unresolved
+        // initial check falls back to guest; an already signed-in user
+        // keeps their session if a later refresh fails.
+        if (get().status !== 'authenticated') {
+          set({ status: 'guest', user: null });
+        }
       } finally {
         pendingRefresh = null;
       }
@@ -76,4 +82,9 @@ export function getRoleLabel(roleId?: string): string {
   }
 
   return ROLE_LABELS[roleId] ?? roleId;
+}
+
+/** Name shown in the UI, falling back to the email address. */
+export function getDisplayName(user: SessionUser | null): string {
+  return user?.name || user?.email || 'GoEvent member';
 }

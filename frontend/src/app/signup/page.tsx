@@ -200,6 +200,7 @@ export default function SignupPage() {
           roleId: data.roleId,
           email: data.email,
         });
+        void useSessionStore.getState().refresh();
       }
 
       setSuccessState(wasManualSignup ? 'registeredManual' : 'registered');

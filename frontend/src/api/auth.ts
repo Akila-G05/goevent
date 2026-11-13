@@ -65,6 +65,7 @@ export interface SessionResponse {
   status: boolean;
   authenticated?: boolean;
   userId?: number;
+  name?: string;
   roleId?: string;
   email?: string;
   message?: string;

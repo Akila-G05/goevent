@@ -6,7 +6,7 @@ vi.mock('@/api', () => ({
   authApi: { getSession },
 }));
 
-import { useSessionStore } from '@/lib/session-store';
+import { useSessionStore, getDisplayName } from '@/lib/session-store';
 
 describe('session store', () => {
   beforeEach(() => {
@@ -19,6 +19,7 @@ describe('session store', () => {
       status: true,
       authenticated: true,
       userId: 7,
+      name: 'Nimal Perera',
       roleId: 'STUDENT',
       email: 'attendee@goevent.com',
     });
@@ -28,6 +29,7 @@ describe('session store', () => {
     expect(useSessionStore.getState().status).toBe('authenticated');
     expect(useSessionStore.getState().user).toEqual({
       userId: 7,
+      name: 'Nimal Perera',
       roleId: 'STUDENT',
       email: 'attendee@goevent.com',
     });
@@ -64,5 +66,35 @@ describe('session store', () => {
 
     expect(useSessionStore.getState().status).toBe('guest');
     expect(useSessionStore.getState().user).toBeNull();
+  });
+
+  it('keeps a signed-in user when a later refresh fails', async () => {
+    useSessionStore.getState().setAuthenticated({
+      userId: 1,
+      name: 'Kasun Silva',
+      roleId: 'USER',
+      email: 'viewer@goevent.com',
+    });
+
+    getSession.mockRejectedValue(new Error('network down'));
+
+    await useSessionStore.getState().refresh();
+
+    expect(useSessionStore.getState().status).toBe('authenticated');
+    expect(useSessionStore.getState().user?.name).toBe('Kasun Silva');
+  });
+
+  it('falls back to the email when no name is stored', async () => {
+    getSession.mockResolvedValue({
+      status: true,
+      authenticated: true,
+      userId: 9,
+      roleId: 'ORGANIZER',
+      email: 'organizer@goevent.com',
+    });
+
+    await useSessionStore.getState().refresh();
+
+    expect(getDisplayName(useSessionStore.getState().user)).toBe('organizer@goevent.com');
   });
 });

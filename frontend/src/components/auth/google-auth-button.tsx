@@ -100,6 +100,7 @@ export function GoogleAuthButton({
           roleId: data.roleId,
           email: data.email,
         });
+        void useSessionStore.getState().refresh();
         toast.success('Registration completed');
       } else {
         useSessionStore.getState().setAuthenticated({
@@ -107,6 +108,7 @@ export function GoogleAuthButton({
           roleId: data.roleId,
           email: data.email,
         });
+        void useSessionStore.getState().refresh();
         toast.success('Authentication successful');
       }
 

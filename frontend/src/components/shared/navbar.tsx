@@ -3,9 +3,9 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { CornerDownRight, Loader2, LogOut, Menu, X } from 'lucide-react';
-import { ProfileMenu } from '@/components/shared/profile-menu';
+import { ProfileButton } from '@/components/shared/profile-button';
 import { useLogout } from '@/hooks/use-logout';
-import { getRoleLabel, useSessionStore } from '@/lib/session-store';
+import { getDisplayName, getRoleLabel, useSessionStore } from '@/lib/session-store';
 
 export const Navbar: React.FC = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -20,10 +20,10 @@ export const Navbar: React.FC = () => {
   }, [refresh]);
 
   const navLinks = [
-    { label: 'All Tickets Event', href: '/#browse' },
-    { label: 'Festivals', href: '/#events' },
-    { label: 'VIP Experiences', href: '/#upcoming' },
-    { label: 'About Us', href: '/#discover' },
+    { label: 'Home', href: '/' },
+    { label: 'Events', href: '/#events' },
+    { label: 'Profile', href: '/profile' },
+    { label: 'Contact Us', href: '/#contact' },
   ];
 
   const handleLogout = () => {
@@ -69,7 +69,7 @@ export const Navbar: React.FC = () => {
               />
             ) : status === 'authenticated' ? (
               <>
-                <ProfileMenu email={user?.email} roleId={user?.roleId} />
+                <ProfileButton name={getDisplayName(user)} />
                 <button
                   type="button"
                   onClick={logout}
@@ -103,7 +103,7 @@ export const Navbar: React.FC = () => {
                 className="h-8 w-8 animate-pulse rounded-full bg-white/10"
               />
             ) : status === 'authenticated' ? (
-              <ProfileMenu email={user?.email} roleId={user?.roleId} />
+              <ProfileButton name={getDisplayName(user)} />
             ) : (
               <Link
                 href="/signup"
@@ -142,14 +142,23 @@ export const Navbar: React.FC = () => {
             <div className="pt-2 border-t border-white/10">
               {status === 'authenticated' ? (
                 <div className="space-y-2">
-                  <div className="px-3 py-1.5">
-                    <p className="truncate text-xs font-medium text-zinc-200">
-                      {user?.email}
-                    </p>
-                    <p className="text-[11px] text-zinc-500">
-                      {getRoleLabel(user?.roleId)}
-                    </p>
-                  </div>
+                  <Link
+                    href="/profile"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="flex items-center gap-2.5 rounded-xl px-3 py-2 hover:bg-white/5"
+                  >
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/10 text-white">
+                      <CornerDownRight className="h-3.5 w-3.5 stroke-[2.5]" />
+                    </span>
+                    <span className="min-w-0">
+                      <span className="block truncate text-xs font-medium text-zinc-200">
+                        {getDisplayName(user)}
+                      </span>
+                      <span className="block text-[11px] text-zinc-500">
+                        {getRoleLabel(user?.roleId)}
+                      </span>
+                    </span>
+                  </Link>
                   <button
                     type="button"
                     onClick={handleLogout}

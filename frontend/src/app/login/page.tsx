@@ -88,6 +88,8 @@ export default function LoginPage() {
           roleId: response.roleId,
           email: response.email ?? data.email,
         });
+        // Pull the display name from the session (login response omits it).
+        void useSessionStore.getState().refresh();
         // The backend created the session; the success card offers "Visit Site".
         setAuthSuccess(true);
       } else {
