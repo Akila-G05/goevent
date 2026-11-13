@@ -1,75 +1,394 @@
 package com.goevent.service;
 
 import com.goevent.dto.UserDTO;
+import com.goevent.enums.AuthType;
 import com.goevent.enums.Role;
+import com.goevent.repository.ContentRepo;
 import com.goevent.repository.UserRepo;
 import com.goevent.util.AppUtil;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonNull;
 import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
+import org.slf4j.Logger;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.FileSystemResource;
+import org.springframework.http.CacheControl;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
+import java.time.Duration;
+import java.util.Map;
+import java.util.UUID;
+import java.util.regex.Pattern;
 
 @Service
 public class UserService {
 
-    private final UserRepo userRepo;
+    private static final Logger logger = AppUtil.getLogger(UserService.class);
 
-    public UserService(UserRepo userRepo) {
+    private static final long MAX_IMAGE_BYTES = 2L * 1024 * 1024;
+    private static final String IMAGE_URL_PREFIX = "/goevent/api/user/image/";
+
+    private static final Pattern IMAGE_FILENAME = Pattern.compile(
+            "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\\.(jpg|png|webp)$"
+    );
+    private static final Pattern EMAIL = Pattern.compile("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$");
+    private static final Pattern MOBILE = Pattern.compile("^\\+?[0-9 ()-]{6,15}$");
+
+    private final UserRepo userRepo;
+    private final ContentRepo contentRepo;
+    private final String uploadDir;
+
+    public UserService(
+            UserRepo userRepo,
+            ContentRepo contentRepo,
+            @Value("${app.upload-dir:uploads/profile}") String uploadDir
+    ) {
         this.userRepo = userRepo;
+        this.contentRepo = contentRepo;
+        this.uploadDir = uploadDir;
     }
 
-
-    //Returns the profile of the signed-in user. The user is resolved from the
+    /**
+     * Returns everything the profile page and the edit dialog need in a single
+     * response: base profile, auth type, role-specific details and the
+     * university/organization dropdown options.
+     */
     public ResponseEntity<String> getCurrentUserData(HttpServletRequest httpRequest) {
 
-        HttpSession session = httpRequest.getSession(false);
-        Object sessionUserId = session != null ? session.getAttribute("userId") : null;
+        Integer userId = currentUserId(httpRequest);
 
-        if (!(sessionUserId instanceof Integer)) {
+        if (userId == null) {
             return unauthorized("Not authenticated");
         }
 
-        UserDTO user = userRepo.getUserById((Integer) sessionUserId);
+        JsonObject profile = buildProfileJson(userId);
 
-        if (user == null) {
+        if (profile == null) {
             // Session points at a user that no longer exists.
             return unauthorized("Not authenticated");
         }
 
-        JsonObject responseObject = new JsonObject();
+        return json(HttpStatus.OK, profile);
+    }
 
-        responseObject.addProperty("status", true);
-        responseObject.addProperty("firstName", user.getFname());
-        responseObject.addProperty("lastName", user.getLname());
-        responseObject.addProperty("name", buildDisplayName(user));
-        responseObject.addProperty("email", user.getEmail());
-        responseObject.addProperty("mobile", user.getMobile());
-        responseObject.addProperty("role", roleName(user.getRoleId()));
-        responseObject.addProperty("profileImgUrl", user.getProfileImgUrl());
-        responseObject.addProperty(
+    /**
+     * Updates the editable parts of the profile. Role, auth type and email are
+     * never taken from the client; they are read from the database.
+     */
+    @Transactional
+    public ResponseEntity<String> updateCurrentUserData(String body, HttpServletRequest httpRequest) {
+
+        Integer userId = currentUserId(httpRequest);
+
+        if (userId == null) {
+            return unauthorized("Not authenticated");
+        }
+
+        UserDTO user = userRepo.getUserById(userId);
+
+        if (user == null) {
+            return unauthorized("Not authenticated");
+        }
+
+        JsonObject payload;
+
+        try {
+            JsonElement parsed = JsonParser.parseString(body);
+
+            if (!parsed.isJsonObject()) {
+                return badRequest("Invalid request body");
+            }
+
+            payload = parsed.getAsJsonObject();
+        } catch (RuntimeException e) {
+            return badRequest("Invalid request body");
+        }
+
+        String firstName = stringField(payload, "firstName", user.getFname());
+        String lastName = stringField(payload, "lastName", user.getLname());
+        String mobile = stringField(payload, "mobile", user.getMobile());
+        String profileImgUrl = stringField(payload, "profileImgUrl", user.getProfileImgUrl());
+
+        if (firstName == null || firstName.isBlank()) {
+            return badRequest("First name is required");
+        }
+        if (firstName.length() > 45) {
+            return badRequest("First name must be 45 characters or fewer");
+        }
+        if (lastName == null || lastName.isBlank()) {
+            return badRequest("Last name is required");
+        }
+        if (lastName.length() > 45) {
+            return badRequest("Last name must be 45 characters or fewer");
+        }
+        if (mobile != null && !mobile.isBlank() && !MOBILE.matcher(mobile).matches()) {
+            return badRequest("Enter a valid mobile number");
+        }
+        if (profileImgUrl != null && profileImgUrl.length() > 200) {
+            return badRequest("Profile image URL is too long");
+        }
+        if (profileImgUrl != null && !profileImgUrl.isBlank() && !isAllowedImageUrl(profileImgUrl)) {
+            return badRequest("Invalid profile image");
+        }
+
+        Role role = roleOf(user.getRoleId());
+
+        String indexNo = null;
+        String uniEmail = null;
+        Integer universityId = null;
+        Integer organizationId = null;
+        String position = null;
+
+        if (role == Role.STUDENT && isObjectField(payload, "student")) {
+            JsonObject student = payload.getAsJsonObject("student");
+
+            indexNo = stringField(student, "indexNo", null);
+            uniEmail = stringField(student, "uniEmail", null);
+            universityId = intField(student, "universityId");
+
+            if (indexNo == null || indexNo.isBlank()) {
+                return badRequest("Index number is required");
+            }
+            if (indexNo.length() > 45) {
+                return badRequest("Index number must be 45 characters or fewer");
+            }
+            if (uniEmail == null || !EMAIL.matcher(uniEmail).matches()) {
+                return badRequest("Enter a valid university email");
+            }
+            if (uniEmail.length() > 100) {
+                return badRequest("University email must be 100 characters or fewer");
+            }
+            if (universityId == null || !userRepo.universityExists(universityId)) {
+                return badRequest("Select a valid university");
+            }
+        }
+
+        if (role == Role.ORGANIZER && isObjectField(payload, "organization")) {
+            JsonObject organization = payload.getAsJsonObject("organization");
+
+            organizationId = intField(organization, "organizationId");
+            position = stringField(organization, "position", null);
+
+            if (organizationId == null || !userRepo.organizationExists(organizationId)) {
+                return badRequest("Select a valid organization");
+            }
+            if (position == null || position.isBlank()) {
+                return badRequest("Position is required");
+            }
+            if (position.length() > 45) {
+                return badRequest("Position must be 45 characters or fewer");
+            }
+        }
+
+        userRepo.updateProfile(userId, firstName, lastName, mobile, profileImgUrl);
+
+        if (indexNo != null) {
+            userRepo.upsertStudentDetail(userId, indexNo, uniEmail, universityId);
+        }
+
+        if (organizationId != null) {
+            userRepo.upsertOrganizerDetail(userId, organizationId, position);
+        }
+
+        refreshSessionProfile(httpRequest, userId);
+
+        JsonObject profile = buildProfileJson(userId);
+
+        if (profile == null) {
+            return unauthorized("Not authenticated");
+        }
+
+        return json(HttpStatus.OK, profile);
+    }
+
+    /**
+     * Stores a profile image and returns the URL the browser should use. The
+     * file name is a random UUID so callers can never influence the path.
+     */
+    public ResponseEntity<String> uploadProfileImage(MultipartFile file, HttpServletRequest httpRequest) {
+
+        Integer userId = currentUserId(httpRequest);
+
+        if (userId == null) {
+            return unauthorized("Not authenticated");
+        }
+
+        if (file == null || file.isEmpty()) {
+            return badRequest("Please choose an image file");
+        }
+        if (file.getSize() > MAX_IMAGE_BYTES) {
+            return badRequest("Image must be 2 MB or smaller");
+        }
+
+        String extension = detectImageExtension(file);
+
+        if (extension == null) {
+            return badRequest("Only JPEG, PNG or WebP images are supported");
+        }
+
+        String filename = UUID.randomUUID() + "." + extension;
+        Path root = uploadRoot();
+        Path target = root.resolve(filename).normalize();
+
+        if (!target.startsWith(root)) {
+            return badRequest("Invalid file name");
+        }
+
+        try {
+            Files.createDirectories(root);
+
+            try (InputStream input = file.getInputStream()) {
+                Files.copy(input, target, StandardCopyOption.REPLACE_EXISTING);
+            }
+        } catch (IOException e) {
+            logger.error("Could not store a profile image for user {}", userId, e);
+            return serverError("Could not save the image. Please try again.");
+        }
+
+        JsonObject response = new JsonObject();
+
+        response.addProperty("status", true);
+        response.addProperty("profileImgUrl", IMAGE_URL_PREFIX + filename);
+
+        return json(HttpStatus.OK, response);
+    }
+
+    /**
+     * Serves a previously uploaded profile image. The file name must match the
+     * generated UUID pattern, which also blocks path traversal attempts.
+     */
+    public ResponseEntity<?> getProfileImage(String filename) {
+
+        if (filename == null || !IMAGE_FILENAME.matcher(filename).matches()) {
+            return ResponseEntity.notFound().build();
+        }
+
+        Path root = uploadRoot();
+        Path target = root.resolve(filename).normalize();
+
+        if (!target.startsWith(root) || !Files.isRegularFile(target)) {
+            return ResponseEntity.notFound().build();
+        }
+
+        String extension = filename.substring(filename.lastIndexOf('.') + 1);
+        MediaType mediaType = switch (extension) {
+            case "png" -> MediaType.IMAGE_PNG;
+            case "webp" -> MediaType.parseMediaType("image/webp");
+            default -> MediaType.IMAGE_JPEG;
+        };
+
+        return ResponseEntity.ok()
+                .contentType(mediaType)
+                .cacheControl(CacheControl.maxAge(Duration.ofDays(30)).cachePublic())
+                .body(new FileSystemResource(target));
+    }
+
+    private JsonObject buildProfileJson(int userId) {
+
+        UserDTO user = userRepo.getUserById(userId);
+
+        if (user == null) {
+            return null;
+        }
+
+        JsonObject response = new JsonObject();
+
+        response.addProperty("status", true);
+        response.addProperty("firstName", user.getFname());
+        response.addProperty("lastName", user.getLname());
+        response.addProperty("name", buildDisplayName(user));
+        response.addProperty("email", user.getEmail());
+        response.addProperty("mobile", user.getMobile());
+        response.addProperty("role", roleName(user.getRoleId()));
+        response.addProperty("authType", authTypeName(user.getAuthTypeId()));
+        response.addProperty("profileImgUrl", user.getProfileImgUrl());
+        response.addProperty(
                 "registeredDate",
                 user.getRegisteredDate() != null
                         ? user.getRegisteredDate().toLocalDateTime().toLocalDate().toString()
                         : null
         );
 
-        return ResponseEntity.ok(AppUtil.gson.toJson(responseObject));
+        Map<String, Object> student = userRepo.getStudentDetail(userId);
+
+        if (student != null) {
+            JsonObject studentJson = new JsonObject();
+
+            studentJson.addProperty("indexNo", stringValue(student.get("index_no")));
+            studentJson.addProperty("uniEmail", stringValue(student.get("uni_email")));
+            studentJson.addProperty("universityId", intValue(student.get("university_id")));
+            studentJson.addProperty("universityName", stringValue(student.get("university_name")));
+
+            response.add("student", studentJson);
+        } else {
+            response.add("student", JsonNull.INSTANCE);
+        }
+
+        Map<String, Object> organizer = userRepo.getOrganizerDetail(userId);
+
+        if (organizer != null) {
+            JsonObject organizationJson = new JsonObject();
+
+            organizationJson.addProperty("organizationId", intValue(organizer.get("organization_id")));
+            organizationJson.addProperty("organizationName", stringValue(organizer.get("organization_name")));
+            organizationJson.addProperty("position", stringValue(organizer.get("position")));
+
+            response.add("organization", organizationJson);
+        } else {
+            response.add("organization", JsonNull.INSTANCE);
+        }
+
+        JsonObject options = new JsonObject();
+
+        options.add("universities", AppUtil.gson.toJsonTree(contentRepo.getUniversities()));
+        options.add("organizations", AppUtil.gson.toJsonTree(contentRepo.getOrganizations()));
+
+        response.add("options", options);
+
+        return response;
     }
 
-    private ResponseEntity<String> unauthorized(String message) {
-        JsonObject responseObject = new JsonObject();
+    private Integer currentUserId(HttpServletRequest httpRequest) {
 
-        responseObject.addProperty("status", false);
-        responseObject.addProperty("message", message);
+        HttpSession session = httpRequest.getSession(false);
+        Object sessionUserId = session != null ? session.getAttribute("userId") : null;
 
-        return ResponseEntity
-                .status(HttpStatus.UNAUTHORIZED)
-                .body(AppUtil.gson.toJson(responseObject));
+        return sessionUserId instanceof Integer ? (Integer) sessionUserId : null;
+    }
+
+    private void refreshSessionProfile(HttpServletRequest httpRequest, int userId) {
+
+        HttpSession session = httpRequest.getSession(false);
+
+        if (session == null) {
+            return;
+        }
+
+        UserDTO user = userRepo.getUserById(userId);
+
+        if (user == null) {
+            return;
+        }
+
+        session.setAttribute("name", buildDisplayName(user));
+        session.setAttribute("email", user.getEmail());
     }
 
     private String buildDisplayName(UserDTO user) {
+
         StringBuilder displayName = new StringBuilder();
 
         if (user.getFname() != null && !user.getFname().isBlank()) {
@@ -87,10 +406,162 @@ public class UserService {
     }
 
     private String roleName(int roleId) {
+        Role role = roleOf(roleId);
+        return role != null ? role.name() : null;
+    }
+
+    private Role roleOf(int roleId) {
         try {
-            return Role.fromId(roleId).name();
+            return Role.fromId(roleId);
         } catch (IllegalArgumentException e) {
             return null;
         }
+    }
+
+    private String authTypeName(int authTypeId) {
+        try {
+            return AuthType.fromId(authTypeId).name();
+        } catch (IllegalArgumentException e) {
+            return null;
+        }
+    }
+
+    private String detectImageExtension(MultipartFile file) {
+
+        try (InputStream input = file.getInputStream()) {
+            byte[] header = input.readNBytes(12);
+
+            // JPEG: FF D8 FF
+            if (header.length >= 3
+                    && (header[0] & 0xFF) == 0xFF
+                    && (header[1] & 0xFF) == 0xD8
+                    && (header[2] & 0xFF) == 0xFF) {
+                return "jpg";
+            }
+
+            // PNG: 89 50 4E 47 0D 0A 1A 0A
+            if (header.length >= 8
+                    && (header[0] & 0xFF) == 0x89
+                    && header[1] == 'P'
+                    && header[2] == 'N'
+                    && header[3] == 'G') {
+                return "png";
+            }
+
+            // WebP: "RIFF" .... "WEBP"
+            if (header.length >= 12
+                    && header[0] == 'R'
+                    && header[1] == 'I'
+                    && header[2] == 'F'
+                    && header[3] == 'F'
+                    && header[8] == 'W'
+                    && header[9] == 'E'
+                    && header[10] == 'B'
+                    && header[11] == 'P') {
+                return "webp";
+            }
+        } catch (IOException e) {
+            logger.warn("Could not inspect the uploaded image");
+        }
+
+        return null;
+    }
+
+    private Path uploadRoot() {
+        return Path.of(uploadDir).toAbsolutePath().normalize();
+    }
+
+    private boolean isAllowedImageUrl(String url) {
+
+        if (url.startsWith(IMAGE_URL_PREFIX)) {
+            return true;
+        }
+
+        return url.startsWith("http://") || url.startsWith("https://");
+    }
+
+    private boolean isObjectField(JsonObject object, String key) {
+        return object != null
+                && object.has(key)
+                && object.get(key).isJsonObject();
+    }
+
+    private String stringField(JsonObject object, String key, String fallback) {
+
+        if (object == null || !object.has(key) || object.get(key).isJsonNull()) {
+            return fallback;
+        }
+
+        JsonElement element = object.get(key);
+
+        if (!element.isJsonPrimitive()) {
+            return fallback;
+        }
+
+        return element.getAsString().trim();
+    }
+
+    private Integer intField(JsonObject object, String key) {
+
+        if (object == null || !object.has(key) || object.get(key).isJsonNull()) {
+            return null;
+        }
+
+        try {
+            return object.get(key).getAsInt();
+        } catch (RuntimeException e) {
+            return null;
+        }
+    }
+
+    private String stringValue(Object value) {
+        return value != null ? value.toString() : null;
+    }
+
+    private int intValue(Object value) {
+
+        if (value instanceof Number number) {
+            return number.intValue();
+        }
+
+        try {
+            return value != null ? Integer.parseInt(value.toString()) : 0;
+        } catch (NumberFormatException e) {
+            return 0;
+        }
+    }
+
+    private ResponseEntity<String> json(HttpStatus status, JsonObject body) {
+        return ResponseEntity
+                .status(status)
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(AppUtil.gson.toJson(body));
+    }
+
+    private ResponseEntity<String> unauthorized(String message) {
+        JsonObject response = new JsonObject();
+
+        response.addProperty("status", false);
+        response.addProperty("message", message);
+
+        return json(HttpStatus.UNAUTHORIZED, response);
+    }
+
+    private ResponseEntity<String> badRequest(String message) {
+        JsonObject response = new JsonObject();
+
+        response.addProperty("status", false);
+        response.addProperty("message", message);
+
+        return json(HttpStatus.BAD_REQUEST, response);
+    }
+
+    private ResponseEntity<String> serverError(String message) {
+        JsonObject response = new JsonObject();
+
+        response.addProperty("status", false);
+        response.addProperty("message", message);
+
+        return json(HttpStatus.INTERNAL_SERVER_ERROR, response);
     }
 }
