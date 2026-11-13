@@ -22,6 +22,11 @@ export const API_ROUTES = {
     LOGOUT: `${API_PREFIX}/auth/logout`,
   },
 
+  // Signed-in user endpoints
+  USER: {
+    DATA: `${API_PREFIX}/user/data`,
+  },
+
   // Content endpoints (cached via gateway)
   CONTENT: {
     INITIAL_DATA: `${API_PREFIX}/content/initial-data`,

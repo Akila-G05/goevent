@@ -30,6 +30,12 @@ export const Navbar: React.FC = () => {
     { label: 'Contact Us', href: '/#contact' },
   ];
 
+  // Profile is only reachable with a session; guests never see the entry.
+  const visibleNavLinks =
+    status === 'authenticated'
+      ? navLinks
+      : navLinks.filter((link) => link.href !== '/profile');
+
   const handleLogout = () => {
     setMobileMenuOpen(false);
     logout();
@@ -59,7 +65,7 @@ export const Navbar: React.FC = () => {
 
           {/* Center Dark Glass Pill Menu */}
           <nav className="hidden md:flex items-center bg-black/40 border border-white/10 rounded-full px-7 py-2.5 backdrop-blur-md shadow-2xl space-x-7 text-xs sm:text-[13px] tracking-wide text-zinc-300 font-medium">
-            {navLinks.map((link) => (
+            {visibleNavLinks.map((link) => (
               <Link
                 key={link.label}
                 href={link.href}
@@ -138,7 +144,7 @@ export const Navbar: React.FC = () => {
       {mobileMenuOpen && (
         <div className="md:hidden bg-[#101014]/95 backdrop-blur-xl border border-white/10 mx-4 mt-2 rounded-2xl p-4 space-y-3 shadow-2xl">
           <div className="flex flex-col space-y-2">
-            {navLinks.map((link) => (
+            {visibleNavLinks.map((link) => (
               <Link
                 key={link.label}
                 href={link.href}

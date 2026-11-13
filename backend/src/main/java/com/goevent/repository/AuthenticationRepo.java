@@ -40,7 +40,7 @@ public class AuthenticationRepo {
         user.setProfileImgUrl(rs.getString("profile_img_url"));
         user.setPassword(rs.getString("password"));
         user.setAuthTypeId(rs.getInt("auth_type_id"));
-        user.setMobile("mobile");
+        user.setMobile(rs.getString("mobile"));
 
         return user;
     };

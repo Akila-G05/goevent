@@ -72,6 +72,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
 const ROLE_LABELS: Record<string, string> = {
   USER: 'Attendee',
   ORGANIZER: 'Organizer',
+  ADMIN: 'Administrator',
   STUDENT: 'Student',
   CONTRIBUTOR: 'Contributor',
 };
@@ -82,6 +83,11 @@ export function getRoleLabel(roleId?: string): string {
   }
 
   return ROLE_LABELS[roleId] ?? roleId;
+}
+
+/** Organizers, admins and contributors may publish events. */
+export function canCreateEvents(roleId?: string): boolean {
+  return roleId === 'ORGANIZER' || roleId === 'ADMIN' || roleId === 'CONTRIBUTOR';
 }
 
 /** Name shown in the UI, falling back to the email address. */

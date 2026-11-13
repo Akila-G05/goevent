@@ -1,7 +1,9 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useQuery } from '@tanstack/react-query';
 import {
   CalendarDays,
   Calendar,
@@ -29,25 +31,160 @@ import {
   ChevronRight,
   Activity,
   ScanLine,
+  RefreshCw,
 } from 'lucide-react';
-import { useSessionStore, getDisplayName, getRoleLabel } from '@/lib/session-store';
+import { userApi } from '@/api';
+import {
+  useSessionStore,
+  getDisplayName,
+  getRoleLabel,
+  canCreateEvents,
+} from '@/lib/session-store';
 import { useLogout } from '@/hooks/use-logout';
 
 type RoleView = 'USER' | 'STUDENT' | 'ORGANIZER' | 'ADMIN' | 'CONTRIBUTOR';
 type TabType = 'overview' | 'my-events' | 'sales' | 'attendees' | 'saved' | 'settings';
 
+const ROLE_VIEWS: RoleView[] = ['USER', 'STUDENT', 'ORGANIZER', 'ADMIN', 'CONTRIBUTOR'];
+
+const MONTHS = [
+  'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+];
+
+function formatJoinedDate(value?: string): string | null {
+  if (!value) {
+    return null;
+  }
+
+  const [year, month] = value.split('-');
+  const monthIndex = Number(month) - 1;
+
+  if (!year || Number.isNaN(monthIndex) || monthIndex < 0 || monthIndex > 11) {
+    return value;
+  }
+
+  return `${MONTHS[monthIndex]} ${year}`;
+}
+
+function ProfileSkeleton() {
+  return (
+    <div
+      aria-busy="true"
+      aria-label="Loading profile"
+      className="relative min-h-screen bg-[#f7f5f4] pb-20 pt-20 text-[#1c1b1b]"
+    >
+      <div className="w-full border-b border-[#ddd8d6] bg-[#ede9e8] px-4 py-3 sm:px-6 lg:px-8">
+        <div className="mx-auto h-6 w-64 max-w-full animate-pulse rounded-full bg-[#ded9d7]" />
+      </div>
+
+      <div className="mx-auto flex max-w-7xl flex-col gap-6 px-4 py-8 sm:px-6 lg:px-8">
+        <div className="h-44 w-full animate-pulse rounded-3xl border border-[#eae6e5] bg-white" />
+
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {[0, 1, 2, 3].map((card) => (
+            <div
+              key={card}
+              className="h-32 animate-pulse rounded-2xl border border-[#eae6e5] bg-white"
+            />
+          ))}
+        </div>
+
+        <div className="h-12 w-full animate-pulse rounded-2xl border border-[#eae6e5] bg-white" />
+      </div>
+    </div>
+  );
+}
+
+function ProfileErrorState({ onRetry }: { onRetry: () => void }) {
+  return (
+    <div className="relative flex min-h-screen items-center justify-center bg-[#f7f5f4] px-4 pb-20 pt-20 text-[#1c1b1b]">
+      <div className="w-full max-w-md rounded-3xl border border-[#eae6e5] bg-white p-8 text-center shadow-sm">
+        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-[#f0eceb] text-[#1c1b1b]">
+          <RefreshCw className="h-6 w-6" />
+        </div>
+        <h1 className="mt-5 font-display text-2xl uppercase tracking-wide">
+          Could not load your profile
+        </h1>
+        <p className="mt-2 text-sm text-[#736e6c]">
+          The server did not return your account details. Please try again.
+        </p>
+        <button
+          type="button"
+          onClick={onRetry}
+          className="mt-6 rounded-full bg-[#1c1b1b] px-6 py-2.5 text-xs font-bold uppercase tracking-wider text-white transition-colors hover:bg-[#333131]"
+        >
+          Try again
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export default function ProfilePage() {
+  const router = useRouter();
   const status = useSessionStore((state) => state.status);
   const user = useSessionStore((state) => state.user);
   const { logout, isLoggingOut } = useLogout();
 
-  // Active role view in the switcher (defaults to ORGANIZER)
-  const [activeRoleView, setActiveRoleView] = useState<RoleView>('ORGANIZER');
+  const profileQuery = useQuery({
+    // Keyed by account so a different sign-in never reuses cached data.
+    queryKey: ['user', 'profile', user?.userId],
+    queryFn: userApi.getProfile,
+    enabled: status === 'authenticated',
+    retry: false,
+  });
+
+  const profile = profileQuery.data;
+  const errorStatus = (profileQuery.error as { status?: number } | null)?.status;
+
+  const actualRole = profile?.role || user?.roleId || 'USER';
+  const roleView: RoleView = ROLE_VIEWS.includes(actualRole as RoleView)
+    ? (actualRole as RoleView)
+    : 'USER';
+
+  const [activeRoleView, setActiveRoleView] = useState<RoleView>(roleView);
   const [activeTab, setActiveTab] = useState<TabType>('overview');
   const [isScannerActive, setIsScannerActive] = useState(false);
 
-  const displayName = getDisplayName(user);
-  const userRole = user?.roleId || 'ORGANIZER';
+  // Keep the switcher on the real role once the profile response arrives.
+  useEffect(() => {
+    setActiveRoleView(roleView);
+  }, [roleView]);
+
+  // A page visit without a session goes straight back to sign-in.
+  useEffect(() => {
+    if (status === 'guest') {
+      router.replace('/login');
+    }
+  }, [status, router]);
+
+  // The profile endpoint also rejects stale sessions.
+  useEffect(() => {
+    if (errorStatus === 401) {
+      router.replace('/login');
+    }
+  }, [errorStatus, router]);
+
+  const displayName = profile?.name || getDisplayName(user);
+  const email = profile?.email || user?.email;
+  const mobile = profile?.mobile;
+  const joinedDate = formatJoinedDate(profile?.registeredDate);
+  const roleLabel = getRoleLabel(actualRole);
+  const showCreateEvent = canCreateEvents(actualRole);
+
+  if (status === 'loading' || (status === 'authenticated' && profileQuery.isPending)) {
+    return <ProfileSkeleton />;
+  }
+
+  // Redirect in progress; keep the skeleton instead of flashing guest UI.
+  if (status === 'guest') {
+    return <ProfileSkeleton />;
+  }
+
+  if (profileQuery.isError && errorStatus !== 401) {
+    return <ProfileErrorState onRetry={() => profileQuery.refetch()} />;
+  }
 
   const roleDescriptions: Record<RoleView, string> = {
     USER: 'Viewing as USER. Standard attendee view with ticket booking and pass storage.',
@@ -107,12 +244,22 @@ export default function ProfilePage() {
             {/* Avatar */}
             <div className="relative shrink-0">
               <div className="w-24 h-24 rounded-2xl overflow-hidden bg-[#1c1b1b] border-4 border-[#f0eceb] shadow-md flex items-center justify-center text-3xl font-display font-bold text-white tracking-widest">
-                {displayName
-                  .split(' ')
-                  .map((n) => n[0])
-                  .slice(0, 2)
-                  .join('')
-                  .toUpperCase() || 'AG'}
+                {profile?.profileImgUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={profile.profileImgUrl}
+                    alt={displayName}
+                    className="w-full h-full object-cover"
+                    referrerPolicy="no-referrer"
+                  />
+                ) : (
+                  displayName
+                    .split(' ')
+                    .map((n) => n[0])
+                    .slice(0, 2)
+                    .join('')
+                    .toUpperCase() || 'AG'
+                )}
               </div>
               <span className="absolute -bottom-1 -right-1 w-6 h-6 bg-[#1c1b1b] text-white rounded-full flex items-center justify-center shadow-md border-2 border-white">
                 <CheckCircle2 className="w-3.5 h-3.5 text-white" />
@@ -128,26 +275,27 @@ export default function ProfilePage() {
                 <span className="px-2.5 py-0.5 rounded-full bg-[#1c1b1b] text-white font-bold text-[10px] uppercase tracking-widest">
                   {activeRoleView}
                 </span>
-                <span className="px-2.5 py-0.5 rounded-full bg-[#f0eceb] text-[#555251] font-semibold text-[11px] tracking-wider">
-                  ID: #{user?.userId ? `USR-${user.userId}` : 'VT-8920'}
-                </span>
               </div>
 
               <div className="flex items-center gap-2 text-[#4a4746] text-sm font-medium">
                 <Users className="w-4 h-4 text-[#1c1b1b] shrink-0" />
-                <span>VoiceTech Community • Committee Member</span>
+                <span>{roleLabel} • GoEvent member</span>
               </div>
 
               <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-xs text-[#736e6c] mt-1">
                 <span className="flex items-center gap-1.5">
-                  <Mail className="w-3.5 h-3.5 text-[#918c8a]" /> {user?.email || 'akila@example.com'}
+                  <Mail className="w-3.5 h-3.5 text-[#918c8a]" /> {email || '—'}
                 </span>
-                <span className="flex items-center gap-1.5">
-                  <Phone className="w-3.5 h-3.5 text-[#918c8a]" /> +94 77 123 4567
-                </span>
-                <span className="flex items-center gap-1.5">
-                  <MapPin className="w-3.5 h-3.5 text-[#918c8a]" /> Colombo • Global Events Lead
-                </span>
+                {mobile && (
+                  <span className="flex items-center gap-1.5">
+                    <Phone className="w-3.5 h-3.5 text-[#918c8a]" /> {mobile}
+                  </span>
+                )}
+                {joinedDate && (
+                  <span className="flex items-center gap-1.5">
+                    <CalendarDays className="w-3.5 h-3.5 text-[#918c8a]" /> Joined {joinedDate}
+                  </span>
+                )}
               </div>
             </div>
           </div>
@@ -161,13 +309,15 @@ export default function ProfilePage() {
               <SlidersHorizontal className="w-3.5 h-3.5" />
               Edit Profile
             </button>
-            <Link
-              href="/#events"
-              className="flex-1 sm:flex-initial px-6 py-2.5 rounded-full bg-[#1c1b1b] text-white hover:bg-[#333131] font-bold text-xs tracking-wider transition-all shadow-md flex items-center justify-center gap-2 group"
-            >
-              <PlusCircle className="w-4 h-4 group-hover:rotate-90 transition-transform text-white" />
-              + Create Event
-            </Link>
+            {showCreateEvent && (
+              <Link
+                href="/#events"
+                className="flex-1 sm:flex-initial px-6 py-2.5 rounded-full bg-[#1c1b1b] text-white hover:bg-[#333131] font-bold text-xs tracking-wider transition-all shadow-md flex items-center justify-center gap-2 group"
+              >
+                <PlusCircle className="w-4 h-4 group-hover:rotate-90 transition-transform text-white" />
+                + Create Event
+              </Link>
+            )}
           </div>
         </div>
 

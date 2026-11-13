@@ -6,7 +6,7 @@ vi.mock('@/api', () => ({
   authApi: { getSession },
 }));
 
-import { useSessionStore, getDisplayName } from '@/lib/session-store';
+import { useSessionStore, getDisplayName, canCreateEvents } from '@/lib/session-store';
 
 describe('session store', () => {
   beforeEach(() => {
@@ -96,5 +96,14 @@ describe('session store', () => {
     await useSessionStore.getState().refresh();
 
     expect(getDisplayName(useSessionStore.getState().user)).toBe('organizer@goevent.com');
+  });
+
+  it('only lets organizers, admins and contributors create events', () => {
+    expect(canCreateEvents('ORGANIZER')).toBe(true);
+    expect(canCreateEvents('ADMIN')).toBe(true);
+    expect(canCreateEvents('CONTRIBUTOR')).toBe(true);
+    expect(canCreateEvents('USER')).toBe(false);
+    expect(canCreateEvents('STUDENT')).toBe(false);
+    expect(canCreateEvents(undefined)).toBe(false);
   });
 });
