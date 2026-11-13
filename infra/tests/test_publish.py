@@ -22,6 +22,8 @@ if name=='gh':print('{"protected":true}')
 if name=='az':
  if args[:3]==['acr','repository','show-tags']:
   repository=args[args.index('--repository')+1]
+  if scenario=='caddy_denied' and repository=='goevent/caddy':
+   print('ERROR: denied: requested access to the resource is denied',file=sys.stderr);sys.exit(1)
   if scenario=='missing' or (scenario=='mixed' and repository.endswith('backend')):
    print('ERROR: repository "'+repository+'" is not found',file=sys.stderr);sys.exit(1)
   if scenario=='missing_formatted':
@@ -89,20 +91,24 @@ class PublishTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         pushes = [c for c in commands if c[:2] == ['docker', 'push']]
         self.assertEqual(pushes, [['docker', 'push', f'acrgoevent.azurecr.io/goevent/{c}:{SHA}']
-                                 for c in ['backend', 'gateway']])
+                                 for c in ['backend', 'gateway', 'caddy']])
         candidate = json.loads((root / 'infra/validation/release/candidate.json').read_text())
         self.assertEqual(candidate['images']['backend'], 'acrgoevent.azurecr.io/goevent/backend@' + DIGEST)
         self.assertEqual(candidate['images']['gateway'], 'acrgoevent.azurecr.io/goevent/gateway@' + DIGEST)
-        self.assertEqual((root / 'outputs').read_text(), f'backend={DIGEST}\ngateway={DIGEST}\n')
+        dependency = json.loads((root / 'infra/validation/release/caddy-candidate.json').read_text())
+        self.assertEqual(dependency['image'], 'acrgoevent.azurecr.io/goevent/caddy@' + DIGEST)
+        self.assertEqual(dependency['commit'], SHA)
+        self.assertTrue(dependency['operator_approval_required'])
+        self.assertEqual((root / 'outputs').read_text(), f'backend={DIGEST}\ngateway={DIGEST}\ncaddy={DIGEST}\n')
         lookups = [c for c in commands if c[:4] == ['az', 'acr', 'repository', 'show']]
-        self.assertEqual(len(lookups), 2)
+        self.assertEqual(len(lookups), 3)
         self.assertTrue(all('--image' in c for c in lookups))
         self.assertFalse(any('list' in c for c in commands))
 
     def test_first_publication_with_azure_cli_formatted_error(self):
         result, _, commands = self.invoke('missing_formatted')
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertEqual(len([c for c in commands if c[:2] == ['docker', 'push']]), 2)
+        self.assertEqual(len([c for c in commands if c[:2] == ['docker', 'push']]), 3)
 
     def test_existing_repository_with_unused_tag(self):
         result, _, _ = self.invoke('empty')
@@ -122,7 +128,7 @@ class PublishTests(unittest.TestCase):
     def test_registry_failures_stop_before_push(self):
         for scenario in ['denied', 'authentication', 'network', 'unexpected',
                          'registry_missing', 'wrong_repo', 'mixed_error', 'partial',
-                         'malformed', 'object', 'null', 'nonstring', 'login_denied']:
+                         'malformed', 'object', 'null', 'nonstring', 'login_denied', 'caddy_denied']:
             with self.subTest(scenario=scenario):
                 result, root, commands = self.invoke(scenario)
                 self.assertNotEqual(result.returncode, 0)

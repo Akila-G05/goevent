@@ -47,7 +47,10 @@ class DeploymentTests(unittest.TestCase):
         dependencies = yaml.safe_load((ROOT/'infra/compose/dependencies.yml').read_text())
         self.assertEqual(set(dependencies['services']), {'redis', 'caddy'})
         for name, service in dependencies['services'].items():
-            self.assertRegex(service['image'], r'@sha256:[0-9a-f]{64}$')
+            if name == 'caddy':
+                self.assertEqual(service['image'], '${CADDY_IMAGE:?reviewed acrgoevent.azurecr.io/goevent/caddy digest required}')
+            else:
+                self.assertRegex(service['image'], r'@sha256:[0-9a-f]{64}$')
             self.assertEqual(service['restart'], 'no')
             if name != 'caddy': self.assertFalse(service.get('ports'))
         redis = (ROOT/'infra/compose/redis.conf.example').read_text()

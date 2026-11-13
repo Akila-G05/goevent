@@ -1,5 +1,8 @@
 # Disabled deployment bundle: staging handoff
 
+For the custom Caddy build, scoped ACR prerequisites and dependency approval,
+read [Caddy security remediation](CADDY-SECURITY-FIX.md) before staging.
+
 This change starts from clean commit `032e8e3` (the audited revision). No audit
 finding was assumed fixed by an intervening revision. The task branch is
 `vinura/staging-readiness`. No VM/Azure change, commit, push or deployment is part
@@ -153,7 +156,8 @@ GATEWAY_IMAGE to the reviewed ACR `repository@sha256:...` values (not tags):
 ```sh
 : "${BACKEND_IMAGE:?approved immutable backend image required}"
 : "${GATEWAY_IMAGE:?approved immutable gateway image required}"
-export BACKEND_IMAGE GATEWAY_IMAGE
+: "${CADDY_IMAGE:?approved immutable Caddy image required}"
+export BACKEND_IMAGE GATEWAY_IMAGE CADDY_IMAGE
 GOEVENT_API_DOMAIN=localhost docker compose -p goevent-dependencies -f "$BUNDLE/compose/dependencies.yml" -f "$BUNDLE/compose/staging.yml" config --quiet
 docker compose -p goevent-app -f "$BUNDLE/compose/applications.yml" config --quiet
 sudo systemd-analyze verify "$BUNDLE/systemd/goevent-release.service"

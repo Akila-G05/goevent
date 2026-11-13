@@ -30,7 +30,7 @@ services:
       start_period: 10s
     networks: [application]
   caddy:
-    image: caddy:2-alpine@sha256:78bd35025c7ba85961dd149ae670315129954e77abe2383ac47c89106b35ade9
+    image: ${CADDY_IMAGE:?reviewed acrgoevent.azurecr.io/goevent/caddy digest required}
     user: '10001:10001'
     command: [caddy, run, --config, /run/config/Caddyfile, --adapter, caddyfile]
     restart: 'no'

@@ -194,6 +194,11 @@ jobs:
           subject-name: ${{ vars.AZURE_ACR_LOGIN_SERVER }}/goevent/gateway
           subject-digest: ${{ steps.publish.outputs.gateway }}
           push-to-registry: true
+      - uses: @actions/attest-build-provenance@
+        with:
+          subject-name: ${{ vars.AZURE_ACR_LOGIN_SERVER }}/goevent/caddy
+          subject-digest: ${{ steps.publish.outputs.caddy }}
+          push-to-registry: true
       - uses: @actions/upload-artifact@
         with:
           name: deployment-candidate

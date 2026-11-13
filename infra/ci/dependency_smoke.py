@@ -12,14 +12,19 @@ import uuid
 
 ROOT = Path(__file__).resolve().parents[2]
 REDIS = 'redis:7.4-alpine@sha256:7f7d30b7fdd09467bac58198a1f166dd69789d348d4fe859cccb20e0cf287fbe'
-CADDY = 'caddy:2-alpine@sha256:78bd35025c7ba85961dd149ae670315129954e77abe2383ac47c89106b35ade9'
+CADDY = 'goevent-caddy:infra-check'
 
 
 def run(args, **kwargs):
-    return subprocess.run(args, check=True, capture_output=True, text=True, timeout=120, **kwargs).stdout
+    return subprocess.run(args, check=True, capture_output=True, text=True, timeout=kwargs.pop('timeout',120), **kwargs).stdout
 
 
 def main():
+    run(['docker','build','-f',str(ROOT/'infra/docker/caddy.Dockerfile'),
+         '-t',CADDY,str(ROOT/'infra/docker')], timeout=1200)
+    build_info = run(['docker','run','--rm','--network','none',CADDY,'caddy','build-info'])
+    assert 'github.com/go-jose/go-jose/v3' not in build_info, 'vulnerable jose v3 remains'
+    assert 'golang.org/x/net\tv0.62.0' in build_info, 'patched x/net missing'
     name = 'goevent-dependency-smoke-' + uuid.uuid4().hex[:8]
     with tempfile.TemporaryDirectory() as directory:
         root = Path(directory)
@@ -37,6 +42,7 @@ def main():
         config = (ROOT/'infra/compose/redis.conf.example').read_text().replace('/run/secrets/', '/fixture/')
         (root/'redis.conf').write_text(config)
         (root/'Caddyfile').write_bytes((ROOT/'infra/compose/Caddyfile.example').read_bytes())
+        (root/'Caddyfile.staging').write_bytes((ROOT/'infra/config/caddy/Caddyfile.staging').read_bytes())
         for path in root.iterdir(): path.chmod(0o640)
         try:
             run(['docker','run','-d','--name',name,'--network','none',
@@ -78,7 +84,13 @@ def main():
                  '--tmpfs','/config:rw,size=16m,uid=10001,gid=10001',
                  '-e','GOEVENT_API_DOMAIN=staging.example.invalid',CADDY,
                  'caddy','validate','--config','/fixture/Caddyfile','--adapter','caddyfile'])
-            print('PASS: Redis TLS-only, ACL separation, Lua permissions and Caddy configuration')
+            run(['docker','run','--rm','--network','none','--user','10001:10001',
+                 '--group-add',str(os.getgid()),'--read-only','--cap-drop','ALL',
+                 '--mount','type=bind,src='+directory+',dst=/fixture,readonly',
+                 '--tmpfs','/data:rw,size=16m,uid=10001,gid=10001',
+                 '--tmpfs','/config:rw,size=16m,uid=10001,gid=10001',CADDY,
+                 'caddy','validate','--config','/fixture/Caddyfile.staging','--adapter','caddyfile'])
+            print('PASS: Redis TLS-only, ACL separation, Lua permissions and custom Caddy production/staging configurations')
         finally:
             subprocess.run(['docker','rm','-f',name], capture_output=True, timeout=30)
 
