@@ -26,11 +26,11 @@ jobs:
       GH_TOKEN: ${{ github.token }}
       BUILD_RUN_ID: ${{ inputs.build_run_id }}
       AZURE_ACR_LOGIN_SERVER: ${{ vars.AZURE_ACR_LOGIN_SERVER }}
-      DELIVERY_ENABLED: ${{ vars.GOEVENT_BLOB_DELIVERY_APPROVED }}
+      DELIVERY_ENABLED: 'false' # Deliberate repository kill switch; remove only by reviewed activation PR.
       STORAGE_ACCOUNT: ${{ vars.AZURE_RELEASE_STORAGE_ACCOUNT }}
       STORAGE_CONTAINER: ${{ vars.AZURE_RELEASE_CONTAINER }}
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           persist-credentials: false
       - run: |
@@ -38,7 +38,7 @@ jobs:
           test -n "$STORAGE_ACCOUNT"
           test -n "$STORAGE_CONTAINER"
           python3 infra/ci/promote.py
-      - uses: azure/login@7184910d9eb2b1c5e48f7073824a90609bb9b6d6
+      - uses: azure/login@a641126d1b8aa4d1fa005f4f92df94a3a4c4c906
         with:
           client-id: ${{ vars.AZURE_CLIENT_ID }}
           tenant-id: ${{ vars.AZURE_TENANT_ID }}

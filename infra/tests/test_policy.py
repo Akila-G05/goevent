@@ -31,7 +31,7 @@ class PolicyTests(unittest.TestCase):
         with patch('pull.run',return_value=b'wrong'):
             with self.assertRaises(ValueError):preflight(dict(enabled=True,disk_uuid='expected',mysql_mount='/srv/goevent/mysql',mysql_data='/srv/goevent/mysql/data'))
     def test_no_secret_inventory(self):
-        with tempfile.TemporaryDirectory() as tmp, patch('pull.run',return_value=b'expected'), patch('pull.protected',side_effect=lambda *a:Path(tmp)), patch('pull.Path.is_dir',return_value=True):
+        with tempfile.TemporaryDirectory() as tmp, patch('pull.protected_tree'), patch('pull.network_preflight'), patch('pull.run',return_value=b'expected'), patch('pull.protected',side_effect=lambda *a:Path(tmp)), patch('pull.Path.is_dir',return_value=True):
             c=dict(enabled=True,disk_uuid='expected',mysql_mount='/srv/goevent/mysql',mysql_data='/srv/goevent/mysql/data',secrets_dir=tmp,config_dir=tmp,state_dir=tmp,required_secrets=[])
             with self.assertRaises(ValueError):preflight(c)
     def test_concurrent_lock(self):
@@ -59,7 +59,8 @@ class PolicyTests(unittest.TestCase):
             approval=Path(tmp)/'approval.json'
             approval.write_text(json.dumps({'plan':'review','commit':'a'*40,'approved':True}))
             c=dict(registry='example.azurecr.io',repository='VinuraY/goevent',migration_approval=str(approval),state_dir=tmp,acr_name='example',compose_file=tmp+'/compose',health_hook=tmp+'/health')
-            model={'services':{k:{'image':v,'restart':'no','user':'10001:10001','read_only':True} for k,v in self.value['images'].items()}}
+            from test_deployment import model as compose_model
+            model=compose_model(self.value['images'])
             def command(args,**kwargs):
                 return json.dumps(model).encode() if 'config' in args else b''
             with patch('pull.preflight'),patch('pull.protected',side_effect=lambda p,*a:Path(p)),patch('pull.run',side_effect=command),patch('pull.subprocess.run',side_effect=subprocess.CalledProcessError(1,'health')):
@@ -67,7 +68,9 @@ class PolicyTests(unittest.TestCase):
             self.assertFalse((Path(tmp)/'current.json').exists())
 
     def test_missing_secret_file(self):
-        with tempfile.TemporaryDirectory() as tmp, patch('pull.run',return_value=b'expected'), patch('pull.protected',side_effect=lambda p,*a:Path(p)), patch('pull.Path.is_dir',return_value=True):
+        with tempfile.TemporaryDirectory() as tmp, patch('pull.protected_tree'), patch('pull.network_preflight'), patch('pull.run',return_value=b'expected'), patch('pull.protected',side_effect=lambda p,*a:Path(p)), patch('pull.Path.is_dir',return_value=True):
+            for component, filename in [('backend','application.properties'),('gateway','application.properties'),('redis','redis.conf'),('caddy','Caddyfile')]:
+                directory=Path(tmp)/component; directory.mkdir(); (directory/filename).write_text('test-only')
             c=dict(enabled=True,disk_uuid='expected',mysql_mount='/srv/goevent/mysql',mysql_data='/srv/goevent/mysql/data',secrets_dir=tmp,config_dir=tmp,state_dir=tmp,required_secrets=['absent'])
             with self.assertRaises(FileNotFoundError):preflight(c)
 

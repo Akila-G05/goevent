@@ -1,0 +1,4 @@
+# Apply only to dependencies.yml on an isolated staging host. Never public ingress.
+services:
+  caddy:
+    ports: !override ['127.0.0.1:18080:8080', '127.0.0.1:18443:8443']

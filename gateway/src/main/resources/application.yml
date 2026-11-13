@@ -32,7 +32,7 @@ spring:
           routes:
             # 1. Strict rate limit
             - id: test-strict
-              uri: http://localhost:8081
+              uri: ${BACKEND_URL:http://localhost:8081}
               order: -3
               predicates:
                 - Path=/goevent/api/test/strict
@@ -45,7 +45,7 @@ spring:
 
             # 2. Normal rate limit
             - id: test-normal
-              uri: ${BACKEND_URL}
+              uri: ${BACKEND_URL:http://localhost:8081}
               order: -2
               predicates:
                 - Path=/goevent/api/test/normal
@@ -58,7 +58,7 @@ spring:
 
             # 3. Relaxed rate limit
             - id: test-relaxed
-              uri: ${BACKEND_URL}
+              uri: ${BACKEND_URL:http://localhost:8081}
               order: -1
               predicates:
                 - Path=/goevent/api/test/relaxed
@@ -71,7 +71,7 @@ spring:
 
             # Initial content - 6 hours
             - id: goevent-initial-content
-              uri: ${BACKEND_URL}
+              uri: ${BACKEND_URL:http://localhost:8081}
               order: -10
               predicates:
                 - Path=/goevent/api/content/initial-data
@@ -83,7 +83,7 @@ spring:
 
             # Universities - 1 hour
             - id: goevent-universities
-              uri: ${BACKEND_URL}
+              uri: ${BACKEND_URL:http://localhost:8081}
               order: -9
               predicates:
                 - Path=/goevent/api/content/universities
@@ -95,7 +95,7 @@ spring:
 
             # Organizations - 1 hour
             - id: goevent-organizations
-              uri: ${BACKEND_URL}
+              uri: ${BACKEND_URL:http://localhost:8081}
               order: -8
               predicates:
                 - Path=/goevent/api/content/organizations
@@ -107,7 +107,7 @@ spring:
 
             # 4. Default rate limit for other API routes
             - id: goevent-backend
-              uri: ${BACKEND_URL}
+              uri: ${BACKEND_URL:http://localhost:8081}
               order: 0
               predicates:
                 - Path=/goevent/api/**
@@ -147,7 +147,7 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,gateway
+        include: health
   endpoint:
     gateway:
-      access: unrestricted
+      access: none

@@ -149,7 +149,7 @@ public class ResponseCacheGatewayFilterFactory
 
             log.info(
                     "Checking response cache for {}",
-                    request.getURI()
+                    request.getURI().getRawPath()
             );
 
             log.info("Cache key: {}", cacheKey);

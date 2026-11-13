@@ -18,7 +18,7 @@ def validate(value, registry, repository):
         raise ValueError('migration plan required')
     now = dt.datetime.now(dt.timezone.utc)
     created, expires = (dt.datetime.fromisoformat(value[k].replace('Z', '+00:00')) for k in ('created_at', 'expires_at'))
-    if not created.tzinfo or not expires.tzinfo or created > now + dt.timedelta(minutes=5) or expires <= now or expires-created > dt.timedelta(days=7):
+    if not created.tzinfo or not expires.tzinfo or created > now + dt.timedelta(minutes=5) or expires <= now or expires <= created or expires-created > dt.timedelta(days=7):
         raise ValueError('expired or invalid release window')
     if not re.fullmatch(r'[a-z0-9]+\.azurecr\.io', registry):
         raise ValueError('invalid registry')
@@ -46,3 +46,11 @@ def guard_environment(env):
 def require_reviewers(environment):
     if not any(r.get('type')=='required_reviewers' and r.get('reviewers') for r in environment.get('protection_rules',[])):
         raise ValueError('OWNER ACTION REQUIRED: production reviewers not enforced')
+
+
+def validate_blob_policy(config):
+    if (config.get('storage_account') != 'stgoevent'
+        or config.get('storage_container') != 'goevent-release-intents'
+        or not re.fullmatch(r'intents/[1-9][0-9]*-[1-9][0-9]*\.json', config.get('approved_blob', ''))
+        or not re.fullmatch(r'[0-9a-f]{64}', config.get('approved_intent_sha256', ''))):
+        raise ValueError('exact approved Blob name and out-of-band SHA-256 required')

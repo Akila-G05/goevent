@@ -1,0 +1,75 @@
+# Separate dependency project. Never combine with the protected MySQL Compose.
+services:
+  redis:
+    image: redis:7.4-alpine@sha256:7f7d30b7fdd09467bac58198a1f166dd69789d348d4fe859cccb20e0cf287fbe
+    user: '10001:10001'
+    entrypoint: [redis-server, /run/config/redis.conf]
+    restart: 'no'
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ['no-new-privileges:true']
+    mem_limit: 384m
+    cpus: 0.5
+    tmpfs: ['/tmp:rw,noexec,nosuid,size=16m', '/data:rw,noexec,nosuid,size=16m,uid=10001,gid=10001']
+    volumes:
+      - type: bind
+        source: /opt/goevent/app-config/redis
+        target: /run/config
+        read_only: true
+        bind: {create_host_path: false}
+      - type: bind
+        source: /run/goevent/redis
+        target: /run/secrets
+        read_only: true
+        bind: {create_host_path: false}
+    healthcheck:
+      test: [CMD-SHELL, 'REDISCLI_AUTH="$$(cat /run/secrets/health-password)" redis-cli --tls --cacert /run/secrets/redis-ca.crt --user health --raw ping | grep -qx PONG']
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+    networks: [application]
+  caddy:
+    image: ${CADDY_IMAGE:?reviewed acrgoevent.azurecr.io/goevent/caddy digest required}
+    user: '10001:10001'
+    command: [caddy, run, --config, /run/config/Caddyfile, --adapter, caddyfile]
+    restart: 'no'
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ['no-new-privileges:true']
+    mem_limit: 128m
+    cpus: 0.5
+    environment:
+      GOEVENT_API_DOMAIN: ${GOEVENT_API_DOMAIN:?approved DNS name required}
+      XDG_DATA_HOME: /data
+      XDG_CONFIG_HOME: /config
+    ports: ['80:8080', '443:8443']
+    tmpfs: ['/tmp:rw,noexec,nosuid,size=16m', '/config:rw,noexec,nosuid,size=16m,uid=10001,gid=10001']
+    volumes:
+      - type: bind
+        source: /opt/goevent/app-config/caddy
+        target: /run/config
+        read_only: true
+        bind: {create_host_path: false}
+      - type: bind
+        source: /var/lib/goevent-caddy
+        target: /data
+        bind: {create_host_path: false}
+    networks:
+      ingress: {ipv4_address: 172.29.240.2}
+      edge: {}
+networks:
+  ingress:
+    name: goevent-ingress
+    internal: true
+    ipam:
+      config: [{subnet: 172.29.240.0/28}]
+  application:
+    name: goevent-application
+    internal: true
+    ipam:
+      config: [{subnet: 172.29.241.0/28}]
+  backend-egress:
+    name: goevent-backend-egress
+  edge:
+    name: goevent-edge
