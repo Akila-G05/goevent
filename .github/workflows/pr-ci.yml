@@ -117,6 +117,7 @@ jobs:
           mvn -B -ntp -f gateway/pom.xml verify
           mkdir -p infra/validation
           python3 infra/ci/runtime_smoke.py
+          python3 infra/ci/dependency_smoke.py
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         if: always()
         with:

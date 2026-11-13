@@ -125,6 +125,7 @@ jobs:
           mvn -B -ntp -f gateway/pom.xml verify
           mkdir -p infra/validation
           python3 infra/ci/runtime_smoke.py
+          python3 infra/ci/dependency_smoke.py
       - uses: @actions/upload-artifact@
         if: always()
         with:
@@ -227,7 +228,7 @@ jobs:
       GH_TOKEN: ${{ github.token }}
       BUILD_RUN_ID: ${{ inputs.build_run_id }}
       AZURE_ACR_LOGIN_SERVER: ${{ vars.AZURE_ACR_LOGIN_SERVER }}
-      DELIVERY_ENABLED: ${{ vars.GOEVENT_BLOB_DELIVERY_APPROVED }}
+      DELIVERY_ENABLED: 'false' # Deliberate repository kill switch; remove only by reviewed activation PR.
       STORAGE_ACCOUNT: ${{ vars.AZURE_RELEASE_STORAGE_ACCOUNT }}
       STORAGE_CONTAINER: ${{ vars.AZURE_RELEASE_CONTAINER }}
     steps:

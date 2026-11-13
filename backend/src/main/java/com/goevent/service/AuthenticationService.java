@@ -88,6 +88,7 @@ public class AuthenticationService {
 
                                 // Create user session
                                 HttpSession session = httpRequest.getSession(true);
+                                httpRequest.changeSessionId();
 
                                 session.setAttribute("userId", user.getId());
                                 session.setAttribute("roleId", user.getRoleId());

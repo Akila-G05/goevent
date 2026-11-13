@@ -17,10 +17,10 @@ activation steps are in [infra](../../infra/README.md).
 
 The diagram and package responsibilities below describe the target business
 architecture. Current repositories use JdbcTemplate; JPA/Hibernate, Spring
-Security, Bean Validation and OpenAPI are not installed. No Java test sources
-currently exist; the isolated infrastructure smoke harness provides migration
-and service compatibility checks. Frontend `/api/v1` and gateway `/goevent/api`
-defaults still differ. See [migration evidence](../../infra/docs/DEPENDENCY-MIGRATION.md).
+Security, Bean Validation and OpenAPI are not installed. Focused Java tests cover transport security; the isolated infrastructure smoke
+harness provides migration and service compatibility checks. Frontend and gateway
+use `/goevent/api`, with a legacy `/api/v1` browser rewrite. Production activation
+remains blocked pending the staging handoff and external verification. See [migration evidence](../../infra/docs/DEPENDENCY-MIGRATION.md).
 
 ## High-Level Architecture
 
