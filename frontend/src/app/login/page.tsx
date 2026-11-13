@@ -203,35 +203,6 @@ export default function LoginPage() {
                 </p>
               </div>
 
-              {/* Demo Login Shortcuts */}
-              <div className="p-3 bg-white/5 border border-white/10 rounded-2xl space-y-2">
-                <span className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider block">
-                  Demo Quick Fill:
-                </span>
-                <div className="flex flex-wrap gap-2">
-                  <button
-                    type="button"
-                    onClick={() => handleQuickDemoFill('viewer')}
-                    className="text-[11px] bg-white/10 hover:bg-white/20 text-zinc-200 px-3 py-1 rounded-full border border-white/10 transition-colors"
-                  >
-                    Attendee Demo
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleQuickDemoFill('creator')}
-                    className="text-[11px] bg-white/10 hover:bg-white/20 text-zinc-200 px-3 py-1 rounded-full border border-white/10 transition-colors"
-                  >
-                    Creator Demo
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleQuickDemoFill('admin')}
-                    className="text-[11px] bg-white/10 hover:bg-white/20 text-zinc-200 px-3 py-1 rounded-full border border-white/10 transition-colors"
-                  >
-                    Admin Demo
-                  </button>
-                </div>
-              </div>
 
               {/* Google Sign-In */}
               <div className="space-y-3">

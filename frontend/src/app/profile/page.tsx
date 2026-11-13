@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   CalendarDays,
   Calendar,
@@ -33,7 +33,7 @@ import {
   ScanLine,
   RefreshCw,
 } from 'lucide-react';
-import { userApi } from '@/api';
+import { userApi, resolveProfileImageUrl } from '@/api';
 import {
   useSessionStore,
   getDisplayName,
@@ -41,6 +41,8 @@ import {
   canCreateEvents,
 } from '@/lib/session-store';
 import { useLogout } from '@/hooks/use-logout';
+import { useMinimumLoading } from '@/hooks/use-minimum-loading';
+import { EditProfileModal } from '@/components/profile/edit-profile-modal';
 
 type RoleView = 'USER' | 'STUDENT' | 'ORGANIZER' | 'ADMIN' | 'CONTRIBUTOR';
 type TabType = 'overview' | 'my-events' | 'sales' | 'attendees' | 'saved' | 'settings';
@@ -123,15 +125,21 @@ function ProfileErrorState({ onRetry }: { onRetry: () => void }) {
 
 export default function ProfilePage() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const status = useSessionStore((state) => state.status);
   const user = useSessionStore((state) => state.user);
   const { logout, isLoggingOut } = useLogout();
+
+  const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
 
   const profileQuery = useQuery({
     // Keyed by account so a different sign-in never reuses cached data.
     queryKey: ['user', 'profile', user?.userId],
     queryFn: userApi.getProfile,
-    enabled: status === 'authenticated',
+    // Fire immediately on page load; a 401 also drives the redirect.
+    enabled: status !== 'guest',
+    // Always ask the backend when the page is opened.
+    staleTime: 0,
     retry: false,
   });
 
@@ -172,18 +180,31 @@ export default function ProfilePage() {
   const joinedDate = formatJoinedDate(profile?.registeredDate);
   const roleLabel = getRoleLabel(actualRole);
   const showCreateEvent = canCreateEvents(actualRole);
+  const avatarSrc = resolveProfileImageUrl(profile?.profileImgUrl);
 
-  if (status === 'loading' || (status === 'authenticated' && profileQuery.isPending)) {
+  const profileRequestLoading =
+    status === 'loading' ||
+    (status === 'authenticated' && (profileQuery.isPending || profileQuery.isFetching));
+
+  // The animation stays for at least 500 ms, even if the API answers sooner.
+  const showProfileLoading = useMinimumLoading(profileRequestLoading);
+
+  if (showProfileLoading || status === 'guest') {
     return <ProfileSkeleton />;
   }
 
-  // Redirect in progress; keep the skeleton instead of flashing guest UI.
-  if (status === 'guest') {
+  // Session expired: the redirect is already in flight.
+  if (errorStatus === 401) {
     return <ProfileSkeleton />;
   }
 
-  if (profileQuery.isError && errorStatus !== 401) {
+  if (profileQuery.isError) {
     return <ProfileErrorState onRetry={() => profileQuery.refetch()} />;
+  }
+
+  // Narrow the response for the rest of the render (and the edit dialog).
+  if (!profile) {
+    return <ProfileSkeleton />;
   }
 
   const roleDescriptions: Record<RoleView, string> = {
@@ -244,10 +265,10 @@ export default function ProfilePage() {
             {/* Avatar */}
             <div className="relative shrink-0">
               <div className="w-24 h-24 rounded-2xl overflow-hidden bg-[#1c1b1b] border-4 border-[#f0eceb] shadow-md flex items-center justify-center text-3xl font-display font-bold text-white tracking-widest">
-                {profile?.profileImgUrl ? (
+                {avatarSrc ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
-                    src={profile.profileImgUrl}
+                    src={avatarSrc}
                     alt={displayName}
                     className="w-full h-full object-cover"
                     referrerPolicy="no-referrer"
@@ -304,6 +325,7 @@ export default function ProfilePage() {
           <div className="flex items-center gap-3 w-full sm:w-auto relative z-10">
             <button
               type="button"
+              onClick={() => setIsEditProfileOpen(true)}
               className="flex-1 sm:flex-initial px-5 py-2.5 rounded-full bg-[#f0eceb] hover:bg-[#e4dfde] text-[#1c1b1b] font-semibold text-xs tracking-wider transition-all flex items-center justify-center gap-2"
             >
               <SlidersHorizontal className="w-3.5 h-3.5" />
@@ -899,6 +921,16 @@ export default function ProfilePage() {
           </div>
         </div>
       </div>
+
+      <EditProfileModal
+        open={isEditProfileOpen}
+        onClose={() => setIsEditProfileOpen(false)}
+        profile={profile}
+        onSaved={(updated) => {
+          queryClient.setQueryData(['user', 'profile', user?.userId], updated);
+          void useSessionStore.getState().refresh();
+        }}
+      />
     </div>
   );
 }

@@ -25,6 +25,7 @@ export const API_ROUTES = {
   // Signed-in user endpoints
   USER: {
     DATA: `${API_PREFIX}/user/data`,
+    IMAGE: `${API_PREFIX}/user/image`,
   },
 
   // Content endpoints (cached via gateway)

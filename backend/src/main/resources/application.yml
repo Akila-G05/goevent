@@ -21,6 +21,12 @@ spring:
     redis:
       namespace: goevent:session
 
+  # Profile image uploads (validated again in UserService)
+  servlet:
+    multipart:
+      max-file-size: 2MB
+      max-request-size: 3MB
+
   # Supports launches from either the repository root or backend/.
   config:
     import: "optional:file:../.env[.properties],optional:file:.env[.properties]"
@@ -74,6 +80,10 @@ logging:
 
 google:
   client-id: ${GOOGLE_CLIENT_ID}
+
+# Uploaded profile images (relative paths resolve from the launch directory)
+app:
+  upload-dir: ${UPLOAD_DIR:uploads/profile}
 
 
 #app:
