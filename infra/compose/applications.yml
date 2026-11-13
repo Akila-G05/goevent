@@ -26,7 +26,11 @@ services:
         read_only: true
         bind:
           create_host_path: false
-    networks: [application, database]
+    networks:
+      application:
+        ipv4_address: 172.29.241.2
+      database: {}
+      backend-egress: {}
   gateway:
     image: ${GATEWAY_IMAGE:?digest required}
     user: '10001:10001'
@@ -53,7 +57,10 @@ services:
         read_only: true
         bind:
           create_host_path: false
-    networks: [ingress, application]
+    networks:
+      ingress: {}
+      application:
+        ipv4_address: 172.29.241.3
 networks:
   ingress:
     external: true
@@ -63,4 +70,7 @@ networks:
     name: goevent-application
   database:
     external: true
-    name: goevent-database
+    name: goevent_goevent_internal
+  backend-egress:
+    external: true
+    name: goevent-backend-egress

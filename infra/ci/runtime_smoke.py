@@ -78,8 +78,8 @@ def main():
             ])
             containers.append(mysql)
             command([
-                'docker', 'run', '--rm', '-d', '--name', redis,
-                '-p', '127.0.0.1::6379', '--env-file', str(redis_env),
+                'docker', 'run', '-d', '--name', redis,
+                '-p', '127.0.0.1:'+str(free_port())+':6379', '--env-file', str(redis_env),
                 'redis:7.4-alpine', 'sh', '-c',
                 'exec redis-server --requirepass "$REDIS_PASSWORD"',
             ])
@@ -107,13 +107,6 @@ def main():
                 'BACKEND_URL': f'http://127.0.0.1:{backend_port}',
                 'SPRING_CONFIG_IMPORT': '',
             }
-            # The strict test route currently has a literal downstream address.
-            # Override it in a disposable copy; do not edit application settings.
-            gateway_config = temporary / 'gateway.yml'
-            gateway_config.write_text(
-                (ROOT / 'gateway/src/main/resources/application.yml').read_text()
-                .replace('http://localhost:8081', environment['BACKEND_URL'])
-            )
             services = [
                 ('backend', 'backend/target/goevent-1.0-SNAPSHOT.war', backend_port),
                 ('gateway', 'gateway/target/gateway-1.0-SNAPSHOT.jar', gateway_port),
@@ -125,10 +118,6 @@ def main():
                     'LOGGING_LOGBACK_ROLLINGPOLICY_FILE_NAME_PATTERN':
                         str(temporary / f'{component}.%d.%i.log.gz'),
                 }
-                if component == 'gateway':
-                    runtime_env['SPRING_CONFIG_ADDITIONAL_LOCATION'] = (
-                        'file:' + str(gateway_config)
-                    )
                 # The existing main methods ignore CLI arguments; use Spring's
                 # environment binding, including disabling the local .env import.
                 with (validation / f'upgrade-runtime-{component}.log').open('w') as output:
@@ -194,6 +183,46 @@ def main():
                     statuses.append(error.code)
             assert 200 in statuses and 429 in statuses, statuses
             print('PASS: routed API and Redis-backed rate limiting (HTTP 429)', flush=True)
+            # Cache-only public content falls back to the backend; the rate limiter must fail closed.
+            time.sleep(2)
+            assert get(gateway_port, '/goevent/api/content/universities')['status'] is True
+            command(['docker', 'stop', redis])
+            try:
+                get(gateway_port, '/goevent/api/test?redis-outage=1')
+                raise AssertionError('Rate limiter failed open during Redis outage')
+            except urllib.error.HTTPError as error:
+                assert error.code == 503, error.code
+            assert get(gateway_port, '/goevent/api/content/universities')['status'] is True
+            command(['docker', 'start', redis])
+            for _ in range(30):
+                try:
+                    assert get(gateway_port, '/goevent/api/test?recovered=1')['status'] is True
+                    break
+                except (OSError, AssertionError):
+                    time.sleep(1)
+            else:
+                raise AssertionError('Redis recovery did not restore rate limiting')
+            print('PASS: Redis outage denies rate-limited traffic, cache fallback and recovery', flush=True)
+            # Prove failed MySQL DDL stops a fresh backend startup. Disposable DB only.
+            processes[0].terminate()
+            processes[0].wait(timeout=15)
+            bad_migrations = temporary / 'bad-migrations'
+            bad_migrations.mkdir()
+            for migration in migrations:
+                (bad_migrations/migration.name).write_bytes(migration.read_bytes())
+            (bad_migrations/'V999__failure_test.sql').write_text('THIS IS INVALID MYSQL DDL;\n')
+            failed_env = environment | {
+                'SERVER_PORT': str(backend_port),
+                'SPRING_FLYWAY_LOCATIONS': 'filesystem:'+str(bad_migrations),
+                'LOGGING_FILE_NAME': str(temporary/'failed-migration.log'),
+            }
+            with (temporary/'failed-migration-stdout.log').open('w') as output:
+                failed = subprocess.Popen(['java','-jar',str(ROOT/'backend/target/goevent-1.0-SNAPSHOT.war')],
+                    cwd=ROOT, env=failed_env, stdout=output, stderr=output)
+            processes.append(failed)
+            assert failed.wait(timeout=60) != 0
+            assert 'Migration' in (temporary/'failed-migration-stdout.log').read_text()
+            print('PASS: unsuccessful Flyway migration prevents backend startup', flush=True)
         finally:
             for process in reversed(processes):
                 process.terminate()

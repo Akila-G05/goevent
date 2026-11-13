@@ -1,6 +1,16 @@
-# Proposed private Redis dependency only. Operator must approve image digest,
-# persistence, TLS and memory/eviction policy before creating the service.
+# Ephemeral cache, rate limits and sessions: restart invalidates all three.
 protected-mode yes
-port 6379
+bind 0.0.0.0
+port 0
+tls-port 6379
+tls-cert-file /run/secrets/redis.crt
+tls-key-file /run/secrets/redis.key
+tls-ca-cert-file /run/secrets/redis-ca.crt
+tls-auth-clients no
 aclfile /run/secrets/redis.acl
-# Do not publish this port. A default user must be disabled in the supplied ACL.
+maxmemory 256mb
+maxmemory-policy noeviction
+save ""
+appendonly no
+dir /data
+notify-keyspace-events Egx

@@ -1,5 +1,7 @@
 'use client';
 
+import { apiClient } from '@/lib/api-client';
+
 import React, { useState } from 'react';
 import { GoogleLogin, CredentialResponse } from '@react-oauth/google';
 import { Loader2 } from 'lucide-react';
