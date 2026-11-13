@@ -32,7 +32,7 @@ export const Navbar: React.FC = () => {
   };
 
   return (
-    <header className='absolute top-0 left-0 right-0 z-50 w-full'>
+    <header className="fixed top-0 left-0 right-0 z-50 w-full bg-black/95 backdrop-blur-md border-b border-white/10 shadow-[0_4px_20px_rgba(0,0,0,0.25)]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-20">
           {/* Brand Logo with 3 slashes */}
