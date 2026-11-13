@@ -2,12 +2,16 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { CornerDownRight, Loader2, LogOut, Menu, X } from 'lucide-react';
 import { ProfileButton } from '@/components/shared/profile-button';
 import { useLogout } from '@/hooks/use-logout';
 import { getDisplayName, getRoleLabel, useSessionStore } from '@/lib/session-store';
 
 export const Navbar: React.FC = () => {
+  const pathname = usePathname();
+  const isHomePage = pathname === '/';
+
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const status = useSessionStore((state) => state.status);
@@ -32,7 +36,13 @@ export const Navbar: React.FC = () => {
   };
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 w-full bg-black/95 backdrop-blur-md border-b border-white/10 shadow-[0_4px_20px_rgba(0,0,0,0.25)]">
+    <header
+      className={`top-0 left-0 right-0 z-50 w-full transition-colors duration-200 ${
+        isHomePage
+          ? 'absolute bg-transparent border-b border-transparent'
+          : 'fixed bg-black/95 backdrop-blur-md border-b border-white/10 shadow-[0_4px_20px_rgba(0,0,0,0.25)]'
+      }`}
+    >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-20">
           {/* Brand Logo with 3 slashes */}
