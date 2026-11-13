@@ -190,4 +190,19 @@ describe('EditProfileModal', () => {
 
     await waitFor(() => expect(onSaved).toHaveBeenCalledTimes(1));
   });
+
+  it('does not resend the stored image when no new file is chosen', async () => {
+    vi.mocked(userApi.updateProfile).mockResolvedValue({ ...baseProfile });
+
+    renderModal({ ...baseProfile, profileImgUrl: '/goevent/api/images/profile/old.jpg' });
+
+    fireEvent.click(screen.getByRole('button', { name: /Save changes/i }));
+
+    await waitFor(() => expect(userApi.updateProfile).toHaveBeenCalledTimes(1));
+
+    expect(userApi.uploadProfileImage).not.toHaveBeenCalled();
+    expect(vi.mocked(userApi.updateProfile).mock.calls[0][0]).not.toHaveProperty(
+      'profileImgUrl'
+    );
+  });
 });

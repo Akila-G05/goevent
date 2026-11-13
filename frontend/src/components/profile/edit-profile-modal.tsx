@@ -250,7 +250,7 @@ export function EditProfileModal({ open, onClose, profile, onSaved }: EditProfil
     loading.open();
 
     try {
-      let profileImgUrl = profile.profileImgUrl;
+      let uploadedImagePath: string | undefined;
 
       if (imageFile) {
         const uploaded = await userApi.uploadProfileImage(imageFile);
@@ -259,15 +259,20 @@ export function EditProfileModal({ open, onClose, profile, onSaved }: EditProfil
           throw { message: uploaded.message || 'Image upload failed' };
         }
 
-        profileImgUrl = uploaded.profileImgUrl;
+        uploadedImagePath = uploaded.profileImgUrl;
       }
 
       const payload: UpdateProfilePayload = {
         firstName: values.firstName.trim(),
         lastName: values.lastName.trim(),
         mobile: values.mobile.trim(),
-        profileImgUrl,
       };
+
+      // Only send the image when it changed; the backend keeps the stored one
+      // otherwise, and never re-validates a legacy URL the client didn't touch.
+      if (uploadedImagePath) {
+        payload.profileImgUrl = uploadedImagePath;
+      }
 
       if (isStudent) {
         payload.student = {

@@ -10,9 +10,11 @@ spring:
   application:
     name: goevent-gateway
 
-  # Multipart profile uploads must survive the proxy
-  codec:
-    max-in-memory-size: 5MB
+  # Uploads: the gateway must accept the largest image (8 MB banner).
+  # Spring Boot 4 moved this from spring.codec.* to spring.http.codecs.*.
+  http:
+    codecs:
+      max-in-memory-size: 12MB
 
   # Redis connection
   data:

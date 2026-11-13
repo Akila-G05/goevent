@@ -21,11 +21,12 @@ spring:
     redis:
       namespace: goevent:session
 
-  # Profile image uploads (validated again in UserService)
+  # Image uploads. The global limit must cover the largest policy (8 MB event
+  # banners); each image type is validated again against its own limit.
   servlet:
     multipart:
-      max-file-size: 2MB
-      max-request-size: 3MB
+      max-file-size: 10MB
+      max-request-size: 12MB
 
   # Supports launches from either the repository root or backend/.
   config:
@@ -81,9 +82,15 @@ logging:
 google:
   client-id: ${GOOGLE_CLIENT_ID}
 
-# Uploaded profile images (relative paths resolve from the launch directory)
+# Uploaded images. The default root sits outside the repository and build
+# output so cleaning the project never deletes files; point STORAGE_ROOT at a
+# mounted volume or cloud directory in production.
 app:
-  upload-dir: ${UPLOAD_DIR:uploads/profile}
+  storage:
+    root: ${STORAGE_ROOT:${user.home}/goevent/uploads}
+    # Base of the URL stored in MySQL. Replace with a CDN base when images move
+    # to cloud storage; the local /api/images route keeps serving legacy files.
+    public-base-url: ${STORAGE_PUBLIC_BASE_URL:/goevent/api/images}
 
 
 #app:

@@ -1,5 +1,6 @@
 package com.goevent.service;
 
+import com.goevent.config.FileStorageConfig;
 import com.goevent.dto.UserDTO;
 import com.goevent.enums.AuthType;
 import com.goevent.enums.Role;
@@ -12,10 +13,6 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
-import org.slf4j.Logger;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.io.FileSystemResource;
-import org.springframework.http.CacheControl;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -23,42 +20,27 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
-import java.time.Duration;
 import java.util.Map;
-import java.util.UUID;
 import java.util.regex.Pattern;
 
 @Service
 public class UserService {
 
-    private static final Logger logger = AppUtil.getLogger(UserService.class);
-
-    private static final long MAX_IMAGE_BYTES = 2L * 1024 * 1024;
-    private static final String IMAGE_URL_PREFIX = "/goevent/api/user/image/";
-
-    private static final Pattern IMAGE_FILENAME = Pattern.compile(
-            "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\\.(jpg|png|webp)$"
-    );
     private static final Pattern EMAIL = Pattern.compile("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$");
     private static final Pattern MOBILE = Pattern.compile("^\\+?[0-9 ()-]{6,15}$");
 
     private final UserRepo userRepo;
     private final ContentRepo contentRepo;
-    private final String uploadDir;
+    private final ImageUploadService imageUploadService;
 
     public UserService(
             UserRepo userRepo,
             ContentRepo contentRepo,
-            @Value("${app.upload-dir:uploads/profile}") String uploadDir
+            ImageUploadService imageUploadService
     ) {
         this.userRepo = userRepo;
         this.contentRepo = contentRepo;
-        this.uploadDir = uploadDir;
+        this.imageUploadService = imageUploadService;
     }
 
     /**
@@ -120,7 +102,13 @@ public class UserService {
         String firstName = stringField(payload, "firstName", user.getFname());
         String lastName = stringField(payload, "lastName", user.getLname());
         String mobile = stringField(payload, "mobile", user.getMobile());
-        String profileImgUrl = stringField(payload, "profileImgUrl", user.getProfileImgUrl());
+        String previousProfileImgUrl = user.getProfileImgUrl();
+        String profileImgUrl = stringField(payload, "profileImgUrl", previousProfileImgUrl);
+
+        // A blank value removes the picture; an absent value keeps the current one.
+        if (profileImgUrl != null && profileImgUrl.isBlank()) {
+            profileImgUrl = null;
+        }
 
         if (firstName == null || firstName.isBlank()) {
             return badRequest("First name is required");
@@ -140,7 +128,7 @@ public class UserService {
         if (profileImgUrl != null && profileImgUrl.length() > 200) {
             return badRequest("Profile image URL is too long");
         }
-        if (profileImgUrl != null && !profileImgUrl.isBlank() && !isAllowedImageUrl(profileImgUrl)) {
+        if (profileImgUrl != null && !isAllowedImageUrl(profileImgUrl)) {
             return badRequest("Invalid profile image");
         }
 
@@ -203,6 +191,12 @@ public class UserService {
             userRepo.upsertOrganizerDetail(userId, organizationId, position);
         }
 
+        // Only after the database points at the new file do we remove the old
+        // one, so a failed save never leaves the profile without an image.
+        if (previousProfileImgUrl != null && !previousProfileImgUrl.equals(profileImgUrl)) {
+            imageUploadService.deleteByPath(FileStorageConfig.SCOPE_PROFILE, previousProfileImgUrl);
+        }
+
         refreshSessionProfile(httpRequest, userId);
 
         JsonObject profile = buildProfileJson(userId);
@@ -215,8 +209,8 @@ public class UserService {
     }
 
     /**
-     * Stores a profile image and returns the URL the browser should use. The
-     * file name is a random UUID so callers can never influence the path.
+     * Stores a profile picture through the shared image service and returns the
+     * public URL that the browser (and MySQL) should use.
      */
     public ResponseEntity<String> uploadProfileImage(MultipartFile file, HttpServletRequest httpRequest) {
 
@@ -226,74 +220,14 @@ public class UserService {
             return unauthorized("Not authenticated");
         }
 
-        if (file == null || file.isEmpty()) {
-            return badRequest("Please choose an image file");
-        }
-        if (file.getSize() > MAX_IMAGE_BYTES) {
-            return badRequest("Image must be 2 MB or smaller");
-        }
-
-        String extension = detectImageExtension(file);
-
-        if (extension == null) {
-            return badRequest("Only JPEG, PNG or WebP images are supported");
-        }
-
-        String filename = UUID.randomUUID() + "." + extension;
-        Path root = uploadRoot();
-        Path target = root.resolve(filename).normalize();
-
-        if (!target.startsWith(root)) {
-            return badRequest("Invalid file name");
-        }
-
-        try {
-            Files.createDirectories(root);
-
-            try (InputStream input = file.getInputStream()) {
-                Files.copy(input, target, StandardCopyOption.REPLACE_EXISTING);
-            }
-        } catch (IOException e) {
-            logger.error("Could not store a profile image for user {}", userId, e);
-            return serverError("Could not save the image. Please try again.");
-        }
+        String profileImgUrl = imageUploadService.uploadProfilePicture(file);
 
         JsonObject response = new JsonObject();
 
         response.addProperty("status", true);
-        response.addProperty("profileImgUrl", IMAGE_URL_PREFIX + filename);
+        response.addProperty("profileImgUrl", profileImgUrl);
 
         return json(HttpStatus.OK, response);
-    }
-
-    /**
-     * Serves a previously uploaded profile image. The file name must match the
-     * generated UUID pattern, which also blocks path traversal attempts.
-     */
-    public ResponseEntity<?> getProfileImage(String filename) {
-
-        if (filename == null || !IMAGE_FILENAME.matcher(filename).matches()) {
-            return ResponseEntity.notFound().build();
-        }
-
-        Path root = uploadRoot();
-        Path target = root.resolve(filename).normalize();
-
-        if (!target.startsWith(root) || !Files.isRegularFile(target)) {
-            return ResponseEntity.notFound().build();
-        }
-
-        String extension = filename.substring(filename.lastIndexOf('.') + 1);
-        MediaType mediaType = switch (extension) {
-            case "png" -> MediaType.IMAGE_PNG;
-            case "webp" -> MediaType.parseMediaType("image/webp");
-            default -> MediaType.IMAGE_JPEG;
-        };
-
-        return ResponseEntity.ok()
-                .contentType(mediaType)
-                .cacheControl(CacheControl.maxAge(Duration.ofDays(30)).cachePublic())
-                .body(new FileSystemResource(target));
     }
 
     private JsonObject buildProfileJson(int userId) {
@@ -426,58 +360,14 @@ public class UserService {
         }
     }
 
-    private String detectImageExtension(MultipartFile file) {
-
-        try (InputStream input = file.getInputStream()) {
-            byte[] header = input.readNBytes(12);
-
-            // JPEG: FF D8 FF
-            if (header.length >= 3
-                    && (header[0] & 0xFF) == 0xFF
-                    && (header[1] & 0xFF) == 0xD8
-                    && (header[2] & 0xFF) == 0xFF) {
-                return "jpg";
-            }
-
-            // PNG: 89 50 4E 47 0D 0A 1A 0A
-            if (header.length >= 8
-                    && (header[0] & 0xFF) == 0x89
-                    && header[1] == 'P'
-                    && header[2] == 'N'
-                    && header[3] == 'G') {
-                return "png";
-            }
-
-            // WebP: "RIFF" .... "WEBP"
-            if (header.length >= 12
-                    && header[0] == 'R'
-                    && header[1] == 'I'
-                    && header[2] == 'F'
-                    && header[3] == 'F'
-                    && header[8] == 'W'
-                    && header[9] == 'E'
-                    && header[10] == 'B'
-                    && header[11] == 'P') {
-                return "webp";
-            }
-        } catch (IOException e) {
-            logger.warn("Could not inspect the uploaded image");
-        }
-
-        return null;
-    }
-
-    private Path uploadRoot() {
-        return Path.of(uploadDir).toAbsolutePath().normalize();
-    }
-
+    /**
+     * Profile pictures must come from the shared image service (or be an
+     * external Google avatar); arbitrary client paths are rejected.
+     */
     private boolean isAllowedImageUrl(String url) {
-
-        if (url.startsWith(IMAGE_URL_PREFIX)) {
-            return true;
-        }
-
-        return url.startsWith("http://") || url.startsWith("https://");
+        return imageUploadService.isManagedUrl(FileStorageConfig.SCOPE_PROFILE, url)
+                || url.startsWith("http://")
+                || url.startsWith("https://");
     }
 
     private boolean isObjectField(JsonObject object, String key) {
@@ -554,14 +444,5 @@ public class UserService {
         response.addProperty("message", message);
 
         return json(HttpStatus.BAD_REQUEST, response);
-    }
-
-    private ResponseEntity<String> serverError(String message) {
-        JsonObject response = new JsonObject();
-
-        response.addProperty("status", false);
-        response.addProperty("message", message);
-
-        return json(HttpStatus.INTERNAL_SERVER_ERROR, response);
     }
 }
