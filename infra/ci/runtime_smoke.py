@@ -166,22 +166,42 @@ def main():
                 assert denied['status'] is False
                 assert denied['message'] == 'Google ID token is missing'
             print('PASS: JSON authentication request rejects missing Google token', flush=True)
-            body = get(gateway_port, '/goevent/api/test')
+            public_path = '/goevent/api/content/universities'
+            body = get(gateway_port, public_path)
             assert body['status'] is True
-            assert get(gateway_port, '/goevent/api/test') == body
+            assert get(gateway_port, public_path) == body
             keys = redis_command('--scan', '--pattern', 'gateway:response:*').splitlines()
             assert len(keys) == 1, 'Expected a real Redis response-cache entry'
             cached = json.loads(redis_command('GET', keys[0]))
             assert json.loads(base64.b64decode(cached['body'])) == body
             assert 'CACHE HIT:' in (validation / 'upgrade-runtime-gateway.log').read_text()
 
-            # Spring 7's header API must retain authenticated-request cache bypass.
-            time.sleep(2)
-            for name, value in [('Authorization', 'Bearer smoke'), ('Cookie', 'smoke=1')]:
-                assert get(gateway_port, '/goevent/api/test?bypass=' + name,
-                           {name: value})['status'] is True
+            # Only allowlisted public endpoints may populate the shared cache.
+            assert get(gateway_port, '/goevent/api/test')['status'] is True
             assert redis_command('--scan', '--pattern', 'gateway:response:*').splitlines() == keys
-            print('PASS: Jackson cache round trip and Authorization/Cookie cache bypass', flush=True)
+            # Authorization must bypass both an existing cached response and writes.
+            gateway_log = validation / 'upgrade-runtime-gateway.log'
+            hits = gateway_log.read_text().count('CACHE HIT:')
+            assert get(gateway_port, public_path, {'Authorization': 'Bearer smoke'}) == body
+            assert gateway_log.read_text().count('CACHE HIT:') == hits
+            assert get(gateway_port, public_path + '?bypass=Authorization',
+                       {'Authorization': 'Bearer smoke'}) == body
+            assert redis_command('--scan', '--pattern', 'gateway:response:*').splitlines() == keys
+            # Public content is identical for all callers; cookies remain eligible.
+            cookie_path = public_path + '?cookie=smoke'
+            assert get(gateway_port, cookie_path, {'Cookie': 'smoke=1'}) == body
+            cookie_keys = redis_command('--scan', '--pattern', 'gateway:response:*').splitlines()
+            assert len(cookie_keys) == 2, 'Expected cookie-bearing public response to be cached'
+            cookie_key, = set(cookie_keys) - set(keys)
+            cookie_cached = json.loads(redis_command('GET', cookie_key))
+            assert json.loads(base64.b64decode(cookie_cached['body'])) == body
+            hits = gateway_log.read_text().count('CACHE HIT:')
+            assert get(gateway_port, cookie_path, {'Cookie': 'smoke=1'}) == body
+            assert gateway_log.read_text().count('CACHE HIT:') > hits
+            print('PASS: public cache round trip, non-public/Authorization bypass and public cookie caching', flush=True)
+
+            # Let the default rate-limit bucket refill before the strict-route check.
+            time.sleep(2)
 
             statuses = []
             for _ in range(4):
