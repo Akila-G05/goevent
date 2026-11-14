@@ -43,6 +43,7 @@ import {
 import { useLogout } from '@/hooks/use-logout';
 import { useMinimumLoading } from '@/hooks/use-minimum-loading';
 import { EditProfileModal } from '@/components/profile/edit-profile-modal';
+import { CreateEventModal } from '@/components/events/create-event-modal';
 
 type RoleView = 'USER' | 'STUDENT' | 'ORGANIZER' | 'ADMIN' | 'CONTRIBUTOR';
 type TabType = 'overview' | 'my-events' | 'sales' | 'attendees' | 'saved' | 'settings';
@@ -131,6 +132,7 @@ export default function ProfilePage() {
   const { logout, isLoggingOut } = useLogout();
 
   const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
+  const [isCreateEventOpen, setIsCreateEventOpen] = useState(false);
 
   const profileQuery = useQuery({
     // Keyed by account so a different sign-in never reuses cached data.
@@ -332,13 +334,14 @@ export default function ProfilePage() {
               Edit Profile
             </button>
             {showCreateEvent && (
-              <Link
-                href="/#events"
+              <button
+                type="button"
+                onClick={() => setIsCreateEventOpen(true)}
                 className="flex-1 sm:flex-initial px-6 py-2.5 rounded-full bg-[#1c1b1b] text-white hover:bg-[#333131] font-bold text-xs tracking-wider transition-all shadow-md flex items-center justify-center gap-2 group"
               >
                 <PlusCircle className="w-4 h-4 group-hover:rotate-90 transition-transform text-white" />
                 + Create Event
-              </Link>
+              </button>
             )}
           </div>
         </div>
@@ -930,6 +933,11 @@ export default function ProfilePage() {
           queryClient.setQueryData(['user', 'profile', user?.userId], updated);
           void useSessionStore.getState().refresh();
         }}
+      />
+
+      <CreateEventModal
+        open={isCreateEventOpen}
+        onClose={() => setIsCreateEventOpen(false)}
       />
     </div>
   );

@@ -81,6 +81,7 @@ public class UserRepo {
             FROM user_has_organize uho
             INNER JOIN organization o ON o.id = uho.organization_id
             WHERE uho.user_id = ?
+            ORDER BY uho.registered_date DESC, uho.id DESC
             LIMIT 1
             """;
 
@@ -129,6 +130,7 @@ public class UserRepo {
                 UPDATE user_has_organize
                 SET organization_id = ?, position = ?
                 WHERE user_id = ?
+                ORDER BY registered_date DESC, id DESC LIMIT 1
                 """;
 
             jdbcTemplate.update(update, organizationId, position, userId);
