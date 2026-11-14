@@ -21,39 +21,17 @@ import java.util.List;
  * {@code yyyy-MM-dd'T'HH:mm:ss}) because the project reads payloads with a plain
  * {@link com.google.gson.Gson} instance that has no {@code java.time} adapters registered.
  */
-public class CreateEventDTO {
-
-    /** event.name - required, varchar(100). */
+public class EventDTO {
     private String name;
-
-    /** event.description - optional, text. */
     private String description;
-
-    /** event.category_id - required, references category.id. */
     private Integer categoryId;
-
-    /** event.audience_id - required, references audience.id (UNIVERSITY/PUBLIC/BOTH). */
     private Integer audienceId;
-
-    /** event.event_level_id - required, references event_level.id (LISTING_ONLY/FREE/PAYED). */
     private Integer eventLevelId;
-
-    /** img.path - required; public image path returned by ImageUploadService. */
     private String imagePath;
-
-    /** img.bannerpath - optional banner for the event. */
     private String bannerPath;
-
-    /** venue row created and linked as event.venue_id. */
     private Venue venue;
-
-    /** link row created and linked as event.link_id. */
     private Link link;
-
-    /** event_dates rows (and their tickets) belonging to the event. */
     private List<EventDate> dates;
-
-    /** tags.id values linked through event_has_tags. */
     private List<Integer> tagIds;
 
     public String getName() {
