@@ -32,9 +32,9 @@ public class ImageController {
 
     @GetMapping("/{scope}/{owner}/{filename}")
     public ResponseEntity<Resource> image(
-            @PathVariable String scope,
-            @PathVariable String owner,
-            @PathVariable String filename
+            @PathVariable("scope") String scope,
+            @PathVariable("owner") String owner,
+            @PathVariable("filename") String filename
     ) {
         return imageUploadService.load(scope, owner, filename)
                 .map(resource -> ResponseEntity.ok()

@@ -89,8 +89,9 @@ const parseImageResponse = (
 };
 
 /**
- * Google avatars are absolute URLs, uploaded images are stored as a path
- * relative to the API origin. Resolve both into something an `<img>` can use.
+ * Google avatars are absolute URLs, uploaded images are stored as a root-relative
+ * path that already contains the API prefix (`/goevent/api/images/...`).
+ * Resolve both into something an `<img>` can use without duplicating the prefix.
  */
 export function resolveProfileImageUrl(url?: string | null): string | undefined {
   if (!url) {
@@ -101,7 +102,14 @@ export function resolveProfileImageUrl(url?: string | null): string | undefined 
     return url;
   }
 
-  return `${API_BASE_URL}${url.startsWith('/') ? '' : '/'}${url}`;
+  // Uploaded images are persisted root-relative with the full API prefix, so they
+  // must never be prefixed a second time. A relative API base keeps them on the
+  // current origin, where the Next rewrite forwards `/goevent/api/**`.
+  if (url.startsWith('/')) {
+    return /^https?:\/\//i.test(API_BASE_URL) ? new URL(url, API_BASE_URL).toString() : url;
+  }
+
+  return `${API_BASE_URL}/${url}`;
 }
 
 export const userApi = {
