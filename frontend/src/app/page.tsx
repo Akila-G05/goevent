@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useState } from 'react';
 import Image from 'next/image';
@@ -16,48 +16,9 @@ import {
   SkipForward,
   Sparkles,
   ShieldCheck,
-  X,
 } from 'lucide-react';
-
-// Data types
-interface ConcertCard {
-  id: string;
-  title: string;
-  artistSubtitle: string;
-  dayOfWeek: string;
-  dayNumber: string;
-  monthYear: string;
-  city: string;
-  venue: string;
-  imageUrl: string;
-  category: 'All' | 'Today' | 'This Weekend' | 'This Month' | 'Festival';
-  price: number;
-}
-
-interface TourEvent {
-  id: string;
-  dayOfWeek: string;
-  dayNumber: string;
-  monthYear: string;
-  city: string;
-  tourSubtitle: string;
-  tag: string;
-  region: 'Asia' | 'International';
-  price: number;
-}
-
-interface UpcomingConcert {
-  id: string;
-  title: string;
-  subtitle: string;
-  tags: string[];
-  dayOfWeek: string;
-  dayNumber: string;
-  monthYear: string;
-  badgeOverlay: string;
-  imageUrl: string;
-  price: number;
-}
+import { Footer } from '@/components/shared/footer';
+import { browsingConcerts, tourEvents, upcomingConcerts } from '@/lib/sample-events';
 
 interface Article {
   id: string;
@@ -82,214 +43,6 @@ export default function HomePage() {
   const [eventRegion, setEventRegion] = useState<'Asia' | 'International'>('Asia');
   const [isPlaying, setIsPlaying] = useState(false);
   const [playbackProgress, setPlaybackProgress] = useState(48); // %
-
-  // State for Booking Modal demo
-  const [selectedConcertForBooking, setSelectedConcertForBooking] = useState<{
-    title: string;
-    city: string;
-    date: string;
-    price: number;
-  } | null>(null);
-
-  // Sample data strictly derived from the Mello design screenshots
-  const browsingConcerts: ConcertCard[] = [
-    {
-      id: 'c1',
-      title: 'YOABISO',
-      artistSubtitle: 'Sir Paul Shaddy - delivered by Tokopedia',
-      dayOfWeek: 'SUN',
-      dayNumber: '18',
-      monthYear: 'APR 24',
-      city: 'Surabaya',
-      venue: 'Lapangan Merr',
-      imageUrl: 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?auto=format&fit=crop&w=800&q=80',
-      category: 'All',
-      price: 65,
-    },
-    {
-      id: 'c2',
-      title: 'ANDI ODANG',
-      artistSubtitle: 'Pestapora Festival',
-      dayOfWeek: 'SUN',
-      dayNumber: '2',
-      monthYear: 'APR 24',
-      city: 'Surabaya',
-      venue: 'Tunjungan Plaza',
-      imageUrl: 'https://images.unsplash.com/photo-1429962714451-bb934ecdc4ec?auto=format&fit=crop&w=800&q=80',
-      category: 'Festival',
-      price: 85,
-    },
-    {
-      id: 'c3',
-      title: 'SOUND OF HERACLES',
-      artistSubtitle: 'Metal Death Festival',
-      dayOfWeek: 'SUN',
-      dayNumber: '11',
-      monthYear: 'APR 24',
-      city: 'Surabaya',
-      venue: 'Gedung Gedangan',
-      imageUrl: 'https://images.unsplash.com/photo-1465847899084-d164df4dedc6?auto=format&fit=crop&w=800&q=80',
-      category: 'This Weekend',
-      price: 50,
-    },
-    {
-      id: 'c4',
-      title: 'THE YELLOW WALL',
-      artistSubtitle: 'Sir Paul Shaddy - delivered by Tokopedia',
-      dayOfWeek: 'SUN',
-      dayNumber: '18',
-      monthYear: 'APR 24',
-      city: 'Surabaya',
-      venue: 'Lapangan Merr',
-      imageUrl: 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?auto=format&fit=crop&w=800&q=80',
-      category: 'This Month',
-      price: 70,
-    },
-    {
-      id: 'c5',
-      title: 'SIR PAUL SHADDY',
-      artistSubtitle: 'Sir Paul Shaddy - delivered by Tokopedia',
-      dayOfWeek: 'SUN',
-      dayNumber: '31',
-      monthYear: 'MAY 24',
-      city: 'Surabaya',
-      venue: 'Lapangan Merr',
-      imageUrl: 'https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?auto=format&fit=crop&w=800&q=80',
-      category: 'All',
-      price: 95,
-    },
-  ];
-
-  const tourEvents: TourEvent[] = [
-    {
-      id: 't1',
-      dayOfWeek: 'SUN',
-      dayNumber: '27',
-      monthYear: 'APR 24',
-      city: 'BANGKOK',
-      tourSubtitle: 'Comeback Again Nailong 24 City All The World',
-      tag: 'Le Pharaohs',
-      region: 'Asia',
-      price: 110,
-    },
-    {
-      id: 't2',
-      dayOfWeek: 'SAT',
-      dayNumber: '16',
-      monthYear: 'MEI 24',
-      city: 'JAKARTA',
-      tourSubtitle: 'Comeback Again Nailong 24 City All The World',
-      tag: 'Le Pharaohs',
-      region: 'Asia',
-      price: 95,
-    },
-    {
-      id: 't3',
-      dayOfWeek: 'FRI',
-      dayNumber: '12',
-      monthYear: 'JUN 24',
-      city: 'SURABAYA',
-      tourSubtitle: 'Comeback Again Nailong 24 City All The World',
-      tag: 'Le Pharaohs',
-      region: 'Asia',
-      price: 85,
-    },
-    {
-      id: 't4',
-      dayOfWeek: 'SAT',
-      dayNumber: '4',
-      monthYear: 'JUL 24',
-      city: 'BALI',
-      tourSubtitle: 'Comeback Again Nailong 24 City All The World',
-      tag: 'Le Pharaohs',
-      region: 'Asia',
-      price: 125,
-    },
-    {
-      id: 't5',
-      dayOfWeek: 'SAT',
-      dayNumber: '24',
-      monthYear: 'APR 24',
-      city: 'KUALA LUMPUR',
-      tourSubtitle: 'Comeback Again Nailong 24 City All The World',
-      tag: 'Le Pharaohs',
-      region: 'Asia',
-      price: 105,
-    },
-    {
-      id: 't6',
-      dayOfWeek: 'THU',
-      dayNumber: '15',
-      monthYear: 'AUG 24',
-      city: 'TOKYO',
-      tourSubtitle: 'World Tour Stadium Special - Tokyo Dome',
-      tag: 'Le Pharaohs',
-      region: 'International',
-      price: 160,
-    },
-    {
-      id: 't7',
-      dayOfWeek: 'SAT',
-      dayNumber: '28',
-      monthYear: 'SEP 24',
-      city: 'SEOUL',
-      tourSubtitle: 'Olympic Gymnastics Arena Live Experience',
-      tag: 'Le Pharaohs',
-      region: 'International',
-      price: 150,
-    },
-  ];
-
-  const upcomingConcerts: UpcomingConcert[] = [
-    {
-      id: 'u1',
-      title: 'SIR PAUL SHADDY',
-      subtitle: 'Sir Paul Shaddy - delivered by Tokopedia',
-      tags: ['Surabaya', 'Lapangan Merr'],
-      dayOfWeek: 'SUN',
-      dayNumber: '18',
-      monthYear: 'APR 24',
-      badgeOverlay: 'SIR PAUL SHADDY SOLO',
-      imageUrl: 'https://images.unsplash.com/photo-1506157786151-b8491531f063?auto=format&fit=crop&w=800&q=80',
-      price: 90,
-    },
-    {
-      id: 'u2',
-      title: 'BRING ME THE STAR TRACK',
-      subtitle: 'Jakarta Tour 2024 - delivered by Ngojek',
-      tags: ['Jakarta', 'Indonesia Arena'],
-      dayOfWeek: 'SAT',
-      dayNumber: '16',
-      monthYear: 'MAY 24',
-      badgeOverlay: 'BRING ME THE STAR TRACK Jakarta Tour 2024',
-      imageUrl: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=800&q=80',
-      price: 120,
-    },
-    {
-      id: 'u3',
-      title: '4GVS',
-      subtitle: 'This is 4GVS - delivered by JLANT',
-      tags: ['Malang', 'Rampal'],
-      dayOfWeek: 'SUN',
-      dayNumber: '18',
-      monthYear: 'APR 24',
-      badgeOverlay: 'THIS IS 4GVS',
-      imageUrl: 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?auto=format&fit=crop&w=800&q=80',
-      price: 75,
-    },
-    {
-      id: 'u4',
-      title: 'NAILONG',
-      subtitle: 'Comeback Again Nailong 24 City All The World',
-      tags: ['Bojonegoro', 'GOR DABONSIA'],
-      dayOfWeek: 'SAT',
-      dayNumber: '16',
-      monthYear: 'APR 24',
-      badgeOverlay: 'COMEBACK AGAIN NAILONG 24 CITY ALL THE WORLD',
-      imageUrl: 'https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?auto=format&fit=crop&w=800&q=80',
-      price: 80,
-    },
-  ];
 
   const articles: Article[] = [
     {
@@ -509,8 +262,10 @@ export default function HomePage() {
         {/* Concert Cards Carousel / Horizontal Grid */}
         <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-5">
           {filteredConcerts.map((concert) => (
-            <div
+            <Link
               key={concert.id}
+              href={`/events/${concert.slug}`}
+              aria-label={`View ${concert.title} in ${concert.city}`}
               className="bg-white rounded-2xl border border-zinc-200/80 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col overflow-hidden group"
             >
               {/* Card Image */}
@@ -566,23 +321,13 @@ export default function HomePage() {
                   <span className="text-xs font-bold text-zinc-900">
                     ${concert.price}
                   </span>
-                  <button
-                    onClick={() =>
-                      setSelectedConcertForBooking({
-                        title: concert.title,
-                        city: concert.city,
-                        date: `${concert.dayOfWeek} ${concert.dayNumber} ${concert.monthYear}`,
-                        price: concert.price,
-                      })
-                    }
-                    className="border border-zinc-300 hover:border-black text-black text-xs font-semibold px-3 py-1.5 rounded-full flex items-center space-x-1 hover:bg-black hover:text-white transition-colors"
-                  >
+                  <span className="border border-zinc-300 group-hover:border-black text-black text-xs font-semibold px-3 py-1.5 rounded-full flex items-center space-x-1 group-hover:bg-black group-hover:text-white transition-colors">
                     <span>Find Tickets</span>
                     <ArrowUpRight className="w-3.5 h-3.5" />
-                  </button>
+                  </span>
                 </div>
               </div>
-            </div>
+            </Link>
           ))}
         </div>
 
@@ -998,186 +743,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* =========================================================================
-          SECTION 6: PREMIUM FOOTER
-          ========================================================================= */}
-      <footer className="bg-[#0c0c0e] text-white border-t border-white/10 pt-16 pb-12 mt-12">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-10 pb-12 border-b border-white/10">
-            {/* Col 1: Brand */}
-            <div className="space-y-4">
-              <div className="flex items-center space-x-2.5">
-                <div className="flex items-center space-x-1">
-                  <span className="w-1.5 h-6 bg-white rounded-full transform -skew-x-12" />
-                  <span className="w-1.5 h-6 bg-white/80 rounded-full transform -skew-x-12" />
-                  <span className="w-1.5 h-6 bg-white/60 rounded-full transform -skew-x-12" />
-                </div>
-                <span className="font-display text-3xl tracking-wider text-white font-bold">
-                  GOEVENT
-                </span>
-              </div>
-              <p className="text-xs text-zinc-400 leading-relaxed max-w-sm">
-                The premier concert and live event booking platform. Discover verified live tours, reserve tickets with real-time inventory, and access instant QR check-ins.
-              </p>
-            </div>
-
-            {/* Col 2: Navigation */}
-            <div>
-              <h4 className="font-display text-lg font-bold uppercase text-white tracking-wider mb-4">
-                Explore Events
-              </h4>
-              <ul className="space-y-2 text-xs text-zinc-400">
-                <li><Link href="#browse" className="hover:text-white transition-colors">Concerts in Asia</Link></li>
-                <li><Link href="#events" className="hover:text-white transition-colors">Festivals & Tours</Link></li>
-                <li><Link href="#upcoming" className="hover:text-white transition-colors">Upcoming Concerts</Link></li>
-                <li><Link href="#discover" className="hover:text-white transition-colors">Concert Prep Guides</Link></li>
-              </ul>
-            </div>
-
-            {/* Col 3: Role Portals */}
-            <div>
-              <h4 className="font-display text-lg font-bold uppercase text-white tracking-wider mb-4">
-                Account & Access
-              </h4>
-              <ul className="space-y-2 text-xs text-zinc-400">
-                <li>
-                  <Link href="/login" className="hover:text-white flex items-center space-x-1 transition-colors">
-                    <span>Sign In to Your Account</span>
-                    <ArrowUpRight className="w-3 h-3 text-red-400" />
-                  </Link>
-                </li>
-                <li>
-                  <Link href="/signup" className="hover:text-white flex items-center space-x-1 transition-colors">
-                    <span>Create Attendee or Creator Account</span>
-                    <ArrowUpRight className="w-3 h-3 text-zinc-400" />
-                  </Link>
-                </li>
-                <li>
-                  <Link href="#browse" className="hover:text-white transition-colors">
-                    Browse All Concert Passes
-                  </Link>
-                </li>
-              </ul>
-            </div>
-
-            {/* Col 4: Newsletter */}
-            <div>
-              <h4 className="font-display text-lg font-bold uppercase text-white tracking-wider mb-4">
-                Concert Drop Alerts
-              </h4>
-              <p className="text-xs text-zinc-400 mb-3">
-                Be the first to know when artist tickets and tour dates drop in your city.
-              </p>
-              <div className="flex items-center">
-                <input
-                  type="email"
-                  placeholder="Enter your email"
-                  className="bg-white/10 border border-white/15 rounded-l-full px-4 py-2 text-xs text-white placeholder-zinc-500 focus:outline-none w-full"
-                />
-                <button className="bg-white text-black font-semibold text-xs px-4 py-2 rounded-r-full hover:bg-zinc-200 transition-colors shrink-0">
-                  Join
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <div className="flex flex-col sm:flex-row items-center justify-between pt-8 text-[11px] text-zinc-500 gap-4">
-            <p>© {new Date().getFullYear()} GoEvent Platform. All rights reserved.</p>
-            <div className="flex items-center space-x-6">
-              <span className="hover:text-zinc-400 cursor-pointer">Privacy Policy</span>
-              <span className="hover:text-zinc-400 cursor-pointer">Terms of Service</span>
-              <span className="hover:text-zinc-400 cursor-pointer">Ticket Invariant Security</span>
-            </div>
-          </div>
-        </div>
-      </footer>
-
-      {/* =========================================================================
-          INTERACTIVE TICKET RESERVATION MODAL (Preview of Booking Invariant Flow)
-          ========================================================================= */}
-      {selectedConcertForBooking && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-[#141418] border border-white/15 text-white rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-2xl relative space-y-6">
-            <button
-              onClick={() => setSelectedConcertForBooking(null)}
-              className="absolute top-5 right-5 p-1.5 rounded-full bg-white/10 hover:bg-white/20 text-zinc-300 hover:text-white transition-colors"
-              aria-label="Close booking modal"
-            >
-              <X className="w-5 h-5" />
-            </button>
-
-            <div>
-              <div className="flex items-center space-x-2 text-xs text-red-400 font-semibold uppercase tracking-wider mb-1">
-                <Sparkles className="w-4 h-4" />
-                <span>Ticket Reservation</span>
-              </div>
-              <h3 className="font-display text-3xl font-black uppercase text-white leading-tight">
-                {selectedConcertForBooking.title}
-              </h3>
-              <p className="text-xs text-zinc-400 mt-1 flex items-center space-x-2">
-                <span>📍 {selectedConcertForBooking.city}</span>
-                <span>•</span>
-                <span>📅 {selectedConcertForBooking.date}</span>
-              </p>
-            </div>
-
-            {/* Ticket Tier Selection */}
-            <div className="space-y-3">
-              <div className="border border-white/10 hover:border-white/30 rounded-xl p-3.5 bg-white/5 flex items-center justify-between cursor-pointer transition-colors">
-                <div>
-                  <h4 className="text-sm font-bold text-white">General Admission</h4>
-                  <p className="text-[11px] text-zinc-400">Standard standing arena access</p>
-                </div>
-                <div className="text-right">
-                  <span className="text-base font-bold text-white">
-                    ${selectedConcertForBooking.price}
-                  </span>
-                  <span className="block text-[10px] text-emerald-400 font-medium">In Stock</span>
-                </div>
-              </div>
-
-              <div className="border border-white/10 hover:border-white/30 rounded-xl p-3.5 bg-white/5 flex items-center justify-between cursor-pointer transition-colors">
-                <div>
-                  <h4 className="text-sm font-bold text-white">VIP Diamond Access</h4>
-                  <p className="text-[11px] text-zinc-400">Front row soundcheck + priority QR lane</p>
-                </div>
-                <div className="text-right">
-                  <span className="text-base font-bold text-white">
-                    ${selectedConcertForBooking.price + 90}
-                  </span>
-                  <span className="block text-[10px] text-amber-400 font-medium">Limited (14 left)</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Invariant guarantee banner */}
-            <div className="flex items-center space-x-2.5 bg-emerald-950/40 border border-emerald-500/30 rounded-xl p-3 text-xs text-emerald-300">
-              <ShieldCheck className="w-4 h-4 shrink-0 text-emerald-400" />
-              <span>Concurreny-safe reservation with signed QR pass and real-time inventory hold.</span>
-            </div>
-
-            {/* Action buttons */}
-            <div className="flex items-center space-x-3 pt-2">
-              <button
-                onClick={() => setSelectedConcertForBooking(null)}
-                className="w-1/2 py-2.5 rounded-full border border-white/20 text-xs font-semibold text-zinc-300 hover:text-white hover:border-white/40 transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => {
-                  alert(`Ticket hold reserved for ${selectedConcertForBooking.title}! Proceeding to checkout.`);
-                  setSelectedConcertForBooking(null);
-                }}
-                className="w-1/2 py-2.5 rounded-full bg-white text-black hover:bg-zinc-200 text-xs font-semibold flex items-center justify-center space-x-1.5 transition-all shadow-lg active:scale-95"
-              >
-                <span>Book Now</span>
-                <ArrowUpRight className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <Footer />
     </div>
   );
 }
