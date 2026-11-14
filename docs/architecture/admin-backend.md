@@ -1,6 +1,8 @@
 # Admin backend API and operating contract
 
 Base path: `/goevent/api`. No frontend or impersonation feature is included.
+For concrete JSON bodies, Postman authentication and acceptance checks, use the
+[API request and testing guide](admin-api-examples.md).
 Actual checks and remaining blockers are recorded in [validation evidence](admin-backend-validation.md).
 See [authentication](admin-authentication.md) for session/CSRF login. All admin
 mutations require a CSRF token and an active, dedicated admin session; decisions
