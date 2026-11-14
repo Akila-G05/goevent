@@ -20,7 +20,7 @@ const nextConfig = {
       },
       {
         source: '/api/v1/:path*',
-        destination: `${process.env.BACKEND_URL || 'http://localhost:8080'}/:path*`,
+        destination: `${process.env.BACKEND_URL || 'http://localhost:8080'}/goevent/api/:path*`,
       },
     ];
   },

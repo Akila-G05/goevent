@@ -146,6 +146,17 @@ def main():
                 'SELECT COUNT(*) FROM flyway_schema_history WHERE success = 1 AND version IS NOT NULL'
             ) == str(len(migrations))
             print('PASS: versioned Flyway migrations recorded in disposable MySQL', flush=True)
+            # Preserve V2's password width and validate the additive profile schema.
+            assert mysql_query("SELECT CHARACTER_MAXIMUM_LENGTH FROM information_schema.columns "
+                "WHERE table_schema = DATABASE() AND table_name = 'user' AND column_name = 'mobile'") == '15'
+            assert mysql_query("SELECT CHARACTER_MAXIMUM_LENGTH FROM information_schema.columns "
+                "WHERE table_schema = DATABASE() AND table_name = 'user' AND column_name = 'password'") == '255'
+            assert mysql_query("SELECT IS_NULLABLE FROM information_schema.columns "
+                "WHERE table_schema = DATABASE() AND table_name = 'student_detail' AND column_name = 'university_id'") == 'YES'
+            assert mysql_query("SELECT COUNT(*) FROM information_schema.key_column_usage "
+                "WHERE table_schema = DATABASE() AND table_name = 'student_detail' "
+                "AND column_name = 'university_id' AND referenced_table_name = 'university'") == '1'
+            print('PASS: incremental V3 profile columns and university foreign key', flush=True)
             missing_token = urllib.request.Request(
                 f'http://127.0.0.1:{backend_port}/goevent/api/auth/google',
                 data=b'{}', headers={'Content-Type': 'application/json'}, method='POST',
@@ -155,22 +166,42 @@ def main():
                 assert denied['status'] is False
                 assert denied['message'] == 'Google ID token is missing'
             print('PASS: JSON authentication request rejects missing Google token', flush=True)
-            body = get(gateway_port, '/goevent/api/test')
+            public_path = '/goevent/api/content/universities'
+            body = get(gateway_port, public_path)
             assert body['status'] is True
-            assert get(gateway_port, '/goevent/api/test') == body
+            assert get(gateway_port, public_path) == body
             keys = redis_command('--scan', '--pattern', 'gateway:response:*').splitlines()
             assert len(keys) == 1, 'Expected a real Redis response-cache entry'
             cached = json.loads(redis_command('GET', keys[0]))
             assert json.loads(base64.b64decode(cached['body'])) == body
             assert 'CACHE HIT:' in (validation / 'upgrade-runtime-gateway.log').read_text()
 
-            # Spring 7's header API must retain authenticated-request cache bypass.
-            time.sleep(2)
-            for name, value in [('Authorization', 'Bearer smoke'), ('Cookie', 'smoke=1')]:
-                assert get(gateway_port, '/goevent/api/test?bypass=' + name,
-                           {name: value})['status'] is True
+            # Only allowlisted public endpoints may populate the shared cache.
+            assert get(gateway_port, '/goevent/api/test')['status'] is True
             assert redis_command('--scan', '--pattern', 'gateway:response:*').splitlines() == keys
-            print('PASS: Jackson cache round trip and Authorization/Cookie cache bypass', flush=True)
+            # Authorization must bypass both an existing cached response and writes.
+            gateway_log = validation / 'upgrade-runtime-gateway.log'
+            hits = gateway_log.read_text().count('CACHE HIT:')
+            assert get(gateway_port, public_path, {'Authorization': 'Bearer smoke'}) == body
+            assert gateway_log.read_text().count('CACHE HIT:') == hits
+            assert get(gateway_port, public_path + '?bypass=Authorization',
+                       {'Authorization': 'Bearer smoke'}) == body
+            assert redis_command('--scan', '--pattern', 'gateway:response:*').splitlines() == keys
+            # Public content is identical for all callers; cookies remain eligible.
+            cookie_path = public_path + '?cookie=smoke'
+            assert get(gateway_port, cookie_path, {'Cookie': 'smoke=1'}) == body
+            cookie_keys = redis_command('--scan', '--pattern', 'gateway:response:*').splitlines()
+            assert len(cookie_keys) == 2, 'Expected cookie-bearing public response to be cached'
+            cookie_key, = set(cookie_keys) - set(keys)
+            cookie_cached = json.loads(redis_command('GET', cookie_key))
+            assert json.loads(base64.b64decode(cookie_cached['body'])) == body
+            hits = gateway_log.read_text().count('CACHE HIT:')
+            assert get(gateway_port, cookie_path, {'Cookie': 'smoke=1'}) == body
+            assert gateway_log.read_text().count('CACHE HIT:') > hits
+            print('PASS: public cache round trip, non-public/Authorization bypass and public cookie caching', flush=True)
+
+            # Let the default rate-limit bucket refill before the strict-route check.
+            time.sleep(2)
 
             statuses = []
             for _ in range(4):

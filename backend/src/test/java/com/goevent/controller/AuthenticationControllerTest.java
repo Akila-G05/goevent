@@ -13,7 +13,7 @@ class AuthenticationControllerTest {
     @Test void neverPrintsTheGoogleCredential() {
         var service = mock(AuthenticationService.class);
         var request = new MockHttpServletRequest();
-        when(service.handleGoogleAuthentication("sensitive-test-token", request)).thenReturn("{}");
+        when(service.handleGoogleAuthentication(Map.of("idToken", "sensitive-test-token"), request)).thenReturn("{}");
         var original = System.out;
         var captured = new ByteArrayOutputStream();
         try {

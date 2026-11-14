@@ -4,11 +4,17 @@
  */
 
 // Base URLs
-export const API_BASE_URL =
+const configuredBaseUrl =
   process.env.API_URL ||
   process.env.NEXT_PUBLIC_API_URL ||
   process.env.NEXT_PUBLIC_API_BASE_URL ||
-  'http://localhost:8080';
+  '';
+
+// Routes already contain the API prefix. Accept legacy prefixed configuration
+// without letting Axios append that prefix a second time.
+export const API_BASE_URL = configuredBaseUrl
+  .replace(/\/+$/, '')
+  .replace(/\/(?:goevent\/api|api\/v1)$/, '');
 
 export const API_PREFIX = '/goevent/api';
 
