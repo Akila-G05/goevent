@@ -1,4 +1,4 @@
 user default off
-user backend on #REPLACE_BACKEND_PASSWORD_SHA256 ~goevent:session:* &__keyevent@0__:* +@read +@write +@connection +@pubsub +@scripting -keys -flushall -flushdb -config -acl -shutdown
+user backend on #REPLACE_BACKEND_PASSWORD_SHA256 ~goevent:session:* ~goevent:admin-login:* &__keyevent@0__:* +@read +@write +@connection +@pubsub +@scripting -keys -flushall -flushdb -config -acl -shutdown
 user gateway on #REPLACE_GATEWAY_PASSWORD_SHA256 ~gateway:response:* ~request_rate_limiter.* +ping +hello +auth +client +get +set +setex +time +del +expire +ttl +pttl +eval +evalsha +script|load
 user health on #REPLACE_HEALTH_PASSWORD_SHA256 +ping

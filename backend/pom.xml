@@ -17,6 +17,20 @@
     </parent>
 
     <dependencies>
+        <dependency>
+            <groupId>com.azure</groupId>
+            <artifactId>azure-communication-email</artifactId>
+            <version>1.2.1</version>
+        </dependency>
+        <dependency>
+            <groupId>com.azure</groupId>
+            <artifactId>azure-identity</artifactId>
+            <version>1.19.0</version>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-security</artifactId>
+        </dependency>
         <!-- REST API and HTTP methods -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -72,7 +86,7 @@
             <artifactId>spring-boot-starter-session-data-redis</artifactId>
         </dependency>
 
-        <!-- Password hashing only (BCrypt); no security filter chain is added -->
+        <!-- BCrypt remains shared with the existing application login. -->
         <dependency>
             <groupId>org.springframework.security</groupId>
             <artifactId>spring-security-crypto</artifactId>

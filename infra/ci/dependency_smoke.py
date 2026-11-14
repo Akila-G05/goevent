@@ -2,6 +2,7 @@
 No public ports, Azure access, production paths or existing Docker networks are used.
 """
 import hashlib
+import argparse
 import os
 from pathlib import Path
 import secrets
@@ -19,12 +20,13 @@ def run(args, **kwargs):
     return subprocess.run(args, check=True, capture_output=True, text=True, timeout=kwargs.pop('timeout',120), **kwargs).stdout
 
 
-def main():
-    run(['docker','build','-f',str(ROOT/'infra/docker/caddy.Dockerfile'),
-         '-t',CADDY,str(ROOT/'infra/docker')], timeout=1200)
-    build_info = run(['docker','run','--rm','--network','none',CADDY,'caddy','build-info'])
-    assert 'github.com/go-jose/go-jose/v3' not in build_info, 'vulnerable jose v3 remains'
-    assert 'golang.org/x/net\tv0.62.0' in build_info, 'patched x/net missing'
+def main(redis_only=False):
+    if not redis_only:
+        run(['docker','build','-f',str(ROOT/'infra/docker/caddy.Dockerfile'),
+             '-t',CADDY,str(ROOT/'infra/docker')], timeout=1200)
+        build_info = run(['docker','run','--rm','--network','none',CADDY,'caddy','build-info'])
+        assert 'github.com/go-jose/go-jose/v3' not in build_info, 'vulnerable jose v3 remains'
+        assert 'golang.org/x/net\tv0.62.0' in build_info, 'patched x/net missing'
     name = 'goevent-dependency-smoke-' + uuid.uuid4().hex[:8]
     with tempfile.TemporaryDirectory() as directory:
         root = Path(directory)
@@ -66,6 +68,10 @@ def main():
             else:
                 raise AssertionError('Redis TLS readiness failed: '+run(['docker','logs',name])[-2500:])
             assert cli('backend','SET','goevent:session:test','value') == 'OK'
+            throttle_script = "local n=redis.call('INCR',KEYS[1]); if n==1 then redis.call('EXPIRE',KEYS[1],900) end; return n"
+            assert cli('backend','EVAL',throttle_script,'1','goevent:admin-login:email:test') == '1'
+            assert 0 < int(cli('backend','TTL','goevent:admin-login:email:test')) <= 900
+            assert 'NOPERM' in cli('gateway','GET','goevent:admin-login:email:test')
             assert 'NOPERM' in cli('backend','GET','gateway:response:test')
             assert cli('gateway','SET','gateway:response:test','value') == 'OK'
             assert 'NOPERM' in cli('gateway','GET','goevent:session:test')
@@ -77,6 +83,9 @@ def main():
             except subprocess.SubprocessError: pass
             unauth = run(['docker','exec',name,'redis-cli','--tls','--cacert','/fixture/redis-ca.crt','PING'])
             assert 'NOAUTH' in unauth
+            if redis_only:
+                print('PASS: Redis TLS-only, ACL separation and admin throttle Lua/expiry; Caddy not tested')
+                return
             run(['docker','run','--rm','--network','none','--user','10001:10001',
                  '--group-add',str(os.getgid()),'--read-only','--cap-drop','ALL',
                  '--mount','type=bind,src='+directory+',dst=/fixture,readonly',
@@ -95,4 +104,7 @@ def main():
             subprocess.run(['docker','rm','-f',name], capture_output=True, timeout=30)
 
 
-if __name__ == '__main__': main()
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--redis-only', action='store_true', help='Redis checks only; CI defaults to complete dependency checks')
+    main(redis_only=parser.parse_args().redis_only)
