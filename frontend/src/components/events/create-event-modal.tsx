@@ -3,6 +3,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
   CalendarDays,
+  Check,
   Image as ImageIcon,
   Link2,
   MapPin,
@@ -11,6 +12,7 @@ import {
   Tag,
   Ticket,
   Trash2,
+  X,
 } from 'lucide-react';
 import { Dialog } from '@/components/ui/dialog';
 import { toast } from '@/lib/toast-store';
@@ -43,10 +45,41 @@ const AUDIENCES = ['University', 'Public', 'Both'];
 type EventLevel = 'LISTING_ONLY' | 'FREE' | 'PAYED';
 
 const EVENT_LEVELS: Array<{ id: EventLevel; label: string; hint: string }> = [
-  { id: 'LISTING_ONLY', label: 'Listing only', hint: 'Announce the event without ticket sales' },
-  { id: 'FREE', label: 'Free', hint: 'Issue free tickets to attendees' },
-  { id: 'PAYED', label: 'Paid', hint: 'Sell one or more ticket tiers' },
+  {
+    id: 'LISTING_ONLY',
+    label: 'Listing only',
+    hint: 'Announce the event — no tickets, QR codes or payments',
+  },
+  { id: 'FREE', label: 'Free', hint: 'The platform issues free tickets with QR codes' },
+  { id: 'PAYED', label: 'Paid', hint: 'Sell tickets with QR codes and online payment' },
 ];
+
+/**
+ * What each event type actually enables. Listing-only events never touch the
+ * ticketing tables, free events issue QR tickets at zero price, and paid events
+ * add the payment gateway.
+ */
+const EVENT_LEVEL_CAPABILITIES: Record<
+  EventLevel,
+  Array<{ label: string; enabled: boolean }>
+> = {
+  LISTING_ONLY: [
+    { label: 'Event listing only', enabled: true },
+    { label: 'No ticket generation', enabled: false },
+    { label: 'No QR codes', enabled: false },
+    { label: 'No payment gateway', enabled: false },
+  ],
+  FREE: [
+    { label: 'Tickets generated', enabled: true },
+    { label: 'QR codes issued', enabled: true },
+    { label: 'No payment gateway', enabled: false },
+  ],
+  PAYED: [
+    { label: 'Tickets generated', enabled: true },
+    { label: 'QR codes issued', enabled: true },
+    { label: 'Payment gateway', enabled: true },
+  ],
+};
 
 const TAG_GROUPS: Array<{ group: string; options: Array<{ id: string; name: string }> }> = [
   {
@@ -501,6 +534,29 @@ export function CreateEventModal({ open, onClose }: CreateEventModalProps) {
                 );
               })}
             </div>
+
+            <div className="mt-3 rounded-xl border border-[#eae6e5] bg-[#faf8f7] px-3.5 py-3">
+              <p className="text-[11px] font-bold uppercase tracking-wider text-[#736e6c]">
+                What this includes
+              </p>
+              <ul className="mt-2 flex flex-wrap gap-x-4 gap-y-1.5">
+                {EVENT_LEVEL_CAPABILITIES[eventLevel].map((capability) => (
+                  <li
+                    key={capability.label}
+                    className={`flex items-center gap-1.5 text-xs ${
+                      capability.enabled ? 'text-[#1c1b1b]' : 'text-[#a8a4a3]'
+                    }`}
+                  >
+                    {capability.enabled ? (
+                      <Check className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                    ) : (
+                      <X className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                    )}
+                    {capability.label}
+                  </li>
+                ))}
+              </ul>
+            </div>
           </div>
         </section>
 
@@ -675,13 +731,17 @@ export function CreateEventModal({ open, onClose }: CreateEventModalProps) {
           </button>
         </section>
 
-        {/* Tickets */}
-        {eventLevel === 'PAYED' && (
+        {/* Tickets — generated for free and paid events, never for listing-only */}
+        {eventLevel !== 'LISTING_ONLY' && (
           <section className="space-y-4 border-t border-[#f0eceb] pt-5">
             <SectionHeading
               icon={<Ticket className="h-4 w-4 text-[#1c1b1b]" />}
-              title="Ticket tiers"
-              hint="Stock and price per tier"
+              title={eventLevel === 'PAYED' ? 'Ticket tiers' : 'Free tickets'}
+              hint={
+                eventLevel === 'PAYED'
+                  ? 'Stock, price and payment per tier'
+                  : 'Issued by the platform at no charge'
+              }
             />
 
             <div className="space-y-3">
@@ -719,21 +779,30 @@ export function CreateEventModal({ open, onClose }: CreateEventModalProps) {
                       />
                     </div>
 
-                    <div>
-                      <label htmlFor={`ticket-price-${row.key}`} className={labelClass}>
-                        Price <RequiredMark />
-                      </label>
-                      <input
-                        id={`ticket-price-${row.key}`}
-                        type="number"
-                        min={0}
-                        step="0.01"
-                        placeholder="0.00"
-                        value={row.price}
-                        onChange={(event) => updateTicket(row.key, 'price', event.target.value)}
-                        className={inputClass}
-                      />
-                    </div>
+                    {eventLevel === 'PAYED' ? (
+                      <div>
+                        <label htmlFor={`ticket-price-${row.key}`} className={labelClass}>
+                          Price <RequiredMark />
+                        </label>
+                        <input
+                          id={`ticket-price-${row.key}`}
+                          type="number"
+                          min={0}
+                          step="0.01"
+                          placeholder="0.00"
+                          value={row.price}
+                          onChange={(event) => updateTicket(row.key, 'price', event.target.value)}
+                          className={inputClass}
+                        />
+                      </div>
+                    ) : (
+                      <div>
+                        <span className={labelClass}>Price</span>
+                        <p className="flex h-11 items-center rounded-xl border border-[#eae6e5] bg-[#f0eceb] px-3.5 text-sm font-semibold text-[#736e6c]">
+                          Free · 0.00
+                        </p>
+                      </div>
+                    )}
 
                     <div className="sm:col-span-2">
                       <label htmlFor={`ticket-description-${row.key}`} className={labelClass}>
@@ -751,7 +820,7 @@ export function CreateEventModal({ open, onClose }: CreateEventModalProps) {
 
                     <div>
                       <label htmlFor={`ticket-sale-start-${row.key}`} className={labelClass}>
-                        Sales open <RequiredMark />
+                        {eventLevel === 'PAYED' ? 'Sales open' : 'Available from'} <RequiredMark />
                       </label>
                       <input
                         id={`ticket-sale-start-${row.key}`}
@@ -764,7 +833,7 @@ export function CreateEventModal({ open, onClose }: CreateEventModalProps) {
 
                     <div>
                       <label htmlFor={`ticket-sale-end-${row.key}`} className={labelClass}>
-                        Sales close <RequiredMark />
+                        {eventLevel === 'PAYED' ? 'Sales close' : 'Available until'} <RequiredMark />
                       </label>
                       <input
                         id={`ticket-sale-end-${row.key}`}
@@ -785,7 +854,7 @@ export function CreateEventModal({ open, onClose }: CreateEventModalProps) {
               className="inline-flex items-center gap-1.5 rounded-full bg-[#f0eceb] px-4 py-2 text-xs font-semibold text-[#1c1b1b] transition-colors hover:bg-[#e4dfde]"
             >
               <Plus className="h-3.5 w-3.5" />
-              Add ticket tier
+              {eventLevel === 'PAYED' ? 'Add ticket tier' : 'Add free ticket type'}
             </button>
           </section>
         )}

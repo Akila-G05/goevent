@@ -236,7 +236,7 @@ public class CreateEventDTO {
         /** event_dates.time - required, {@code HH:mm} (column is varchar(45)). */
         private String time;
 
-        /** ticket rows sold for this date; empty for LISTING_ONLY and FREE events. */
+        /** ticket rows issued for this date; empty for LISTING_ONLY events. */
         private List<Ticket> tickets;
 
         public String getDate() {
