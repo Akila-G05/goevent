@@ -38,7 +38,7 @@ def get(port, path, headers=None):
         return json.loads(response.read())
 
 
-def main():
+def main(api_check=None):
     prefix = 'goevent-upgrade-' + uuid.uuid4().hex[:8]
     processes, containers = [], []
     validation = ROOT / 'infra/validation'
@@ -159,6 +159,8 @@ def main():
                 "WHERE table_schema = DATABASE() AND table_name = 'student_detail' "
                 "AND column_name = 'university_id' AND referenced_table_name = 'university'") == '1'
             print('PASS: incremental V3 profile columns and university foreign key', flush=True)
+            if api_check is not None:
+                api_check(mysql_query, backend_port, gateway_port, temporary)
             missing_token = urllib.request.Request(
                 f'http://127.0.0.1:{backend_port}/goevent/api/auth/google',
                 data=b'{}', headers={'Content-Type': 'application/json'}, method='POST',

@@ -1,5 +1,28 @@
 # Admin backend validation — 2026-11-14
 
+## Postman CLI verification follow-up
+
+Postman CLI 1.90.0 ran the local acceptance collection through
+`python3 infra/ci/admin_postman_smoke.py`: **73 requests and 82 assertions passed,
+zero failures**. Requests exercise real backend HTTP sessions and CSRF, account
+creation/edit/access/deletion restrictions, another-admin creation/deletion,
+ordinary-member coordinator applications/approval/revocation, event edits and
+review revisions, linked-event deletion protection, contact submission/replies,
+statistics, audit metadata, queued email metadata and gateway anonymous denial.
+Database assertions confirm audit/outbox writes, all emails remaining QUEUED
+with ACS disabled, and preservation of the linked booking.
+The complete runtime harness also passed startup/migrations, admin login
+throttling, gateway cache/bypass/429, Redis outage/recovery and invalid-migration
+startup rejection. Disposable services and temporary credentials were cleaned up.
+
+Fresh verification also passed **34 backend tests**, **2 gateway tests**,
+**32 infrastructure tests**, **35 frontend tests** and frontend TypeScript checking.
+The Postman runner uses a random password and temporary local environment with
+cloud run-event reporting disabled. No real ACS send, external Google login,
+production Azure verification or new image vulnerability scan is covered.
+The original evidence below describes the implementation checkpoint before
+commit `6396f12`; it is retained as historical evidence, not current Git status.
+
 Branch: `vinura/admin-backend`, based on `6b743db`. All changes are uncommitted;
 no GitHub publication, VM installation, shared-database migration or Azure
 resource change was performed.

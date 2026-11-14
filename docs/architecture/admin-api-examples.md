@@ -295,3 +295,32 @@ python3 infra/ci/runtime_smoke.py
 
 These commands are instructions, not a claim of a new test run. Previously
 recorded results and external blockers are in the [validation report](admin-backend-validation.md).
+
+## Run the Postman CLI acceptance collection
+
+With Postman CLI installed, build the two executable artifacts using the commands
+above, then run from the repository root:
+
+```bash
+python3 infra/ci/admin_postman_smoke.py
+```
+
+The runner reuses the isolated runtime harness, seeds test-only admin/member/event
+fixtures, generates a random BCrypt password, and supplies a temporary environment
+to [the collection](../../infra/tests/postman/admin.postman_collection.json).
+It invokes Postman with `--no-report-events`; credentials are not committed or
+passed as command-line values. Services and temporary credentials are removed
+on completion or failure. ACS stays disabled. The existing runtime checks still
+run afterward, including Redis outage/recovery and migration failure rejection.
+
+The collection performs destructive account operations against disposable data.
+**Do not run it with an environment pointing at a shared or production database.**
+Run it through the wrapper rather than supplying an existing development server.
+Coverage includes both admin and ordinary-member sessions, CSRF, account lifecycle,
+coordinator approval/revocation, event revisions, contacts, statistics, audit and
+notification metadata. It does not verify real ACS delivery, OAuth provider login,
+production Azure controls, or every legacy application API.
+
+Test-only change impact: the runtime harness accepts an optional callback after
+migration checks; the default CI invocation is unchanged. No application code,
+schema, deployment gates or live database settings are changed by this runner.

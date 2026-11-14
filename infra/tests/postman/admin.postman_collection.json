@@ -1,0 +1,2057 @@
+{
+  "info": {
+    "name": "GoEvent isolated admin API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Destructive acceptance tests for the disposable admin_postman_smoke.py harness only. Never run against shared or production databases. Generated credentials are supplied in a temporary local environment; no cloud reporting."
+  },
+  "item": [
+    {
+      "name": "Anonymous admin denied",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/admin/accounts"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Anonymous admin denied\", () => pm.response.to.have.status(401));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Gateway protects admin route",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{gatewayUrl}}/admin/accounts"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Gateway protects admin route\", () => pm.response.to.have.status(401));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Public contact CSRF",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/contact/csrf"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Public contact CSRF\", () => pm.response.to.have.status(200));",
+              "if (pm.response.code === 200) { const c=pm.response.json(); pm.environment.set('csrfHeader',c.headerName); pm.environment.set('csrfToken',c.token); }"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Contact without CSRF denied",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/contact",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"email\":\"visitor@example.invalid\",\"subject\":\"Test\",\"message\":\"Question\"}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Contact without CSRF denied\", () => pm.response.to.have.status(403));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Submit contact",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "{{csrfHeader}}",
+            "value": "{{csrfToken}}"
+          }
+        ],
+        "url": "{{baseUrl}}/contact",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"email\":\"visitor@example.invalid\",\"subject\":\"Test\",\"message\":\"Question\"}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Submit contact\", () => pm.response.to.have.status(200));",
+              "if (pm.response.code === 200) { pm.environment.set('contactId',pm.response.json().id); }"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin CSRF",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/admin/auth/csrf"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Admin CSRF\", () => pm.response.to.have.status(200));",
+              "if (pm.response.code === 200) { const c=pm.response.json(); pm.environment.set('csrfHeader',c.headerName); pm.environment.set('csrfToken',c.token); }"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Login without CSRF denied",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/admin/auth/login",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"email\":\"admin@example.invalid\",\"password\":\"{{password}}\"}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Login without CSRF denied\", () => pm.response.to.have.status(403));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Wrong password denied",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "{{csrfHeader}}",
+            "value": "{{csrfToken}}"
+          }
+        ],
+        "url": "{{baseUrl}}/admin/auth/login",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"email\":\"admin@example.invalid\",\"password\":\"wrong\"}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Wrong password denied\", () => pm.response.to.have.status(401));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Member cannot use admin login",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "{{csrfHeader}}",
+            "value": "{{csrfToken}}"
+          }
+        ],
+        "url": "{{baseUrl}}/admin/auth/login",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"email\":\"member@example.invalid\",\"password\":\"{{password}}\"}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Member cannot use admin login\", () => pm.response.to.have.status(401));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin login",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "{{csrfHeader}}",
+            "value": "{{csrfToken}}"
+          }
+        ],
+        "url": "{{baseUrl}}/admin/auth/login",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"email\":\"admin@example.invalid\",\"password\":\"{{password}}\"}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Admin login\", () => pm.response.to.have.status(200));",
+              "if (pm.response.code === 200) { pm.test('Admin identity',()=>pm.expect(pm.response.json().role).to.eql('ADMIN')); }"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Refresh admin CSRF",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/admin/auth/csrf"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Refresh admin CSRF\", () => pm.response.to.have.status(200));",
+              "if (pm.response.code === 200) { const c=pm.response.json(); pm.environment.set('csrfHeader',c.headerName); pm.environment.set('csrfToken',c.token); }"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin session",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/admin/auth/session"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Admin session\", () => pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Account listing",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/admin/accounts?page=0&size=25"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Account listing\", () => pm.response.to.have.status(200));",
+              "if (pm.response.code === 200) { pm.test('Bounded array',()=>pm.expect(pm.response.json().data).to.be.an('array')); }"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Invalid pagination",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/admin/accounts?size=101"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Invalid pagination\", () => pm.response.to.have.status(400));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Invalid role filter",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/admin/accounts?role=99"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Invalid role filter\", () => pm.response.to.have.status(400));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Create account",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "{{csrfHeader}}",
+            "value": "{{csrfToken}}"
+          }
+        ],
+        "url": "{{baseUrl}}/admin/accounts",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"firstName\":\"Postman\",\"lastName\":\"User\",\"email\":\"created@example.invalid\",\"password\":\"{{password}}\",\"roleId\":1,\"statusId\":1,\"reason\":\"Disposable test\"}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Create account\", () => pm.response.to.have.status(200));",
+              "if (pm.response.code === 200) { pm.environment.set('createdId',pm.response.json().data.id); }"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Duplicate email conflicts",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "{{csrfHeader}}",
+            "value": "{{csrfToken}}"
+          }
+        ],
+        "url": "{{baseUrl}}/admin/accounts",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"firstName\":\"Postman\",\"lastName\":\"User\",\"email\":\"created@example.invalid\",\"password\":\"{{password}}\",\"roleId\":1,\"statusId\":1,\"reason\":\"Disposable test\"}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Duplicate email conflicts\", () => pm.response.to.have.status(409));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Read account without secrets",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/admin/accounts/{{createdId}}"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Read account without secrets\", () => pm.response.to.have.status(200));",
+              "if (pm.response.code === 200) { pm.test('No password',()=>pm.expect(pm.response.json().data).not.to.have.property('password')); }"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Edit account",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "{{csrfHeader}}",
+            "value": "{{csrfToken}}"
+          }
+        ],
+        "url": "{{baseUrl}}/admin/accounts/{{createdId}}",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"firstName\":\"Updated\",\"lastName\":\"User\",\"email\":\"created@example.invalid\",\"roleId\":1,\"statusId\":1,\"reason\":\"Disposable test\"}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Edit account\", () => pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Reject password in profile edit",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "{{csrfHeader}}",
+            "value": "{{csrfToken}}"
+          }
+        ],
+        "url": "{{baseUrl}}/admin/accounts/{{createdId}}",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"firstName\":\"Updated\",\"lastName\":\"User\",\"email\":\"created@example.invalid\",\"roleId\":1,\"statusId\":1,\"reason\":\"Disposable test\",\"password\":\"unrequested\"}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Reject password in profile edit\", () => pm.response.to.have.status(400));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Disable account",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "{{csrfHeader}}",
+            "value": "{{csrfToken}}"
+          }
+        ],
+        "url": "{{baseUrl}}/admin/accounts/{{createdId}}/disable",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"reason\":\"Test suspension\"}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Disable account\", () => pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Enable account",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "{{csrfHeader}}",
+            "value": "{{csrfToken}}"
+          }
+        ],
+        "url": "{{baseUrl}}/admin/accounts/{{createdId}}/enable",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"reason\":\"Test restoration\"}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Enable account\", () => pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Self disable rejected",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "{{csrfHeader}}",
+            "value": "{{csrfToken}}"
+          }
+        ],
+        "url": "{{baseUrl}}/admin/accounts/{{adminId}}/disable",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"reason\":\"Must fail\"}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Self disable rejected\", () => pm.response.to.have.status(409));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Self delete rejected",
+      "request": {
+        "method": "DELETE",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "{{csrfHeader}}",
+            "value": "{{csrfToken}}"
+          }
+        ],
+        "url": "{{baseUrl}}/admin/accounts/{{adminId}}",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"reason\":\"Must fail\"}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Self delete rejected\", () => pm.response.to.have.status(409));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Create another admin",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "{{csrfHeader}}",
+            "value": "{{csrfToken}}"
+          }
+        ],
+        "url": "{{baseUrl}}/admin/accounts",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"firstName\":\"Postman\",\"lastName\":\"User\",\"email\":\"second-admin@example.invalid\",\"password\":\"{{password}}\",\"roleId\":3,\"statusId\":1,\"reason\":\"Disposable test\"}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Create another admin\", () => pm.response.to.have.status(200));",
+              "if (pm.response.code === 200) { pm.environment.set('secondAdminId',pm.response.json().data.id); }"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Delete unlinked admin",
+      "request": {
+        "method": "DELETE",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "{{csrfHeader}}",
+            "value": "{{csrfToken}}"
+          }
+        ],
+        "url": "{{baseUrl}}/admin/accounts/{{secondAdminId}}",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"reason\":\"Cleanup disposable admin\"}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Delete unlinked admin\", () => pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Delete unlinked account",
+      "request": {
+        "method": "DELETE",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "{{csrfHeader}}",
+            "value": "{{csrfToken}}"
+          }
+        ],
+        "url": "{{baseUrl}}/admin/accounts/{{createdId}}",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"reason\":\"Cleanup disposable account\"}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Delete unlinked account\", () => pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Deleted account missing",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/admin/accounts/{{createdId}}"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Deleted account missing\", () => pm.response.to.have.status(404));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Contact inbox",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/admin/contacts"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Contact inbox\", () => pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Contact detail",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/admin/contacts/{{contactId}}"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Contact detail\", () => pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Reply contact",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "{{csrfHeader}}",
+            "value": "{{csrfToken}}"
+          }
+        ],
+        "url": "{{baseUrl}}/admin/contacts/{{contactId}}/reply",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"message\":\"Test reply\"}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Reply contact\", () => pm.response.to.have.status(200));",
+              "if (pm.response.code === 200) { pm.test('Delivery queued',()=>pm.expect(pm.response.json().data.delivery).to.eql('QUEUED')); }"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Repeated reply conflicts",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "{{csrfHeader}}",
+            "value": "{{csrfToken}}"
+          }
+        ],
+        "url": "{{baseUrl}}/admin/contacts/{{contactId}}/reply",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"message\":\"Again\"}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Repeated reply conflicts\", () => pm.response.to.have.status(409));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Pending events",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/admin/events?status=1"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Pending events\", () => pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Draft events",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/admin/events?status=4"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Draft events\", () => pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Invalid event phase",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/admin/events?phase=INVALID"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Invalid event phase\", () => pm.response.to.have.status(400));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Event detail",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/admin/events/{{eventId}}"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Event detail\", () => pm.response.to.have.status(200));",
+              "if (pm.response.code === 200) { pm.environment.set('revision',pm.response.json().data.revision); }"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Edit event",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "{{csrfHeader}}",
+            "value": "{{csrfToken}}"
+          }
+        ],
+        "url": "{{baseUrl}}/admin/events/{{eventId}}",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"name\":\"Postman updated\",\"description\":\"Test\",\"startsAt\":\"2026-12-01T09:00:00+05:30\",\"endsAt\":\"2026-12-01T17:00:00+05:30\",\"revision\":0,\"reason\":\"Test schedule\"}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Edit event\", () => pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Stale revision conflicts",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "{{csrfHeader}}",
+            "value": "{{csrfToken}}"
+          }
+        ],
+        "url": "{{baseUrl}}/admin/events/{{eventId}}/decision",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"approve\":true,\"revision\":0,\"reason\":\"Stale\"}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Stale revision conflicts\", () => pm.response.to.have.status(409));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Approve event",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "{{csrfHeader}}",
+            "value": "{{csrfToken}}"
+          }
+        ],
+        "url": "{{baseUrl}}/admin/events/{{eventId}}/decision",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"approve\":true,\"revision\":1,\"reason\":\"Publisher verified\"}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Approve event\", () => pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Repeated review conflicts",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "{{csrfHeader}}",
+            "value": "{{csrfToken}}"
+          }
+        ],
+        "url": "{{baseUrl}}/admin/events/{{eventId}}/decision",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"approve\":false,\"revision\":2,\"reason\":\"Repeated\"}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Repeated review conflicts\", () => pm.response.to.have.status(409));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Approved events",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/admin/events?status=2"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Approved events\", () => pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Schedule UPCOMING",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/admin/events?phase=UPCOMING"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Schedule UPCOMING\", () => pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Schedule ONGOING",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/admin/events?phase=ONGOING"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Schedule ONGOING\", () => pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Schedule COMPLETED",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/admin/events?phase=COMPLETED"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Schedule COMPLETED\", () => pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Schedule UNKNOWN",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/admin/events?phase=UNKNOWN"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Schedule UNKNOWN\", () => pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Linked event deletion denied",
+      "request": {
+        "method": "DELETE",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "{{csrfHeader}}",
+            "value": "{{csrfToken}}"
+          }
+        ],
+        "url": "{{baseUrl}}/admin/events/{{eventId}}",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"reason\":\"Preserve booking\"}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Linked event deletion denied\", () => pm.response.to.have.status(409));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Disable event",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "{{csrfHeader}}",
+            "value": "{{csrfToken}}"
+          }
+        ],
+        "url": "{{baseUrl}}/admin/events/{{eventId}}/disable",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"reason\":\"Test moderation\"}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Disable event\", () => pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Disabled event edit denied",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "{{csrfHeader}}",
+            "value": "{{csrfToken}}"
+          }
+        ],
+        "url": "{{baseUrl}}/admin/events/{{eventId}}",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"name\":\"Disabled\",\"startsAt\":\"2026-12-01T09:00:00Z\",\"endsAt\":\"2026-12-01T17:00:00Z\",\"revision\":3,\"reason\":\"Must fail\"}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Disabled event edit denied\", () => pm.response.to.have.status(409));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Overall statistics",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/admin/statistics?from=2020-01-01T00:00:00Z&to=2030-01-01T00:00:00Z"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Overall statistics\", () => pm.response.to.have.status(200));",
+              "if (pm.response.code === 200) { pm.test('Financial limitations explicit',()=>pm.expect(pm.response.json().data.financialNotice).to.be.a('string')); }"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Individual statistics",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/admin/statistics?from=2020-01-01T00:00:00Z&to=2030-01-01T00:00:00Z&userId={{memberId}}"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Individual statistics\", () => pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Invalid statistics range",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/admin/statistics?from=2030-01-01T00:00:00Z&to=2020-01-01T00:00:00Z"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Invalid statistics range\", () => pm.response.to.have.status(400));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Audit history",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/admin/audit"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Audit history\", () => pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Email metadata only",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/admin/emails"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Email metadata only\", () => pm.response.to.have.status(200));",
+              "if (pm.response.code === 200) { pm.test('No email bodies',()=>pm.response.json().data.forEach(e=>{pm.expect(e).not.to.have.property('recipient');pm.expect(e).not.to.have.property('body');})); }"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Retry nonexistent notification conflicts",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "{{csrfHeader}}",
+            "value": "{{csrfToken}}"
+          }
+        ],
+        "url": "{{baseUrl}}/admin/emails/2147483647/retry",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"reason\":\"Must fail\"}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Retry nonexistent notification conflicts\", () => pm.response.to.have.status(409));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin logout",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "{{csrfHeader}}",
+            "value": "{{csrfToken}}"
+          }
+        ],
+        "url": "{{baseUrl}}/admin/auth/logout"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Admin logout\", () => pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Logged out session denied",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/admin/auth/session"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Logged out session denied\", () => pm.response.to.have.status(401));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Member login",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/auth/manual",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"email\":\"member@example.invalid\",\"password\":\"{{password}}\"}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Member login\", () => pm.response.to.have.status(200));",
+              "if (pm.response.code === 200) { pm.test('Member authenticated',()=>pm.expect(pm.response.json().status).to.eql(true)); }"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Member forbidden admin",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/admin/accounts"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Member forbidden admin\", () => pm.response.to.have.status(401));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Member coordinator CSRF",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/coordinator-requests/csrf"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Member coordinator CSRF\", () => pm.response.to.have.status(200));",
+              "if (pm.response.code === 200) { const c=pm.response.json(); pm.environment.set('csrfHeader',c.headerName); pm.environment.set('csrfToken',c.token); }"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Submit coordinator application",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "{{csrfHeader}}",
+            "value": "{{csrfToken}}"
+          }
+        ],
+        "url": "{{baseUrl}}/coordinator-requests",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"organizationId\":\"{{organizationId}}\",\"position\":\"Coordinator\",\"message\":\"Please review\"}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Submit coordinator application\", () => pm.response.to.have.status(200));",
+              "if (pm.response.code === 200) { pm.environment.set('requestId',pm.response.json().id); }"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Duplicate application conflicts",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "{{csrfHeader}}",
+            "value": "{{csrfToken}}"
+          }
+        ],
+        "url": "{{baseUrl}}/coordinator-requests",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"organizationId\":\"{{organizationId}}\",\"position\":\"Coordinator\",\"message\":\"Again\"}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Duplicate application conflicts\", () => pm.response.to.have.status(409));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Own application history",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/coordinator-requests"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Own application history\", () => pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin CSRF after member login",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/admin/auth/csrf"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Admin CSRF after member login\", () => pm.response.to.have.status(200));",
+              "if (pm.response.code === 200) { const c=pm.response.json(); pm.environment.set('csrfHeader',c.headerName); pm.environment.set('csrfToken',c.token); }"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin login for approval",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "{{csrfHeader}}",
+            "value": "{{csrfToken}}"
+          }
+        ],
+        "url": "{{baseUrl}}/admin/auth/login",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"email\":\"admin@example.invalid\",\"password\":\"{{password}}\"}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Admin login for approval\", () => pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Refresh CSRF for approval",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/admin/auth/csrf"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Refresh CSRF for approval\", () => pm.response.to.have.status(200));",
+              "if (pm.response.code === 200) { const c=pm.response.json(); pm.environment.set('csrfHeader',c.headerName); pm.environment.set('csrfToken',c.token); }"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Pending coordinator queue",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/admin/coordinator-requests?status=1"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Pending coordinator queue\", () => pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Approve coordinator application",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "{{csrfHeader}}",
+            "value": "{{csrfToken}}"
+          }
+        ],
+        "url": "{{baseUrl}}/admin/coordinator-requests/{{requestId}}/decision",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"approve\":true,\"reason\":\"Membership verified\"}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Approve coordinator application\", () => pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Repeated coordinator review denied",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "{{csrfHeader}}",
+            "value": "{{csrfToken}}"
+          }
+        ],
+        "url": "{{baseUrl}}/admin/coordinator-requests/{{requestId}}/decision",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"approve\":false,\"reason\":\"Repeated\"}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Repeated coordinator review denied\", () => pm.response.to.have.status(409));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Verify coordinator role",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/admin/accounts/{{memberId}}"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Verify coordinator role\", () => pm.response.to.have.status(200));",
+              "if (pm.response.code === 200) { pm.test('Role granted',()=>pm.expect(pm.response.json().data.role_id).to.eql(2)); }"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Linked member deletion denied",
+      "request": {
+        "method": "DELETE",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "{{csrfHeader}}",
+            "value": "{{csrfToken}}"
+          }
+        ],
+        "url": "{{baseUrl}}/admin/accounts/{{memberId}}",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"reason\":\"Must preserve request and booking\"}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Linked member deletion denied\", () => pm.response.to.have.status(409));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Revoke coordinator",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "{{csrfHeader}}",
+            "value": "{{csrfToken}}"
+          }
+        ],
+        "url": "{{baseUrl}}/admin/accounts/{{memberId}}/revoke-coordinator",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"reason\":\"End test grant\"}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Revoke coordinator\", () => pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Verify restored member role",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/admin/accounts/{{memberId}}"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Verify restored member role\", () => pm.response.to.have.status(200));",
+              "if (pm.response.code === 200) { pm.test('Role restored',()=>pm.expect(pm.response.json().data.role_id).to.eql(1)); }"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Final logout",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "{{csrfHeader}}",
+            "value": "{{csrfToken}}"
+          }
+        ],
+        "url": "{{baseUrl}}/admin/auth/logout"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Final logout\", () => pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}
