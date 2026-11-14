@@ -1,5 +1,10 @@
 # GoEvent
 
+Admin authentication backend endpoints and their CSRF/session contract are
+documented in [admin authentication](docs/architecture/admin-authentication.md).
+The [admin backend API](docs/architecture/admin-backend.md) documents management,
+moderation, statistics and Azure Communication Services notification delivery.
+
 GoEvent is a high-integrity, modular monolith event planning and ticket booking platform designed to support event organizers, attendees, and platform administrators.
 
 ## Features

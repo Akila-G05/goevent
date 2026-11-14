@@ -86,6 +86,11 @@ google:
 # output so cleaning the project never deletes files; point STORAGE_ROOT at a
 # mounted volume or cloud directory in production.
 app:
+  email:
+    enabled: ${ACS_EMAIL_ENABLED:false}
+    endpoint: ${ACS_EMAIL_ENDPOINT:}
+    sender: ${ACS_EMAIL_SENDER:}
+    managed-identity-client-id: ${ACS_MANAGED_IDENTITY_CLIENT_ID:}
   storage:
     root: ${STORAGE_ROOT:${user.home}/goevent/uploads}
     # Base of the public URL stored in MySQL (one folder per owner, e.g.

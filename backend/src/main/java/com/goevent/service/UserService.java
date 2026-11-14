@@ -172,6 +172,10 @@ public class UserService {
             if (organizationId == null || !userRepo.organizationExists(organizationId)) {
                 return ApiResponse.badRequest("Select a valid organization");
             }
+            Map<String,Object> approved=userRepo.getOrganizerDetail(userId);
+            if(approved==null || ((Number)approved.get("organization_id")).intValue()!=organizationId) {
+                return ApiResponse.badRequest("Organization changes require administrator approval");
+            }
             if (position == null || position.isBlank()) {
                 return ApiResponse.badRequest("Position is required");
             }
@@ -299,7 +303,12 @@ public class UserService {
         HttpSession session = httpRequest.getSession(false);
         Object sessionUserId = session != null ? session.getAttribute("userId") : null;
 
-        return sessionUserId instanceof Integer ? (Integer) sessionUserId : null;
+        if (!(sessionUserId instanceof Integer id)) return null;
+        UserDTO current=userRepo.getUserById(id);
+        if(current==null||current.getUserStatusId()!=1) {
+            session.invalidate(); return null;
+        }
+        return id;
     }
 
     private void refreshSessionProfile(HttpServletRequest httpRequest, int userId) {

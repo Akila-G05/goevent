@@ -46,6 +46,11 @@ public class AuthenticationRepo {
     };
 
     // Get existing Google user
+    public UserDTO getUserById(int id) {
+        try { return jdbcTemplate.queryForObject("SELECT * FROM `user` WHERE id=?",userRowMapper,id); }
+        catch(EmptyResultDataAccessException error) { return null; }
+    }
+
     public UserDTO getUserByGoogleSub(String googleSub) {
 
         String query = "SELECT * FROM `user` WHERE google_sub = ? LIMIT 1";

@@ -85,6 +85,12 @@ public class AuthenticationService {
                 }
             }
 
+            // Coordinator access is requested by an existing signed-in user.
+            if (role == Role.ORGANIZER || role == Role.ADMIN || role == Role.CONTRIBUTOR) {
+                responseObject.addProperty("status", false);
+                responseObject.addProperty("message", "Register as a user, then request coordinator access.");
+                return AppUtil.gson.toJson(responseObject);
+            }
             // 1. Validate ID token
             if (idToken == null || idToken.isBlank()) {
                 message = "Google ID token is missing";
@@ -417,7 +423,6 @@ public class AuthenticationService {
 
         return switch (id) {
             case 1 -> Role.USER;
-            case 2 -> Role.ORGANIZER;
             case 4 -> Role.STUDENT;
             default -> null;
         };
@@ -489,6 +494,15 @@ public class AuthenticationService {
         Object email = session != null ? session.getAttribute("email") : null;
 
         boolean authenticated = userId instanceof Integer;
+        if(authenticated) {
+            UserDTO current=authenticationRepo.getUserById((Integer)userId);
+            if(current==null||current.getUserStatusId()!=UserStatus.ACTIVE.getId()) {
+                session.invalidate(); authenticated=false;
+            } else {
+                role=Role.fromId(current.getRoleId()).name();
+                name=buildDisplayName(current); email=current.getEmail();
+            }
+        }
 
         responseObject.addProperty("status", true);
         responseObject.addProperty("authenticated", authenticated);

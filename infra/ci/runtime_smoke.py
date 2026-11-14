@@ -1,6 +1,7 @@
 """Run real services against disposable MySQL/Redis, never the Compose database."""
 
 import base64
+import http.cookiejar
 import json
 import os
 from pathlib import Path
@@ -106,6 +107,7 @@ def main():
                 'SPRING_DATA_REDIS_PASSWORD': password,
                 'BACKEND_URL': f'http://127.0.0.1:{backend_port}',
                 'SPRING_CONFIG_IMPORT': '',
+                'APP_EMAIL_ENABLED': 'false',
             }
             services = [
                 ('backend', 'backend/target/goevent-1.0-SNAPSHOT.war', backend_port),
@@ -166,6 +168,30 @@ def main():
                 assert denied['status'] is False
                 assert denied['message'] == 'Google ID token is missing'
             print('PASS: JSON authentication request rejects missing Google token', flush=True)
+            # Real HTTP sessions/CSRF and Redis throttling for the admin-only chain.
+            admin_client = urllib.request.build_opener(
+                urllib.request.HTTPCookieProcessor(http.cookiejar.CookieJar()))
+            admin_url = f'http://127.0.0.1:{backend_port}/goevent/api/admin/auth'
+            try:
+                admin_client.open(admin_url + '/session', timeout=5)
+                raise AssertionError('Anonymous admin access was allowed')
+            except urllib.error.HTTPError as error:
+                assert error.code == 401, error.code
+            with admin_client.open(admin_url + '/csrf', timeout=5) as response:
+                csrf = json.loads(response.read())
+            payload = json.dumps({'email': 'admin-smoke@example.invalid', 'password': 'invalid-test-password'}).encode()
+            def admin_login(headers):
+                try:
+                    admin_client.open(urllib.request.Request(admin_url + '/login', data=payload,
+                        headers={'Content-Type':'application/json'} | headers), timeout=5)
+                    raise AssertionError('Unknown account authenticated as admin')
+                except urllib.error.HTTPError as error:
+                    return error.code
+            assert admin_login({}) == 403
+            for _ in range(10):
+                assert admin_login({csrf['headerName']:csrf['token']}) == 401
+            assert admin_login({csrf['headerName']:csrf['token']}) == 429
+            print('PASS: real admin session/CSRF denial and Redis-backed login throttle', flush=True)
             public_path = '/goevent/api/content/universities'
             body = get(gateway_port, public_path)
             assert body['status'] is True
