@@ -92,4 +92,30 @@ class AdminSecurityConfigTest {
             .andExpect(status().isForbidden());
         verifyNoInteractions(context.getBean(AdminLoginThrottle.class));
     }
+    @Test void userModeCannotReadAdminDataAndReturnRequiresCsrfAndFreshRole() throws Exception {
+        var session=new MockHttpSession();session.setAttribute("userId",7);session.setAttribute("adminUserModeId",7);
+        when(context.getBean(AdminAccessRepository.class).isActiveAdmin(7)).thenReturn(true);
+        mvc.perform(get("/api/admin/accounts").session(session)).andExpect(status().isUnauthorized());
+        mvc.perform(post("/api/admin/auth/switch-to-admin").session(session)).andExpect(status().isForbidden());
+        var result=mvc.perform(get("/api/admin/auth/csrf").session(session)).andReturn();
+        var token=JsonParser.parseString(result.getResponse().getContentAsString()).getAsJsonObject();
+        mvc.perform(post("/api/admin/auth/switch-to-admin").session(session)
+            .header(token.get("headerName").getAsString(),token.get("token").getAsString()))
+            .andExpect(status().isOk());
+        verify(context.getBean(AdminAuthenticationService.class)).switchMode(any(),eq(true));
+        when(context.getBean(AdminAccessRepository.class).isActiveAdmin(7)).thenReturn(false);
+        mvc.perform(post("/api/admin/auth/switch-to-admin").session(session)
+            .header(token.get("headerName").getAsString(),token.get("token").getAsString()))
+            .andExpect(status().isUnauthorized());
+        Assertions.assertTrue(session.isInvalid());
+    }
+    @Test void ordinaryAdminRoleAttributeCannotUseReturnEndpoint() throws Exception {
+        var session=new MockHttpSession();session.setAttribute("userId",7);session.setAttribute("role","ADMIN");
+        var result=mvc.perform(get("/api/admin/auth/csrf").session(session)).andReturn();
+        var token=JsonParser.parseString(result.getResponse().getContentAsString()).getAsJsonObject();
+        mvc.perform(post("/api/admin/auth/switch-to-admin").session(session)
+            .header(token.get("headerName").getAsString(),token.get("token").getAsString()))
+            .andExpect(status().isUnauthorized());
+        verifyNoInteractions(context.getBean(AdminAuthenticationService.class));
+    }
 }

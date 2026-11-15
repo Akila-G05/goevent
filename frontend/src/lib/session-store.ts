@@ -4,6 +4,7 @@ import { authApi } from '@/api';
 export type SessionStatus = 'loading' | 'authenticated' | 'guest';
 
 export interface SessionUser {
+  adminUserMode?: boolean;
   userId?: number;
   name?: string;
   roleId?: string;
@@ -44,6 +45,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
               name: data.name,
               roleId: data.roleId,
               email: data.email,
+              adminUserMode: data.adminUserMode,
             },
           });
         } else {

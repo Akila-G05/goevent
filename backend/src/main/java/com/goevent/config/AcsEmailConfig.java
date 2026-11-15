@@ -17,7 +17,14 @@ public class AcsEmailConfig {
     @Bean
     @ConditionalOnProperty(name="app.email.enabled",havingValue="true")
     AdminEmailDelivery acsDelivery(@Value("${app.email.endpoint:}") String endpoint,
-        @Value("${app.email.sender:}") String sender,@Value("${app.email.managed-identity-client-id:}") String clientId) {
+        @Value("${app.email.sender:}") String sender,@Value("${app.email.managed-identity-client-id:}") String clientId,
+        @Value("${app.email.connection-string:}") String connectionString) {
+        if(!sender.matches("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$"))
+            throw new IllegalArgumentException("Verified ACS sender required");
+        var builder=new EmailClientBuilder();
+        if(!connectionString.isBlank()) {
+            builder.connectionString(connectionString);
+        } else {
         var uri=URI.create(endpoint);
         if(!"https".equals(uri.getScheme())||uri.getHost()==null||!uri.getHost().endsWith(".communication.azure.com")
             ||uri.getUserInfo()!=null||uri.getQuery()!=null||uri.getFragment()!=null
@@ -25,7 +32,9 @@ public class AcsEmailConfig {
             throw new IllegalArgumentException("Valid ACS HTTPS endpoint and verified sender required");
         var credential=new ManagedIdentityCredentialBuilder();
         if(!clientId.isBlank()) credential.clientId(clientId);
-        var client=new EmailClientBuilder().endpoint(endpoint).credential(credential.build()).buildClient();
+        builder.endpoint(endpoint).credential(credential.build());
+        }
+        var client=builder.buildClient();
         return (recipient,subject,body) -> {
             var message=new EmailMessage().setSenderAddress(sender).setToRecipients(recipient)
                 .setSubject(subject).setBodyPlainText(body);

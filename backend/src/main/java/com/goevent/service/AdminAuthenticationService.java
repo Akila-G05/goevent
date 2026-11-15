@@ -37,4 +37,36 @@ public class AdminAuthenticationService {
         request.getSession(true).setAttribute("adminUserId", user.getId());
         return Map.of("status", true, "userId", user.getId(), "role", "ADMIN");
     }
+    public Map<String, Object> session(HttpServletRequest request) {
+        var session=request.getSession(false);
+        Object identity=session==null?null:session.getAttribute("adminUserId");
+        if(!(identity instanceof Integer id)) throw new ResponseStatusException(HttpStatus.UNAUTHORIZED,"Admin session required");
+        var user=users.getUserById(id);
+        if(user==null||user.getRoleId()!=3||user.getUserStatusId()!=1)
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,"Active admin required");
+        String name=((user.getFname()==null?"":user.getFname())+" "+(user.getLname()==null?"":user.getLname())).trim();
+        return Map.of("status",true,"userId",id,"role","ADMIN","name",name.isEmpty()?user.getEmail():name,"email",user.getEmail());
+    }
+    public Map<String, Object> switchMode(HttpServletRequest request, boolean toAdmin) {
+        var previous=request.getSession(false);
+        Object identity=previous==null?null:previous.getAttribute(toAdmin?"userId":"adminUserId");
+        if (!(identity instanceof Integer id) || (toAdmin && !identity.equals(previous.getAttribute("adminUserModeId"))))
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,"Admin mode switch required");
+        var user=users.getUserById(id);
+        if(user==null || user.getRoleId()!=3 || user.getUserStatusId()!=1)
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,"Active admin required");
+        previous.invalidate();
+        var session=request.getSession(true);
+        if(toAdmin) {
+            session.setAttribute("adminUserId",id);
+        } else {
+            String name=((user.getFname()==null?"":user.getFname())+" "+(user.getLname()==null?"":user.getLname())).trim();
+            session.setAttribute("userId",id);
+            session.setAttribute("name",name.isEmpty()?user.getEmail():name);
+            session.setAttribute("email",user.getEmail());
+            session.setAttribute("role","ADMIN");
+            session.setAttribute("adminUserModeId",id);
+        }
+        return Map.of("status",true,"userId",id,"role","ADMIN","adminUserMode",!toAdmin);
+    }
 }

@@ -22,11 +22,19 @@ public class AdminAuthenticationController {
     }
     @GetMapping("/session")
     public Map<String, Object> session(HttpServletRequest request) {
-        return Map.of("status", true, "userId", request.getSession(false).getAttribute("adminUserId"), "role", "ADMIN");
+        return service.session(request);
     }
     @PostMapping("/logout")
     public Map<String, Boolean> logout(HttpServletRequest request) {
         request.getSession(false).invalidate();
         return Map.of("status", true);
+    }
+    @PostMapping("/switch-to-user")
+    public Map<String, Object> switchToUser(HttpServletRequest request) {
+        return service.switchMode(request, false);
+    }
+    @PostMapping("/switch-to-admin")
+    public Map<String, Object> switchToAdmin(HttpServletRequest request) {
+        return service.switchMode(request, true);
     }
 }
