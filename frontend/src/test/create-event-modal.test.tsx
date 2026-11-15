@@ -36,16 +36,23 @@ describe('CreateEventModal', () => {
     expect(screen.getAllByLabelText(/^Date/)).toHaveLength(1);
   });
 
-  it('shows ticket tiers only when the event is paid', () => {
+  it('keeps free and paid event types disabled and offers listing only', () => {
     renderModal();
 
+    const listing = screen.getByRole('button', { name: /^Listing only/ });
+    const free = screen.getByRole('button', { name: /^Free/ });
+    const paid = screen.getByRole('button', { name: /^Paid/ });
+
+    expect(listing).toHaveAttribute('aria-pressed', 'true');
+    expect(free).toBeDisabled();
+    expect(paid).toBeDisabled();
+    expect(screen.getAllByText('Coming soon')).toHaveLength(2);
     expect(screen.queryByText('Ticket tiers')).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: /^Paid/ }));
-    expect(screen.getByText('Ticket tiers')).toBeInTheDocument();
-    expect(screen.getByLabelText(/^Quantity/)).toBeInTheDocument();
+    fireEvent.click(paid);
+    fireEvent.click(free);
 
-    fireEvent.click(screen.getByRole('button', { name: /^Free/ }));
+    expect(listing).toHaveAttribute('aria-pressed', 'true');
     expect(screen.queryByText('Ticket tiers')).not.toBeInTheDocument();
   });
 

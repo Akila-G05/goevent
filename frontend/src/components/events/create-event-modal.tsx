@@ -42,10 +42,25 @@ const AUDIENCES = ['University', 'Public', 'Both'];
 
 type EventLevel = 'LISTING_ONLY' | 'FREE' | 'PAYED';
 
-const EVENT_LEVELS: Array<{ id: EventLevel; label: string; hint: string }> = [
-  { id: 'LISTING_ONLY', label: 'Listing only', hint: 'Announce the event without ticket sales' },
-  { id: 'FREE', label: 'Free', hint: 'Issue free tickets to attendees' },
-  { id: 'PAYED', label: 'Paid', hint: 'Sell one or more ticket tiers' },
+const EVENT_LEVELS: Array<{ id: EventLevel; label: string; hint: string; available: boolean }> = [
+  {
+    id: 'LISTING_ONLY',
+    label: 'Listing only',
+    hint: 'Announce the event without ticket sales',
+    available: true,
+  },
+  {
+    id: 'FREE',
+    label: 'Free',
+    hint: 'Issue free tickets to attendees',
+    available: false,
+  },
+  {
+    id: 'PAYED',
+    label: 'Paid',
+    hint: 'Sell one or more ticket tiers',
+    available: false,
+  },
 ];
 
 const TAG_GROUPS: Array<{ group: string; options: Array<{ id: string; name: string }> }> = [
@@ -482,14 +497,33 @@ export function CreateEventModal({ open, onClose }: CreateEventModalProps) {
                     key={level.id}
                     type="button"
                     aria-pressed={selected}
-                    onClick={() => setEventLevel(level.id)}
+                    disabled={!level.available}
+                    title={
+                      level.available
+                        ? undefined
+                        : `${level.label} ticketing is coming soon`
+                    }
+                    onClick={() => {
+                      if (level.available) {
+                        setEventLevel(level.id);
+                      }
+                    }}
                     className={`rounded-xl border px-3.5 py-3 text-left transition-colors ${
-                      selected
-                        ? 'border-[#1c1b1b] bg-[#1c1b1b] text-white'
-                        : 'border-[#e0dbd9] bg-[#faf8f7] text-[#1c1b1b] hover:bg-[#f0eceb]'
+                      !level.available
+                        ? 'cursor-not-allowed border-dashed border-[#e0dbd9] bg-[#f5f2f1] text-[#918c8a]'
+                        : selected
+                          ? 'border-[#1c1b1b] bg-[#1c1b1b] text-white'
+                          : 'border-[#e0dbd9] bg-[#faf8f7] text-[#1c1b1b] hover:bg-[#f0eceb]'
                     }`}
                   >
-                    <span className="block text-sm font-semibold">{level.label}</span>
+                    <span className="flex items-center justify-between gap-2">
+                      <span className="block text-sm font-semibold">{level.label}</span>
+                      {!level.available && (
+                        <span className="rounded-full border border-[#e8e4e3] bg-white px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-[#736e6c]">
+                          Coming soon
+                        </span>
+                      )}
+                    </span>
                     <span
                       className={`mt-0.5 block text-[11px] ${
                         selected ? 'text-white/70' : 'text-[#918c8a]'
@@ -501,6 +535,14 @@ export function CreateEventModal({ open, onClose }: CreateEventModalProps) {
                 );
               })}
             </div>
+
+            <p className="mt-2 flex items-start gap-1.5 text-[11px] text-[#918c8a]">
+              <Sparkles aria-hidden="true" className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#1c1b1b]" />
+              <span>
+                Free and paid ticketing are coming soon. Only listing-only events can be created
+                for now.
+              </span>
+            </p>
           </div>
         </section>
 
