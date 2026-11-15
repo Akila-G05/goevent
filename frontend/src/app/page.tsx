@@ -22,6 +22,7 @@ import {
 // Data types
 interface ConcertCard {
   id: string;
+  slug: string;
   title: string;
   artistSubtitle: string;
   dayOfWeek: string;
@@ -36,6 +37,7 @@ interface ConcertCard {
 
 interface TourEvent {
   id: string;
+  slug: string;
   dayOfWeek: string;
   dayNumber: string;
   monthYear: string;
@@ -48,6 +50,7 @@ interface TourEvent {
 
 interface UpcomingConcert {
   id: string;
+  slug: string;
   title: string;
   subtitle: string;
   tags: string[];
@@ -85,6 +88,7 @@ export default function HomePage() {
 
   // State for Booking Modal demo
   const [selectedConcertForBooking, setSelectedConcertForBooking] = useState<{
+    slug: string;
     title: string;
     city: string;
     date: string;
@@ -95,6 +99,7 @@ export default function HomePage() {
   const browsingConcerts: ConcertCard[] = [
     {
       id: 'c1',
+      slug: 'yoabiso',
       title: 'YOABISO',
       artistSubtitle: 'Sir Paul Shaddy - delivered by Tokopedia',
       dayOfWeek: 'SUN',
@@ -108,6 +113,7 @@ export default function HomePage() {
     },
     {
       id: 'c2',
+      slug: 'andi-odang',
       title: 'ANDI ODANG',
       artistSubtitle: 'Pestapora Festival',
       dayOfWeek: 'SUN',
@@ -121,6 +127,7 @@ export default function HomePage() {
     },
     {
       id: 'c3',
+      slug: 'sound-of-heracles',
       title: 'SOUND OF HERACLES',
       artistSubtitle: 'Metal Death Festival',
       dayOfWeek: 'SUN',
@@ -134,6 +141,7 @@ export default function HomePage() {
     },
     {
       id: 'c4',
+      slug: 'the-yellow-wall',
       title: 'THE YELLOW WALL',
       artistSubtitle: 'Sir Paul Shaddy - delivered by Tokopedia',
       dayOfWeek: 'SUN',
@@ -147,6 +155,7 @@ export default function HomePage() {
     },
     {
       id: 'c5',
+      slug: 'sir-paul-shaddy',
       title: 'SIR PAUL SHADDY',
       artistSubtitle: 'Sir Paul Shaddy - delivered by Tokopedia',
       dayOfWeek: 'SUN',
@@ -163,6 +172,7 @@ export default function HomePage() {
   const tourEvents: TourEvent[] = [
     {
       id: 't1',
+      slug: 'le-pharaohs-bangkok',
       dayOfWeek: 'SUN',
       dayNumber: '27',
       monthYear: 'APR 24',
@@ -174,6 +184,7 @@ export default function HomePage() {
     },
     {
       id: 't2',
+      slug: 'le-pharaohs-jakarta',
       dayOfWeek: 'SAT',
       dayNumber: '16',
       monthYear: 'MEI 24',
@@ -185,6 +196,7 @@ export default function HomePage() {
     },
     {
       id: 't3',
+      slug: 'le-pharaohs-surabaya',
       dayOfWeek: 'FRI',
       dayNumber: '12',
       monthYear: 'JUN 24',
@@ -196,6 +208,7 @@ export default function HomePage() {
     },
     {
       id: 't4',
+      slug: 'le-pharaohs-bali',
       dayOfWeek: 'SAT',
       dayNumber: '4',
       monthYear: 'JUL 24',
@@ -207,6 +220,7 @@ export default function HomePage() {
     },
     {
       id: 't5',
+      slug: 'le-pharaohs-kuala-lumpur',
       dayOfWeek: 'SAT',
       dayNumber: '24',
       monthYear: 'APR 24',
@@ -218,6 +232,7 @@ export default function HomePage() {
     },
     {
       id: 't6',
+      slug: 'le-pharaohs-tokyo',
       dayOfWeek: 'THU',
       dayNumber: '15',
       monthYear: 'AUG 24',
@@ -229,6 +244,7 @@ export default function HomePage() {
     },
     {
       id: 't7',
+      slug: 'le-pharaohs-seoul',
       dayOfWeek: 'SAT',
       dayNumber: '28',
       monthYear: 'SEP 24',
@@ -243,6 +259,7 @@ export default function HomePage() {
   const upcomingConcerts: UpcomingConcert[] = [
     {
       id: 'u1',
+      slug: 'sir-paul-shaddy-solo',
       title: 'SIR PAUL SHADDY',
       subtitle: 'Sir Paul Shaddy - delivered by Tokopedia',
       tags: ['Surabaya', 'Lapangan Merr'],
@@ -255,6 +272,7 @@ export default function HomePage() {
     },
     {
       id: 'u2',
+      slug: 'bring-me-the-star-track',
       title: 'BRING ME THE STAR TRACK',
       subtitle: 'Jakarta Tour 2024 - delivered by Ngojek',
       tags: ['Jakarta', 'Indonesia Arena'],
@@ -267,6 +285,7 @@ export default function HomePage() {
     },
     {
       id: 'u3',
+      slug: '4gvs',
       title: '4GVS',
       subtitle: 'This is 4GVS - delivered by JLANT',
       tags: ['Malang', 'Rampal'],
@@ -279,6 +298,7 @@ export default function HomePage() {
     },
     {
       id: 'u4',
+      slug: 'nailong',
       title: 'NAILONG',
       subtitle: 'Comeback Again Nailong 24 City All The World',
       tags: ['Bojonegoro', 'GOR DABONSIA'],
@@ -569,6 +589,7 @@ export default function HomePage() {
                   <button
                     onClick={() =>
                       setSelectedConcertForBooking({
+                        slug: concert.slug,
                         title: concert.title,
                         city: concert.city,
                         date: `${concert.dayOfWeek} ${concert.dayNumber} ${concert.monthYear}`,
@@ -646,6 +667,7 @@ export default function HomePage() {
                 <button
                   onClick={() =>
                     setSelectedConcertForBooking({
+                      slug: 'le-pharaohs-bangkok',
                       title: 'LE PHARAOHS X SERKONSER TOUR',
                       city: 'Asia & World Stadium Tour',
                       date: 'Summer 2024',
@@ -801,6 +823,7 @@ export default function HomePage() {
                       <button
                         onClick={() =>
                           setSelectedConcertForBooking({
+                            slug: evt.slug,
                             title: `${evt.city} - ${evt.tag}`,
                             city: evt.city,
                             date: `${evt.dayOfWeek} ${evt.dayNumber} ${evt.monthYear}`,
@@ -916,6 +939,7 @@ export default function HomePage() {
                   <button
                     onClick={() =>
                       setSelectedConcertForBooking({
+                        slug: item.slug,
                         title: item.title,
                         city: item.tags[0],
                         date: `${item.dayOfWeek} ${item.dayNumber} ${item.monthYear}`,
@@ -1082,7 +1106,7 @@ export default function HomePage() {
           </div>
 
           <div className="flex flex-col sm:flex-row items-center justify-between pt-8 text-[11px] text-zinc-500 gap-4">
-            <p>© {new Date().getFullYear()} GoEvent Platform. All rights reserved.</p>
+            <p>Â© {new Date().getFullYear()} GoEvent Platform. All rights reserved.</p>
             <div className="flex items-center space-x-6">
               <span className="hover:text-zinc-400 cursor-pointer">Privacy Policy</span>
               <span className="hover:text-zinc-400 cursor-pointer">Terms of Service</span>
@@ -1115,9 +1139,9 @@ export default function HomePage() {
                 {selectedConcertForBooking.title}
               </h3>
               <p className="text-xs text-zinc-400 mt-1 flex items-center space-x-2">
-                <span>📍 {selectedConcertForBooking.city}</span>
-                <span>•</span>
-                <span>📅 {selectedConcertForBooking.date}</span>
+                <span>ðŸ“ {selectedConcertForBooking.city}</span>
+                <span>â€¢</span>
+                <span>ðŸ“… {selectedConcertForBooking.date}</span>
               </p>
             </div>
 
@@ -1164,16 +1188,14 @@ export default function HomePage() {
               >
                 Cancel
               </button>
-              <button
-                onClick={() => {
-                  alert(`Ticket hold reserved for ${selectedConcertForBooking.title}! Proceeding to checkout.`);
-                  setSelectedConcertForBooking(null);
-                }}
+              <Link
+                href={`/events/${selectedConcertForBooking.slug}`}
+                onClick={() => setSelectedConcertForBooking(null)}
                 className="w-1/2 py-2.5 rounded-full bg-white text-black hover:bg-zinc-200 text-xs font-semibold flex items-center justify-center space-x-1.5 transition-all shadow-lg active:scale-95"
               >
                 <span>Book Now</span>
                 <ArrowUpRight className="w-4 h-4" />
-              </button>
+              </Link>
             </div>
           </div>
         </div>

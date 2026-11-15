@@ -21,7 +21,7 @@ import java.util.List;
  * {@code yyyy-MM-dd'T'HH:mm:ss}) because the project reads payloads with a plain
  * {@link com.google.gson.Gson} instance that has no {@code java.time} adapters registered.
  */
-public class CreateEventDTO {
+public class EventDTO {
 
     /** event.name - required, varchar(100). */
     private String name;

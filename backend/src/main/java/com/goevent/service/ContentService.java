@@ -16,8 +16,7 @@ public class ContentService {
 
     private final ContentRepo contentRepo;
 
-    private static final Logger logger =
-            AppUtil.getLogger(ContentService.class);
+    private static final Logger logger = AppUtil.getLogger(ContentService.class);
 
     public ContentService(ContentRepo contentRepo) {
         this.contentRepo = contentRepo;
