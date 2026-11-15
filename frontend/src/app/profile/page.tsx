@@ -42,6 +42,7 @@ import {
 } from '@/lib/session-store';
 import { useLogout } from '@/hooks/use-logout';
 import { useMinimumLoading } from '@/hooks/use-minimum-loading';
+import { CreateEventModal } from '@/components/events/create-event-modal';
 import { EditProfileModal } from '@/components/profile/edit-profile-modal';
 import { ReturnToAdmin } from '@/components/admin/return-to-admin';
 
@@ -131,6 +132,7 @@ export default function ProfilePage() {
   const user = useSessionStore((state) => state.user);
   const { logout, isLoggingOut } = useLogout();
 
+  const [isCreateEventOpen, setIsCreateEventOpen] = useState(false);
   const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
   const [isSwitchingToAdmin, setIsSwitchingToAdmin] = useState(false);
 
