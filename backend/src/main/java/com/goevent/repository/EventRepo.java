@@ -84,20 +84,7 @@ public class EventRepo {
                 name, url);
     }
 
-    public long insertEvent(String name,
-                            String description,
-                            int categoryId,
-                            long venueId,
-                            int statusId,
-                            int audienceId,
-                            int levelId,
-                            int publishedBy,
-                            LocalDateTime startsAt,
-                            LocalDateTime endsAt) {
-
-        // aproved_by stays NULL: the column is foreign-keyed to `user` and no
-        // moderator has acted yet. img_id/link_id are NULL because the cover
-        // image is optional and links live in event_has_links.
+    public long insertEvent(String name, String description, int categoryId, long venueId, int statusId, int audienceId, int levelId, int publishedBy, LocalDateTime startsAt, LocalDateTime endsAt) {
         return insert(
                 "INSERT INTO `event`(name,description,category_id,venue_id,event_status_id,"
                         + "audience_id,event_level_id,img_id,link_id,published_by,aproved_by,"

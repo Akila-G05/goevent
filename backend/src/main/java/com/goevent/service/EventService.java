@@ -23,19 +23,6 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 
-/**
- * Creates a listing-only event from the organizer form.
- *
- * <p>One event is written across several tables, so the whole creation runs in
- * one transaction: the venue, every link, the event row, the
- * {@code event_has_links} rows, one {@code event_dates} row per occurrence and
- * the selected tags. Free and paid ticketing are not available yet and are
- * rejected on the server even if a client sends them.</p>
- *
- * <p>Each occurrence is entered as a start and an end time; this service joins
- * them with {@link ScheduleTime} because {@code event_dates.time} is a
- * {@code varchar(45)}.</p>
- */
 @Service
 public class EventService {
 
@@ -200,8 +187,7 @@ public class EventService {
 
         String name = required(input.getAudienceName(), 45, "Audience");
 
-        return eventRepo.audienceId(name)
-                .orElseThrow(() -> EventException.badRequest("Unknown audience: " + name));
+        return eventRepo.audienceId(name).orElseThrow(() -> EventException.badRequest("Unknown audience: " + name));
     }
 
     private List<LinkRow> validLinks(List<EventDTO.Link> links) {
