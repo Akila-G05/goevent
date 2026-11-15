@@ -20,8 +20,8 @@ export const Navbar: React.FC = () => {
   const { logout, isLoggingOut } = useLogout();
 
   useEffect(() => {
-    refresh();
-  }, [refresh]);
+    if (!pathname.startsWith('/admin')) refresh();
+  }, [refresh, pathname]);
 
   const navLinks = [
     { label: 'Home', href: '/' },
@@ -40,6 +40,8 @@ export const Navbar: React.FC = () => {
     setMobileMenuOpen(false);
     logout();
   };
+
+  if (pathname === '/admin' || pathname.startsWith('/admin/')) return null;
 
   return (
     <header

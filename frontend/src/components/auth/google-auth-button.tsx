@@ -9,6 +9,9 @@ import { authApi, GoogleAuthResponse, API_ROUTES } from '@/api';
 import { loading } from '@/lib/loading-store';
 import { useSessionStore } from '@/lib/session-store';
 import { getErrorMessage, toast } from '@/lib/toast-store';
+import { useRouter } from 'next/navigation';
+import { useQueryClient } from '@tanstack/react-query';
+import { adminApi } from '@/api/admin';
 
 export type { GoogleAuthResponse };
 
@@ -38,6 +41,8 @@ export function GoogleAuthButton({
   className = '',
 }: GoogleAuthButtonProps) {
   const [isLoading, setIsLoading] = useState(false);
+  const router = useRouter();
+  const queryClient = useQueryClient();
 
   const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
 
@@ -71,6 +76,19 @@ export function GoogleAuthButton({
         toast.error(data.message || 'Google authentication failed', {
           title: 'Google sign-in failed',
         });
+        return;
+      }
+
+      if (data.action === 'LOGIN' && data.roleId === 'ADMIN') {
+        // The server has verified Google and the current database role. Verify
+        // the dedicated session before navigating; decoded JWT claims are not authorization.
+        const session = await adminApi.session();
+        if (!session.status || session.role !== 'ADMIN') throw new Error('Administrator session could not be verified.');
+        await adminApi.csrf();
+        await queryClient.cancelQueries();
+        queryClient.clear();
+        useSessionStore.getState().clear();
+        router.replace('/admin');
         return;
       }
 

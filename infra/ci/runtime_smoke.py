@@ -161,6 +161,11 @@ def main(api_check=None):
             print('PASS: incremental V3 profile columns and university foreign key', flush=True)
             if api_check is not None:
                 api_check(mysql_query, backend_port, gateway_port, temporary)
+                # Browser checks may warm public content. Restore the empty-cache
+                # baseline before the exact cache assertions below. This Redis
+                # container belongs exclusively to this disposable run.
+                for key in redis_command('--scan', '--pattern', 'gateway:response:*').splitlines():
+                    redis_command('DEL', key)
             missing_token = urllib.request.Request(
                 f'http://127.0.0.1:{backend_port}/goevent/api/auth/google',
                 data=b'{}', headers={'Content-Type': 'application/json'}, method='POST',

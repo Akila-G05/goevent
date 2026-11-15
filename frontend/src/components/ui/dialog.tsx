@@ -47,6 +47,18 @@ export function Dialog({
       if (event.key === 'Escape') {
         onCloseRef.current();
       }
+      if (event.key === 'Tab' && panelRef.current) {
+        const controls = Array.from(panelRef.current.querySelectorAll<HTMLElement>(
+          'button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex="0"]'
+        ));
+        const first = controls[0], last = controls[controls.length - 1];
+        if (!first) { event.preventDefault(); panelRef.current.focus(); }
+        else if (event.shiftKey && (document.activeElement === first || document.activeElement === panelRef.current)) {
+          event.preventDefault(); last.focus();
+        } else if (!event.shiftKey && (document.activeElement === last || document.activeElement === panelRef.current)) {
+          event.preventDefault(); first.focus();
+        }
+      }
     };
 
     const previousOverflow = document.body.style.overflow;

@@ -15,11 +15,16 @@ class AcsEmailConfigTest {
             assertTrue(context.getBeansOfType(AdminEmailDelivery.class).isEmpty());
         }
     }
+    @Test void connectionStringDoesNotRequireManagedIdentityEndpoint() {
+        var config=new AcsEmailConfig();
+        assertNotNull(config.acsDelivery("", "sender@example.invalid", "",
+            "endpoint=https://example.communication.azure.com/;accesskey=dGVzdA=="));
+    }
     @Test void rejectsInvalidEndpointOrSenderBeforeConstructingAzureClient() {
         var config=new AcsEmailConfig();
         for(String endpoint:new String[]{"http://example.communication.azure.com","https://example.invalid","https://example.communication.azure.com/path","https://user:secret@example.communication.azure.com","https://example.communication.azure.com?query=1"}) {
-            assertThrows(IllegalArgumentException.class,()->config.acsDelivery(endpoint,"sender@example.invalid",""));
+            assertThrows(IllegalArgumentException.class,()->config.acsDelivery(endpoint,"sender@example.invalid","",""));
         }
-        assertThrows(IllegalArgumentException.class,()->config.acsDelivery("https://example.communication.azure.com","", ""));
+        assertThrows(IllegalArgumentException.class,()->config.acsDelivery("https://example.communication.azure.com","", "", ""));
     }
 }

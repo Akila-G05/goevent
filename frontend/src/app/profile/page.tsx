@@ -42,8 +42,9 @@ import {
 } from '@/lib/session-store';
 import { useLogout } from '@/hooks/use-logout';
 import { useMinimumLoading } from '@/hooks/use-minimum-loading';
-import { EditProfileModal } from '@/components/profile/edit-profile-modal';
 import { CreateEventModal } from '@/components/events/create-event-modal';
+import { EditProfileModal } from '@/components/profile/edit-profile-modal';
+import { ReturnToAdmin } from '@/components/admin/return-to-admin';
 
 type RoleView = 'USER' | 'STUDENT' | 'ORGANIZER' | 'ADMIN' | 'CONTRIBUTOR';
 type TabType = 'overview' | 'my-events' | 'sales' | 'attendees' | 'saved' | 'settings';
@@ -131,15 +132,16 @@ export default function ProfilePage() {
   const user = useSessionStore((state) => state.user);
   const { logout, isLoggingOut } = useLogout();
 
-  const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
   const [isCreateEventOpen, setIsCreateEventOpen] = useState(false);
+  const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
+  const [isSwitchingToAdmin, setIsSwitchingToAdmin] = useState(false);
 
   const profileQuery = useQuery({
     // Keyed by account so a different sign-in never reuses cached data.
     queryKey: ['user', 'profile', user?.userId],
     queryFn: userApi.getProfile,
     // Fire immediately on page load; a 401 also drives the redirect.
-    enabled: status !== 'guest',
+    enabled: status !== 'guest' && !isSwitchingToAdmin,
     // Always ask the backend when the page is opened.
     staleTime: 0,
     retry: false,
@@ -149,7 +151,7 @@ export default function ProfilePage() {
   const errorStatus = (profileQuery.error as { status?: number } | null)?.status;
 
   const actualRole = profile?.role || user?.roleId || 'USER';
-  const roleView: RoleView = ROLE_VIEWS.includes(actualRole as RoleView)
+  const roleView: RoleView = user?.adminUserMode ? 'USER' : ROLE_VIEWS.includes(actualRole as RoleView)
     ? (actualRole as RoleView)
     : 'USER';
 
@@ -164,24 +166,24 @@ export default function ProfilePage() {
 
   // A page visit without a session goes straight back to sign-in.
   useEffect(() => {
-    if (status === 'guest') {
+    if (status === 'guest' && !isSwitchingToAdmin) {
       router.replace('/login');
     }
-  }, [status, router]);
+  }, [status, router, isSwitchingToAdmin]);
 
   // The profile endpoint also rejects stale sessions.
   useEffect(() => {
-    if (errorStatus === 401) {
+    if (errorStatus === 401 && !isSwitchingToAdmin) {
       router.replace('/login');
     }
-  }, [errorStatus, router]);
+  }, [errorStatus, router, isSwitchingToAdmin]);
 
   const displayName = profile?.name || getDisplayName(user);
   const email = profile?.email || user?.email;
   const mobile = profile?.mobile;
   const joinedDate = formatJoinedDate(profile?.registeredDate);
-  const roleLabel = getRoleLabel(actualRole);
-  const showCreateEvent = canCreateEvents(actualRole);
+  const roleLabel = user?.adminUserMode ? 'User mode · own account' : getRoleLabel(actualRole);
+  const showCreateEvent = !user?.adminUserMode && canCreateEvents(actualRole);
   const avatarSrc = resolveProfileImageUrl(profile?.profileImgUrl);
 
   const profileRequestLoading =
@@ -213,7 +215,7 @@ export default function ProfilePage() {
     USER: 'Viewing as USER. Standard attendee view with ticket booking and pass storage.',
     STUDENT: 'Viewing as STUDENT. University discounts, verified campus credentials, and student passes unlocked.',
     ORGANIZER: 'Viewing as ORGANIZER. Full event publishing, ticket tiers, and gate check-in tools unlocked.',
-    ADMIN: 'Viewing as ADMIN. Platform moderation, disputes, and full system management unlocked.',
+    ADMIN: 'Administrator account. Open the administration workspace for platform management.',
     CONTRIBUTOR: 'Viewing as CONTRIBUTOR. Event promotion, affiliate links, and commission reporting unlocked.',
   };
 
@@ -226,7 +228,7 @@ export default function ProfilePage() {
             <span className="text-[11px] font-bold uppercase tracking-wider text-[#635f5e] mr-2 flex items-center gap-1 shrink-0">
               <Users className="w-3.5 h-3.5" /> Role View:
             </span>
-            {(['USER', 'STUDENT', 'ORGANIZER', 'ADMIN', 'CONTRIBUTOR'] as RoleView[]).map((r) => (
+            {((user?.adminUserMode ? ['USER'] : ['USER', 'STUDENT', 'ORGANIZER', 'CONTRIBUTOR']) as RoleView[]).map((r) => (
               <button
                 key={r}
                 type="button"
@@ -243,6 +245,12 @@ export default function ProfilePage() {
                 {r}
               </button>
             ))}
+            {actualRole === 'ADMIN' && user?.adminUserMode && <ReturnToAdmin onSwitching={setIsSwitchingToAdmin} />}
+            {actualRole === 'ADMIN' && !user?.adminUserMode && (
+              <Link href="/admin" className="px-3.5 py-1 rounded-full bg-[#1c1b1b] text-white text-xs font-semibold uppercase shrink-0">
+                Admin dashboard
+              </Link>
+            )}
           </div>
 
           <div className="flex items-center gap-2 bg-white px-3.5 py-1 rounded-full text-[#4a4746] text-xs w-full md:w-auto justify-between md:justify-start shadow-sm border border-[#e2dedd]">

@@ -46,6 +46,7 @@ pnpm-debug.log*
 .eslintcache
 
 # Test and Coverage
+/infra/validation/admin-ui/
 coverage/
 *.lcov
 test-results/

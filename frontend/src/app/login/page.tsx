@@ -22,6 +22,8 @@ import {
 } from 'lucide-react';
 import { GoogleAuthButton, GoogleAuthResponse, GoogleDecodedUser } from '@/components/auth/google-auth-button';
 import { authApi } from '@/api';
+import { adminApi } from '@/api/admin';
+import { useQueryClient } from '@tanstack/react-query';
 import { loading } from '@/lib/loading-store';
 import { useSessionStore } from '@/lib/session-store';
 import { getErrorMessage, toast } from '@/lib/toast-store';
@@ -36,6 +38,7 @@ type LoginFormData = z.infer<typeof loginSchema>;
 
 export default function LoginPage() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [authSuccess, setAuthSuccess] = useState(false);
@@ -75,13 +78,26 @@ export default function LoginPage() {
     setIsSubmitting(true);
     loading.open();
 
+    let elevatingAdmin = false;
     try {
       const response = await authApi.authenticateManual({
         email: data.email,
         password: data.password,
       });
 
+      if (response.status && response.roleId === 'ADMIN') {
+        elevatingAdmin = true;
+        await adminApi.login(data.email, data.password);
+        await queryClient.cancelQueries();
+        queryClient.clear();
+        useSessionStore.getState().clear();
+        setValue('password', '');
+        router.replace('/admin');
+        return;
+      }
       if (response.status) {
+        await queryClient.cancelQueries();
+        queryClient.clear();
         toast.success('Authentication successful');
         useSessionStore.getState().setAuthenticated({
           userId: response.userId,
@@ -98,6 +114,11 @@ export default function LoginPage() {
         });
       }
     } catch (e) {
+      if (elevatingAdmin) {
+        useSessionStore.getState().clear();
+        queryClient.clear();
+        setValue('password', '');
+      }
       // Network/HTTP failures are normalised by the API client.
       toast.error(getErrorMessage(e), { title: 'Login failed' });
     } finally {
@@ -227,16 +248,17 @@ export default function LoginPage() {
               </div>
 
               {/* Form */}
-              <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+              <form method="post" onSubmit={handleSubmit(onSubmit)} className="space-y-4">
                 {/* Email field */}
                 <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-zinc-300 block">
+                  <label htmlFor="login-email" className="text-xs font-semibold text-zinc-300 block">
                     Email Address
                   </label>
                   <div className="relative">
                     <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
                     <input
                       type="email"
+                      id="login-email"
                       {...register('email')}
                       placeholder="name@example.com"
                       className={`w-full bg-white/5 hover:bg-white/10 focus:bg-white/10 border ${
@@ -255,7 +277,7 @@ export default function LoginPage() {
                 {/* Password field */}
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between">
-                    <label className="text-xs font-semibold text-zinc-300 block">
+                    <label htmlFor="login-password" className="text-xs font-semibold text-zinc-300 block">
                       Password
                     </label>
                     <span className="text-[11px] text-zinc-400 hover:text-white cursor-pointer transition-colors">
@@ -266,6 +288,7 @@ export default function LoginPage() {
                     <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
                     <input
                       type={showPassword ? 'text' : 'password'}
+                      id="login-password"
                       {...register('password')}
                       placeholder="Enter your password"
                       className={`w-full bg-white/5 hover:bg-white/10 focus:bg-white/10 border ${

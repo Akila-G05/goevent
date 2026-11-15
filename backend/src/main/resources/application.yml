@@ -88,6 +88,7 @@ google:
 app:
   email:
     enabled: ${ACS_EMAIL_ENABLED:false}
+    connection-string: ${ACS_EMAIL_CONNECTION_STRING:}
     endpoint: ${ACS_EMAIL_ENDPOINT:}
     sender: ${ACS_EMAIL_SENDER:}
     managed-identity-client-id: ${ACS_MANAGED_IDENTITY_CLIENT_ID:}

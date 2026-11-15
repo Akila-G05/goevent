@@ -10,6 +10,61 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 class AdminAuthenticationServiceTest {
+    @Test void sessionReturnsOnlyOwnCurrentDisplayIdentityAndFallsBackToEmail() {
+        var account=user(3,1);account.setEmail("admin@example.invalid");account.setFname("Zen");account.setLname("Goku");
+        when(users.getUserById(7)).thenReturn(account);
+        var request=new MockHttpServletRequest();request.getSession().setAttribute("adminUserId",7);
+        var identity=service.session(request);
+        assertEquals("Zen Goku",identity.get("name"));assertEquals("admin@example.invalid",identity.get("email"));
+        assertFalse(identity.containsKey("password"));
+        account.setFname("");account.setLname(null);
+        assertEquals("admin@example.invalid",service.session(request).get("name"));
+    }
+    @Test void sessionIdentityRequiresAnActiveAdminSession() {
+        assertThrows(ResponseStatusException.class,()->service.session(new MockHttpServletRequest()));
+        var request=new MockHttpServletRequest();request.getSession().setAttribute("adminUserId",7);
+        for(var account:new UserDTO[]{user(1,1),user(3,2),null}) {
+            when(users.getUserById(7)).thenReturn(account);
+            assertThrows(ResponseStatusException.class,()->service.session(request));
+        }
+    }
+    @Test void selfSwitchRotatesBothSessionsWithoutChangingAccountRole() {
+        var account=user(3,1);account.setEmail("admin@example.invalid");
+        when(users.getUserById(7)).thenReturn(account);
+        var request=new MockHttpServletRequest();
+        var first=request.getSession();first.setAttribute("adminUserId",7);
+        service.switchMode(request,false);
+        var ordinary=request.getSession();
+        assertNotEquals(first.getId(),ordinary.getId());
+        assertNull(ordinary.getAttribute("adminUserId"));
+        assertEquals(7,ordinary.getAttribute("userId"));
+        assertEquals(7,ordinary.getAttribute("adminUserModeId"));
+        service.switchMode(request,true);
+        assertNotEquals(ordinary.getId(),request.getSession().getId());
+        assertEquals(7,request.getSession().getAttribute("adminUserId"));
+        assertNull(request.getSession().getAttribute("userId"));
+        assertNull(request.getSession().getAttribute("adminUserModeId"));
+        assertEquals(3,account.getRoleId());
+    }
+    @Test void ordinarySessionCannotElevateWithoutTheServerModeMarker() {
+        var request=new MockHttpServletRequest();
+        request.getSession().setAttribute("userId",7);
+        request.getSession().setAttribute("role","ADMIN");
+        assertThrows(ResponseStatusException.class,()->service.switchMode(request,true));
+        request.getSession().setAttribute("adminUserModeId",8);
+        assertThrows(ResponseStatusException.class,()->service.switchMode(request,true));
+        verifyNoInteractions(users);
+    }
+    @Test void returningToAdminRechecksDemotionDisableAndDeletion() {
+        for(var account:new UserDTO[]{user(1,1),user(3,2),null}) {
+            when(users.getUserById(7)).thenReturn(account);
+            var request=new MockHttpServletRequest();
+            request.getSession().setAttribute("userId",7);
+            request.getSession().setAttribute("adminUserModeId",7);
+            assertThrows(ResponseStatusException.class,()->service.switchMode(request,true));
+            assertNull(request.getSession().getAttribute("adminUserId"));
+        }
+    }
     private final AuthenticationRepo users = mock(AuthenticationRepo.class);
     private final AdminLoginThrottle throttle = mock(AdminLoginThrottle.class);
     private final BCryptPasswordEncoder encoder = new BCryptPasswordEncoder(4);
