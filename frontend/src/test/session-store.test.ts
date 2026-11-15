@@ -98,12 +98,12 @@ describe('session store', () => {
     expect(getDisplayName(useSessionStore.getState().user)).toBe('organizer@goevent.com');
   });
 
-  it('only lets organizers, admins and contributors create events', () => {
+  it('only lets organizers and admins create events', () => {
     expect(canCreateEvents('ORGANIZER')).toBe(true);
     expect(canCreateEvents('ADMIN')).toBe(true);
-    expect(canCreateEvents('CONTRIBUTOR')).toBe(true);
     expect(canCreateEvents('USER')).toBe(false);
     expect(canCreateEvents('STUDENT')).toBe(false);
+    expect(canCreateEvents('CONTRIBUTOR')).toBe(false);
     expect(canCreateEvents(undefined)).toBe(false);
   });
 });

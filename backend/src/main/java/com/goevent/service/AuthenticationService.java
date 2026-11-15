@@ -86,7 +86,7 @@ public class AuthenticationService {
             }
 
             // Coordinator access is requested by an existing signed-in user.
-            if (role == Role.ORGANIZER || role == Role.ADMIN || role == Role.CONTRIBUTOR) {
+            if (role == Role.ORGANIZER || role == Role.ADMIN) {
                 responseObject.addProperty("status", false);
                 responseObject.addProperty("message", "Register as a user, then request coordinator access.");
                 return AppUtil.gson.toJson(responseObject);

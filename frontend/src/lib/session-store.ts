@@ -76,7 +76,6 @@ const ROLE_LABELS: Record<string, string> = {
   ORGANIZER: 'Organizer',
   ADMIN: 'Administrator',
   STUDENT: 'Student',
-  CONTRIBUTOR: 'Contributor',
 };
 
 export function getRoleLabel(roleId?: string): string {
@@ -87,9 +86,9 @@ export function getRoleLabel(roleId?: string): string {
   return ROLE_LABELS[roleId] ?? roleId;
 }
 
-/** Organizers, admins and contributors may publish events. */
+/** Organizers and admins may publish events. */
 export function canCreateEvents(roleId?: string): boolean {
-  return roleId === 'ORGANIZER' || roleId === 'ADMIN' || roleId === 'CONTRIBUTOR';
+  return roleId === 'ORGANIZER' || roleId === 'ADMIN';
 }
 
 /** Name shown in the UI, falling back to the email address. */

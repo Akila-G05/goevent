@@ -46,10 +46,10 @@ import { CreateEventModal } from '@/components/events/create-event-modal';
 import { EditProfileModal } from '@/components/profile/edit-profile-modal';
 import { ReturnToAdmin } from '@/components/admin/return-to-admin';
 
-type RoleView = 'USER' | 'STUDENT' | 'ORGANIZER' | 'ADMIN' | 'CONTRIBUTOR';
+type RoleView = 'USER' | 'STUDENT' | 'ORGANIZER' | 'ADMIN';
 type TabType = 'overview' | 'my-events' | 'sales' | 'attendees' | 'saved' | 'settings';
 
-const ROLE_VIEWS: RoleView[] = ['USER', 'STUDENT', 'ORGANIZER', 'ADMIN', 'CONTRIBUTOR'];
+const ROLE_VIEWS: RoleView[] = ['USER', 'STUDENT', 'ORGANIZER', 'ADMIN'];
 
 const MONTHS = [
   'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
@@ -216,7 +216,6 @@ export default function ProfilePage() {
     STUDENT: 'Viewing as STUDENT. University discounts, verified campus credentials, and student passes unlocked.',
     ORGANIZER: 'Viewing as ORGANIZER. Full event publishing, ticket tiers, and gate check-in tools unlocked.',
     ADMIN: 'Administrator account. Open the administration workspace for platform management.',
-    CONTRIBUTOR: 'Viewing as CONTRIBUTOR. Event promotion, affiliate links, and commission reporting unlocked.',
   };
 
   return (
@@ -228,7 +227,7 @@ export default function ProfilePage() {
             <span className="text-[11px] font-bold uppercase tracking-wider text-[#635f5e] mr-2 flex items-center gap-1 shrink-0">
               <Users className="w-3.5 h-3.5" /> Role View:
             </span>
-            {((user?.adminUserMode ? ['USER'] : ['USER', 'STUDENT', 'ORGANIZER', 'CONTRIBUTOR']) as RoleView[]).map((r) => (
+            {((user?.adminUserMode ? ['USER'] : ['USER', 'STUDENT', 'ORGANIZER']) as RoleView[]).map((r) => (
               <button
                 key={r}
                 type="button"

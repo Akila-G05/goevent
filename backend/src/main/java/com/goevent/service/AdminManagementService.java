@@ -30,7 +30,7 @@ public class AdminManagementService {
     private Map<String,Object> account(int id) { var value=db.account(id); require(value!=null,404,"Account not found"); return value; }
     static int number(Map<String,Object> row,String field) { return ((Number)row.get(field)).intValue(); }
     public List<Map<String,Object>> accounts(Integer role,Integer status,String search,int limit,int offset) {
-        require(role==null || Set.of(1,2,3,4,5).contains(role),400,"Invalid role");
+        require(role==null || Set.of(1,2,3,4).contains(role),400,"Invalid role");
         require(status==null || Set.of(1,2,3).contains(status),400,"Invalid status");
         require(search.length()<=100,400,"Search too long"); return db.accounts(role,status,search,limit,offset);
     }
@@ -38,7 +38,7 @@ public class AdminManagementService {
     @Transactional public long create(int actor,Account input) {
         lockAdmin(actor); String reason=text(input.reason(),1000,"reason");
         int role=Objects.requireNonNullElse(input.roleId(),1), status=Objects.requireNonNullElse(input.statusId(),1);
-        require(Set.of(1,2,3,4,5).contains(role)&&Set.of(1,2,3).contains(status),400,"Invalid role/status");
+        require(Set.of(1,2,3,4).contains(role)&&Set.of(1,2,3).contains(status),400,"Invalid role/status");
         String email=email(input.email()); require(!db.emailTaken(email,0),409,"Email already exists");
         text(input.password(),72,"password"); String password=input.password();
         require(password.length()>=12&&password.getBytes(StandardCharsets.UTF_8).length<=72,400,"Password must be 12 to 72 UTF-8 bytes");
@@ -54,7 +54,7 @@ public class AdminManagementService {
         lockAdmin(actor); var old=account(id); String reason=text(input.reason(),1000,"reason");
         int role=Objects.requireNonNullElse(input.roleId(),number(old,"role_id"));
         int status=Objects.requireNonNullElse(input.statusId(),number(old,"user_status_id"));
-        require(Set.of(1,2,3,4,5).contains(role)&&Set.of(1,2,3).contains(status),400,"Invalid role/status");
+        require(Set.of(1,2,3,4).contains(role)&&Set.of(1,2,3).contains(status),400,"Invalid role/status");
         require(input.password()==null,400,"Password changes are not part of account editing");
         protectAdmin(actor,id,old,role,status);
         String email=email(input.email()); require(!db.emailTaken(email,id),409,"Email already exists");

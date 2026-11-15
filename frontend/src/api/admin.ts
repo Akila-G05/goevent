@@ -63,7 +63,7 @@ export function localEventTime(value:string|number|null|undefined):string {
  if(!Number.isFinite(+date))return '';
  return new Date(+date+19800000).toISOString().slice(0,16);
 }
-export const roles:Record<number,string>={1:'User',2:'Coordinator',3:'Administrator',4:'Student',5:'Contributor'};
+export const roles:Record<number,string>={1:'User',2:'Coordinator',3:'Administrator',4:'Student'};
 export const accountStates:Record<number,string>={1:'Active',2:'Suspended',3:'Pending'};
 export const reviewStates:Record<number,string>={1:'Pending',2:'Approved',3:'Rejected',4:'Draft'};
 export const paymentStates:Record<number,string>={1:'Pending',2:'Successful',3:'Failed',4:'Cancelled',5:'Refunded'};
