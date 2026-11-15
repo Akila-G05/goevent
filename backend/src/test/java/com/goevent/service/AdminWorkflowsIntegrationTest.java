@@ -47,6 +47,23 @@ class AdminWorkflowsIntegrationTest {
         admin=user("admin-fixture@example.invalid",3); applicant=user("applicant-fixture@example.invalid",1);
         organization=((Number)db.one("SELECT id FROM organization ORDER BY id LIMIT 1").get("id")).intValue();
     }
+    @Test void optionalGoogleNamesFitTheSchemaAndAllowStudentDetails() {
+        var repository=new AuthenticationRepo(context.getBean(JdbcTemplate.class));
+        assertEquals("",AuthenticationService.googleName(null));
+        assertEquals("Given",AuthenticationService.googleName(" Given "));
+        assertEquals(1,repository.registerGoogleUser(AuthenticationService.googleName("Given"),
+            AuthenticationService.googleName(null),"google-name-fixture@example.invalid",1,4,
+            "google-name-fixture",null,1));
+        var student=repository.getUserByEmail("google-name-fixture@example.invalid");
+        assertEquals("Given",student.getFname());
+        assertEquals("",student.getLname());
+        int university=((Number)db.one("SELECT id FROM university ORDER BY id LIMIT 1").get("id")).intValue();
+        assertEquals(1,repository.registerStudentData(student.getId(),"FIXTURE-1","student@example.invalid",university));
+        assertEquals(1,db.count("SELECT COUNT(*) FROM student_detail WHERE user_id=?",student.getId()));
+        assertEquals(1,repository.registerGoogleUser(AuthenticationService.googleName(null),
+            AuthenticationService.googleName(null),"google-empty-names@example.invalid",1,1,
+            "google-empty-names-fixture",null,1));
+    }
     @AfterEach void close() { context.close(); }
     private int user(String email,int role) { return (int)db.createAccount("Test","Fixture",email,new BCryptPasswordEncoder(4).encode("test-password"),role,1); }
     private int eventFixture() {

@@ -12,12 +12,32 @@ Routes use the existing servlet context and controller prefix:
 | POST `/goevent/api/admin/auth/login` | JSON `email`, `password`; active admin only |
 | GET `/goevent/api/admin/auth/session` | Inspect authenticated admin identity |
 | POST `/goevent/api/admin/auth/logout` | Invalidate session |
+| POST `/goevent/api/admin/auth/switch-to-user` | CSRF-protected own-account user mode |
+| POST `/goevent/api/admin/auth/switch-to-admin` | CSRF-protected return from server-created user mode |
 
 Keep cookies between requests. Fetch CSRF first and send its `token` in the
 returned `headerName` on login. Successful login invalidates the previous
 session, including its CSRF token and ordinary user identity. Fetch a fresh CSRF
-token before logout or subsequent admin mutations. No frontend changes are
-included. Existing user/Google routes retain their current contract.
+token before logout or subsequent admin mutations. The connected
+[admin frontend](admin-frontend.md) handles this flow through the shared password
+login page. Existing user/Google API routes retain their current contract;
+successful ordinary login now replaces the previous session to remove any
+elevated attributes.
+
+The admin session response additively includes `name` and `email` for the current
+account only. The name is built from current database first/last name fields,
+falling back to email when both are blank. No password or token is returned.
+The sidebar uses this identity in its account dropdown, with Switch to user and
+Log out actions. It does not infer identity from a browser-submitted role.
+
+Mode switching accepts no target identity. The server rotates the session in
+both directions and never changes the database role. Switching to user mode
+removes `adminUserId`, sets the same account's ordinary `userId` and a server-only
+return marker, and exposes `adminUserMode: true` through `/auth/session` for UI
+display. Admin API access is denied in user mode. The return endpoint alone
+accepts that matching marker, requires CSRF and rechecks active ADMIN status
+against the database. Ordinary user sessions, submitted roles, mismatched markers
+and disabled/demoted/deleted admins cannot use it to elevate.
 
 The security chain covers `/api/admin/**`, coordinator requests and contact
 submission inside the backend servlet context. Only the latter two flows have
@@ -33,7 +53,12 @@ Login allows only existing active role-3 accounts with a matching BCrypt
 password. Unknown accounts, wrong passwords and ineligible accounts receive the
 same 401 message. Invalid payloads receive 400. BCrypt inputs are capped at 72
 UTF-8 bytes. Existing admins without a password need a separately authorized
-account-provisioning/password process; this change does not modify accounts.
+account-provisioning/password process to use this password endpoint.
+The existing Google endpoint can instead create the same dedicated admin session
+for an active database admin resolved by the verified Google subject, after the
+existing signature/audience/verified-email checks. The frontend verifies that
+session and redirects to `/admin`. Non-admin Google sessions cannot authorize
+admin requests; selecting a role in the UI never promotes an account.
 
 An atomic Redis fixed-window counter allows 10 attempts per normalized email
 and 50 per backend socket peer in 15 minutes, counting successful attempts too.

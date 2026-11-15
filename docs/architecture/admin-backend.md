@@ -1,6 +1,7 @@
 # Admin backend API and operating contract
 
-Base path: `/goevent/api`. No frontend or impersonation feature is included.
+Base path: `/goevent/api`. The connected [admin frontend](admin-frontend.md) is
+available at `/admin`. No impersonation feature is included.
 For concrete JSON bodies, Postman authentication and acceptance checks, use the
 [API request and testing guide](admin-api-examples.md).
 Actual checks and remaining blockers are recorded in [validation evidence](admin-backend-validation.md).
@@ -122,10 +123,14 @@ claim delivery succeeded. An enabled worker sends one message per tick outside
 the database transaction. Rows are leased for ten minutes, retried with bounded
 backoff (five attempts), then marked FAILED for an audited manual retry.
 
-Configure `ACS_EMAIL_ENDPOINT` as your HTTPS Communication Services endpoint,
+For connection string authentication, set `ACS_EMAIL_CONNECTION_STRING` and
+`ACS_EMAIL_SENDER`. The connection string takes precedence; an invalid configured
+connection string fails startup without falling back to another identity. Keep it
+in private environment configuration and rotate its access key as needed.
+
+For Managed Identity, leave the connection string blank and configure `ACS_EMAIL_ENDPOINT` as your HTTPS Communication Services endpoint,
 `ACS_EMAIL_SENDER` as a verified linked-domain sender, and optionally
-`ACS_MANAGED_IDENTITY_CLIENT_ID` for a user-assigned identity. The Java SDK uses
-managed identity, not connection strings. No Azure resources, DNS, identity or
+`ACS_MANAGED_IDENTITY_CLIENT_ID` for a user-assigned identity. The Java SDK supports both authentication paths. No Azure resources, DNS, identity or
 role assignments are created by this repository change.
 
 The Azure owner must provision/link the Email Communication Services domain,

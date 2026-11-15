@@ -113,8 +113,8 @@ public class AuthenticationService {
                     String googleSub = payload.getSubject();
                     String email = payload.getEmail();
 
-                    String fname = (String) payload.get("given_name");
-                    String lname = (String) payload.get("family_name");
+                    String fname = googleName((String) payload.get("given_name"));
+                    String lname = googleName((String) payload.get("family_name"));
                     String profileImgUrl = (String) payload.get("picture");
 
                     Boolean emailVerified = payload.getEmailVerified();
@@ -140,7 +140,7 @@ public class AuthenticationService {
                                     responseObject.addProperty("action", "LOGIN");
 
                                     // Create user session
-                                    createUserSession(httpRequest, user);
+                                    createVerifiedGoogleSession(httpRequest, user);
 
                                     responseObject.addProperty("userId", user.getId());
                                     responseObject.addProperty("roleId", Role.fromId(user.getRoleId()).name());
@@ -446,7 +446,31 @@ public class AuthenticationService {
         return trimmed.isEmpty() ? null : trimmed;
     }
 
+    // Google name claims are optional. Empty means absent, not an invented name;
+    // the existing schema requires non-null values for both name columns.
+    static String googleName(String value) {
+        return value == null ? "" : value.trim();
+    }
+
+    // Called only after token signature/audience/email verification and lookup
+    // by the verified Google subject. Never use a role submitted by the client.
+    void createVerifiedGoogleSession(HttpServletRequest request, UserDTO user) {
+        if (user.getUserStatusId() != UserStatus.ACTIVE.getId()) {
+            throw new IllegalStateException("Active account required");
+        }
+        if (user.getRoleId() == Role.ADMIN.getId()) {
+            HttpSession previous = request.getSession(false);
+            if (previous != null) previous.invalidate();
+            request.getSession(true).setAttribute("adminUserId", user.getId());
+        } else {
+            createUserSession(request, user);
+        }
+    }
+
     private void createUserSession(HttpServletRequest httpRequest, UserDTO user) {
+        // Switching back from an admin session must remove every elevated attribute.
+        HttpSession previous = httpRequest.getSession(false);
+        if (previous != null) previous.invalidate();
         HttpSession session = httpRequest.getSession(true);
 
         session.setAttribute("userId", user.getId());
@@ -512,6 +536,8 @@ public class AuthenticationService {
             responseObject.addProperty("name", name != null ? name.toString() : null);
             responseObject.addProperty("roleId", role != null ? role.toString() : null);
             responseObject.addProperty("email", email != null ? email.toString() : null);
+            responseObject.addProperty("adminUserMode", "ADMIN".equals(role)
+                && userId.equals(session.getAttribute("adminUserModeId")));
         }
 
         return AppUtil.gson.toJson(responseObject);

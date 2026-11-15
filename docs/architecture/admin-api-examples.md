@@ -81,6 +81,25 @@ field names retain their existing snake_case spelling; request DTOs use camelCas
 Do not infer an API timestamp serialization format from these illustrative IDs:
 mutation inputs and statistics filters must use explicit ISO-8601 instants.
 
+## Switch your own working mode
+
+`POST /admin/auth/switch-to-user` with the current admin session and CSRF header
+creates an ordinary user session for that same account. Then `GET /auth/session`
+returns `adminUserMode:true`; normal user/profile APIs work, while admin data
+requests return 401. Fetch a new CSRF token before the next mutation.
+
+`POST /admin/auth/switch-to-admin` accepts only the matching server-created
+return context, fresh active-admin verification and CSRF. Both switches return
+`{"status":true,"userId":123,"role":"ADMIN","adminUserMode":true}`
+(false for the return direction) and rotate the session. They never accept an
+account to impersonate or change the stored role. The UI exposes these as
+**Switch to user** in the admin sidebar and **Back to admin** on the user profile.
+
+Run `python3 infra/ci/admin_self_switch_smoke.py` after building the executable
+Java artifacts for disposable HTTP verification without stopping a running
+frontend server. It runs the Postman suite, both directions, current profile
+access, admin denial in user mode, unchanged identity/role and runtime gates.
+
 ## Account management
 
 `GET /admin/accounts?role=1&status=1&search=example&page=0&size=25`

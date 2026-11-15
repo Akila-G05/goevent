@@ -38,6 +38,7 @@ public class AdminSecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(HttpMethod.GET, "/api/admin/auth/csrf").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/admin/auth/login").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/admin/auth/switch-to-admin").hasRole("ADMIN_USER_MODE")
                 .requestMatchers("/api/contact/**").permitAll()
                 .requestMatchers("/api/coordinator-requests/**").authenticated()
                 .anyRequest().hasRole("ADMIN"))
@@ -66,6 +67,15 @@ public class AdminSecurityConfig {
                     session.invalidate();
                     SecurityContextHolder.clearContext();
                 }
+            } else if (session != null && session.getAttribute("userId") instanceof Integer id
+                    && id.equals(session.getAttribute("adminUserModeId"))
+                    && request.getRequestURI().equals(request.getContextPath()+"/api/admin/auth/switch-to-admin")) {
+                if(access.isActiveAdmin(id)) {
+                    var context=SecurityContextHolder.createEmptyContext();
+                    context.setAuthentication(new UsernamePasswordAuthenticationToken(id,null,
+                        List.of(new SimpleGrantedAuthority("ROLE_ADMIN_USER_MODE"))));
+                    SecurityContextHolder.setContext(context);
+                } else { session.invalidate(); SecurityContextHolder.clearContext(); }
             } else if (session != null && session.getAttribute("userId") instanceof Integer id
                     && request.getRequestURI().contains("/api/coordinator-requests")) {
                 if (access.isActiveUser(id)) {
