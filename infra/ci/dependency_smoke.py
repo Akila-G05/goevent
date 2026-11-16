@@ -20,6 +20,27 @@ def run(args, **kwargs):
     return subprocess.run(args, check=True, capture_output=True, text=True, timeout=kwargs.pop('timeout',120), **kwargs).stdout
 
 
+def upload_persistence_smoke(root):
+    # Disposable host bind only: no /var/lib, production volumes or MySQL paths.
+    uploads = root/'uploads'
+    uploads.mkdir(mode=0o700)
+    mount = 'type=bind,src='+str(uploads)+',dst=/app/uploads'
+    base = ['docker','run','--rm','--network','none','--read-only','--cap-drop','ALL',
+            '--security-opt','no-new-privileges:true','--mount',mount,'--entrypoint','sh']
+    # Only the fixture leaf changes ownership; restore it for host cleanup below.
+    setup = ['docker','run','--rm','--network','none','--mount',mount,'--entrypoint','sh',REDIS]
+    try:
+        run(setup+['-c','chown 10001:10001 /app/uploads && chmod 0700 /app/uploads'])
+        run(base+['--user','10001:10001',REDIS,'-c',
+            'umask 077; mkdir -p /app/uploads/profile/7; printf persistence-fixture > /app/uploads/profile/7/test.png'])
+        # A separate replacement container reads the same host data as the app UID.
+        assert run(base+['--user','10001:10001',REDIS,'-c',
+            'cat /app/uploads/profile/7/test.png']) == 'persistence-fixture'
+        print('PASS: application UID can write persistent upload bind and read it after container replacement')
+    finally:
+        run(setup+['-c','chown -R "$1:$2" /app/uploads','sh',str(os.getuid()),str(os.getgid())])
+
+
 def main(redis_only=False):
     if not redis_only:
         run(['docker','build','-f',str(ROOT/'infra/docker/caddy.Dockerfile'),
@@ -99,6 +120,7 @@ def main(redis_only=False):
                  '--tmpfs','/data:rw,size=16m,uid=10001,gid=10001',
                  '--tmpfs','/config:rw,size=16m,uid=10001,gid=10001',CADDY,
                  'caddy','validate','--config','/fixture/Caddyfile.staging','--adapter','caddyfile'])
+            upload_persistence_smoke(root)
             print('PASS: Redis TLS-only, ACL separation, Lua permissions and custom Caddy production/staging configurations')
         finally:
             subprocess.run(['docker','rm','-f',name], capture_output=True, timeout=30)

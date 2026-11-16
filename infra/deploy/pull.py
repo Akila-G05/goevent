@@ -5,6 +5,8 @@ import argparse
 import fcntl
 import json
 import os
+import stat
+import re
 from pathlib import Path
 import subprocess
 import tempfile
@@ -33,6 +35,25 @@ def protected_tree(path):
         expected = 0o750 if p.is_dir() else 0o640
         if (not p.is_dir() and not p.is_file()) or info.st_gid != 10001 or info.st_mode & 0o777 != expected:
             raise ValueError('runtime tree requires root:10001 directories 0750/files 0640')
+
+
+def upload_preflight(path, mysql_data, expected_uuid):
+    if not re.fullmatch(r'[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}', expected_uuid):
+        raise ValueError('reviewed persistent upload filesystem UUID required')
+    root = Path(path)
+    # Parent directories are operator-owned; only the leaf is application-writable.
+    protected(root.parent, True)
+    if any(parent.is_symlink() for parent in root.parents):
+        raise ValueError('symlink in upload ancestors')
+    info = root.lstat()
+    if (not stat.S_ISDIR(info.st_mode) or info.st_uid != 10001 or info.st_gid != 10001
+        or stat.S_IMODE(info.st_mode) != 0o700):
+        raise ValueError('upload directory requires 10001:10001 mode 0700, without symlinks')
+    if info.st_dev == Path(mysql_data).stat().st_dev:
+        raise ValueError('uploads must not reside on the protected MySQL filesystem')
+    actual = run(['findmnt','--noheadings','--raw','--target',str(root),'--output','UUID']).decode().strip()
+    if actual != expected_uuid:
+        raise ValueError('missing or incorrect persistent upload filesystem')
 
 
 def network_preflight():
@@ -64,15 +85,24 @@ def validate_model(model, images):
             or service.get('cap_drop') != ['ALL']
             or 'no-new-privileges:true' not in service.get('security_opt', [])):
             raise ValueError('unsafe application service')
-        expected = {'/run/goevent/'+name: '/run/secrets', '/opt/goevent/app-config/'+name: '/run/config'}
+        expected = {'/run/goevent/'+name: ('/run/secrets', True),
+                    '/opt/goevent/app-config/'+name: ('/run/config', True)}
+        if name == 'backend':
+            expected['/var/lib/goevent-uploads'] = ('/app/uploads', False)
         mounts = service.get('volumes', [])
-        if len(mounts) != 2:
+        if len(mounts) != len(expected):
             raise ValueError('required runtime binds missing')
+        seen = set()
         for mount in mounts:
-            if (mount.get('type') != 'bind' or not mount.get('read_only')
-                or expected.get(mount.get('source')) != mount.get('target')
-                or mount.get('bind', {}).get('create_host_path') is not False):
+            source = mount.get('source')
+            contract = expected.get(source)
+            if (mount.get('type') != 'bind' or contract is None or source in seen
+                or mount.get('target') != contract[0]
+                or mount.get('read_only', False) is not contract[1]
+                or mount.get('bind', {}).get('create_host_path') is not False
+                or mount.get('bind', {}).get('propagation', 'rprivate') != 'rprivate'):
                 raise ValueError('unapproved service bind')
+            seen.add(source)
 
 
 def preflight(c):
@@ -83,6 +113,7 @@ def preflight(c):
     actual=run(['findmnt','--noheadings','--raw','--mountpoint',c['mysql_mount'],'--output','UUID']).decode().strip()
     if actual!=c['disk_uuid'] or not Path(c['mysql_data']).is_dir():
         raise ValueError('missing or incorrect protected disk')
+    upload_preflight('/var/lib/goevent-uploads', c['mysql_data'], c.get('upload_disk_uuid',''))
     run(['systemctl','is-active','--quiet','docker'])
     run(['systemctl','is-active','--quiet','goevent.service'])
     protected(c['state_dir'], True)

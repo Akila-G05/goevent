@@ -1,3 +1,4 @@
+import { csrfHeaders } from './csrf';
 import { apiClient } from '@/lib/api-client';
 import { API_ROUTES } from './routes';
 
@@ -96,7 +97,8 @@ export const authApi = {
   ): Promise<GoogleAuthResponse> => {
     const response = await apiClient.post<GoogleAuthResponse | string>(
       API_ROUTES.AUTH.GOOGLE,
-      payload
+      payload,
+      { headers: await csrfHeaders() }
     );
 
     return parseAuthResponse(response.data);
@@ -110,7 +112,8 @@ export const authApi = {
   ): Promise<GoogleAuthResponse> => {
     const response = await apiClient.post<GoogleAuthResponse | string>(
       API_ROUTES.AUTH.REGISTER,
-      payload
+      payload,
+      { headers: await csrfHeaders() }
     );
 
     return parseAuthResponse(response.data);
@@ -124,7 +127,8 @@ export const authApi = {
   ): Promise<GoogleAuthResponse> => {
     const response = await apiClient.post<GoogleAuthResponse | string>(
       API_ROUTES.AUTH.MANUAL,
-      payload
+      payload,
+      { headers: await csrfHeaders() }
     );
 
     return parseAuthResponse(response.data);
@@ -146,7 +150,9 @@ export const authApi = {
    */
   logout: async (): Promise<GoogleAuthResponse> => {
     const response = await apiClient.post<GoogleAuthResponse | string>(
-      API_ROUTES.AUTH.LOGOUT
+      API_ROUTES.AUTH.LOGOUT,
+      undefined,
+      { headers: await csrfHeaders() }
     );
 
     return parseAuthResponse(response.data);

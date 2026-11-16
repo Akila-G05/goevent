@@ -21,7 +21,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import java.io.IOException;
 import java.util.List;
 
-/** Protect new admin APIs without changing the existing application login contract. */
+/** Session authorization and CSRF for every implemented state-changing API. */
 @Configuration
 public class AdminSecurityConfig {
     @Bean
@@ -31,11 +31,15 @@ public class AdminSecurityConfig {
     }
     @Bean
     SecurityFilterChain adminSecurity(HttpSecurity http, AdminAccessRepository access) throws Exception {
-        return http.securityMatcher("/api/admin/**", "/api/coordinator-requests/**", "/api/coordinator/**", "/api/public-events/**", "/api/contact/**")
+        return http.securityMatcher("/api/auth/**", "/api/user/**", "/api/admin/**", "/api/coordinator-requests/**", "/api/coordinator/**", "/api/public-events/**", "/api/contact/**")
             .cors(org.springframework.security.config.Customizer.withDefaults())
             .securityContext(context -> context.securityContextRepository(new NullSecurityContextRepository()))
             .requestCache(cache -> cache.disable())
             .authorizeHttpRequests(auth -> auth
+                .requestMatchers(HttpMethod.GET, "/api/auth/csrf", "/api/auth/session").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/auth/manual", "/api/auth/google",
+                    "/api/auth/register", "/api/auth/logout").permitAll()
+                .requestMatchers("/api/user/**").hasRole("MEMBER")
                 .requestMatchers(HttpMethod.GET, "/api/admin/auth/csrf").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/admin/auth/login").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/admin/auth/switch-to-admin").hasRole("ADMIN_USER_MODE")
@@ -83,7 +87,8 @@ public class AdminSecurityConfig {
                     SecurityContextHolder.setContext(context);
                 } else { session.invalidate(); SecurityContextHolder.clearContext(); }
             } else if (session != null && session.getAttribute("userId") instanceof Integer id
-                    && (request.getRequestURI().startsWith(request.getContextPath()+"/api/coordinator/") || request.getRequestURI().startsWith(request.getContextPath()+"/api/coordinator-requests"))) {
+                    && (request.getRequestURI().startsWith(request.getContextPath()+"/api/coordinator/") || request.getRequestURI().startsWith(request.getContextPath()+"/api/coordinator-requests")
+                        || request.getRequestURI().startsWith(request.getContextPath()+"/api/user/"))) {
                 if (access.isActiveUser(id)) {
                     var context=SecurityContextHolder.createEmptyContext();
                     context.setAuthentication(new UsernamePasswordAuthenticationToken(id,null,

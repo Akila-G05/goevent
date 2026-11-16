@@ -26,6 +26,12 @@ services:
         read_only: true
         bind:
           create_host_path: false
+      - type: bind
+        source: /var/lib/goevent-uploads
+        target: /app/uploads
+        read_only: false
+        bind:
+          create_host_path: false
     networks:
       application:
         ipv4_address: 172.29.241.2

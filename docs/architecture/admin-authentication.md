@@ -39,9 +39,15 @@ accepts that matching marker, requires CSRF and rechecks active ADMIN status
 against the database. Ordinary user sessions, submitted roles, mismatched markers
 and disabled/demoted/deleted admins cannot use it to elevate.
 
-The security chain covers `/api/admin/**`, coordinator requests and contact
-submission inside the backend servlet context. Only the latter two flows have
-their explicitly documented member/public access; other routes remain admin-only.
+The security chain covers `/api/auth/**`, `/api/user/**`, `/api/admin/**`,
+coordinator APIs/requests, public event impressions and contact submission inside
+the backend servlet context. Legacy login/registration/logout also require CSRF:
+GET `/goevent/api/auth/csrf` first, retain its session cookie, and send the returned
+`X-CSRF-TOKEN` on each mutation. Login replaces the session/token; fetch again
+before profile JSON/multipart updates or logout. Public auth entry points remain
+accessible without prior login, but profile endpoints require an active ordinary
+user session (administrators switch to user mode first). Admin endpoints retain
+their dedicated privilege checks.
 It rejects anonymous/non-admin access and queries the current database role and
 account state on each request. Redis contains the dedicated `adminUserId`
 session attribute; submitted roles and ordinary login session roles cannot
