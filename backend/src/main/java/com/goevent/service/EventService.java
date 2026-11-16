@@ -3,6 +3,7 @@ package com.goevent.service;
 import com.goevent.config.FileStorageConfig;
 import com.goevent.dto.EventDTO;
 import com.goevent.dto.EventDetails;
+import com.goevent.dto.EventFilter;
 import com.goevent.dto.EventSummary;
 import com.goevent.dto.OwnedEventSummary;
 import com.goevent.enums.EventSort;
@@ -310,12 +311,31 @@ public class EventService {
     /** Public listing: approved events only, capped so one request stays bounded. */
     @Transactional(readOnly = true)
     public List<EventSummary> listApproved(int limit, EventSort sort) {
+        return listApproved(limit, sort, EventFilter.of(null, null, null, List.of()));
+    }
+
+    /** Approved events matching the events-page filter, in the requested order. */
+    @Transactional(readOnly = true)
+    public List<EventSummary> listApproved(int limit, EventSort sort, EventFilter filter) {
 
         int size = clampSize(limit);
 
-        return eventRepo.approvedEvents(Status.APPROVED.getId(), sort, size).stream()
+        List<Map<String, Object>> rows = filter.isEmpty()
+                ? eventRepo.approvedEvents(Status.APPROVED.getId(), sort, size)
+                : eventRepo.searchApproved(Status.APPROVED.getId(), filter, sort, size);
+
+        return rows.stream()
                 .map(EventService::summary)
                 .toList();
+    }
+
+    /** Category, audience and tag names offered by the events-page filter. */
+    @Transactional(readOnly = true)
+    public Map<String, List<String>> filterOptions() {
+        return Map.of(
+                "categories", eventRepo.categoryNames(),
+                "audiences", eventRepo.audienceNames(),
+                "tags", eventRepo.tagNames());
     }
 
     /**
@@ -330,9 +350,12 @@ public class EventService {
         Optional<Integer> universityId = studentUniversityId(httpRequest);
 
         if (universityId.isPresent()) {
-            return eventRepo.approvedEventsForUniversity(Status.APPROVED.getId(), universityId.get(), size).stream()
-                    .map(EventService::summary)
-                    .toList();
+            List<Map<String, Object>> universityRows =
+                    eventRepo.approvedEventsForUniversity(Status.APPROVED.getId(), universityId.get(), size);
+
+            if (!universityRows.isEmpty()) {
+                return universityRows.stream().map(EventService::summary).toList();
+            }
         }
 
         return eventRepo.approvedEvents(Status.APPROVED.getId(), EventSort.DESC, size).stream()

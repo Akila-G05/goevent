@@ -47,6 +47,7 @@ import { MyEventsList } from '@/components/events/my-events-list';
 import { EditProfileModal } from '@/components/profile/edit-profile-modal';
 import { ReturnToAdmin } from '@/components/admin/return-to-admin';
 import { EventCalendar } from '@/components/shared/event-calendar';
+import { SavedEventsView } from '@/components/profile/saved-events-view';
 
 type RoleView = 'USER' | 'STUDENT' | 'ORGANIZER' | 'ADMIN';
 type TabType = 'overview' | 'my-events' | 'sales' | 'attendees' | 'saved' | 'settings';
@@ -354,6 +355,9 @@ export default function ProfilePage() {
         </div>
 
         {/* Main Workspace Layout (8 cols / 4 cols) */}
+        {selectedTab === 'saved' ? (
+          <SavedEventsView />
+        ) : (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
           {/* Left Column: Operations & Active Events (8 cols) */}
           <div className="lg:col-span-8 flex flex-col gap-6">
@@ -397,6 +401,7 @@ export default function ProfilePage() {
             </div>
           </div>
         </div>
+        )}
       </div>
 
       <EditProfileModal

@@ -22,7 +22,23 @@ export interface EventSummary {
 }
 
 /** Ordering for `eventsApi.list`: earliest date first, latest first, or random. */
-export type EventSort = 'asc' | 'desc' | 'random';
+export type EventSort = 'asc' | 'desc' | 'random' | 'name';
+
+/** Criteria for the events page. Empty values mean "no restriction". */
+export interface EventSearchCriteria {
+  query?: string;
+  category?: string;
+  audience?: string;
+  /** Matches events that have any of these tag names. */
+  tags?: string[];
+}
+
+/** Values offered by the events-page filter, as stored by the backend. */
+export interface EventFilterOptions {
+  categories: string[];
+  audiences: string[];
+  tags: string[];
+}
 
 interface EventListResponse {
   status: boolean;
@@ -174,6 +190,40 @@ export const eventsApi = {
   },
 
   /** Approved events with an upcoming date, for the home page. */
+  /** Approved events matching the events-page criteria, ordered by `sort`. */
+  search: async (criteria: EventSearchCriteria, sort: EventSort, limit = 50): Promise<EventSummary[]> => {
+    const params = new URLSearchParams({ limit: String(limit), sort });
+
+    if (criteria.query) {
+      params.set('q', criteria.query);
+    }
+
+    if (criteria.category) {
+      params.set('category', criteria.category);
+    }
+
+    if (criteria.audience) {
+      params.set('audience', criteria.audience);
+    }
+
+    for (const tag of criteria.tags ?? []) {
+      params.append('tag', tag);
+    }
+
+    const response = await apiClient.get<EventListResponse>(`${API_ROUTES.EVENTS.LIST}?${params.toString()}`);
+
+    return response.data.events;
+  },
+
+  /** Category, audience and tag options for the events-page filter. */
+  filters: async (): Promise<EventFilterOptions> => {
+    const response = await apiClient.get<{ status: boolean; options: EventFilterOptions }>(
+      API_ROUTES.EVENTS.FILTERS
+    );
+
+    return response.data.options;
+  },
+
   list: async (limit = 24, sort: EventSort = 'asc'): Promise<EventSummary[]> => {
     const response = await apiClient.get<EventListResponse>(API_ROUTES.EVENTS.LIST, {
       params: { limit, sort },

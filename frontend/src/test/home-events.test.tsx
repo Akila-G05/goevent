@@ -77,8 +77,8 @@ describe('Home page event cards', () => {
     const explore = screen.getAllByRole('link', { name: 'Explore' });
 
     expect(explore).toHaveLength(2);
-    expect(explore[0]).toHaveAttribute('href', '/events/10');
-    expect(explore[1]).toHaveAttribute('href', '/events/11');
+    expect(explore[0]).toHaveAttribute('href', '/events/11');
+    expect(explore[1]).toHaveAttribute('href', '/events/10');
   });
 
   it('asks the backend for approved events', async () => {
@@ -102,24 +102,25 @@ describe('Home page event cards', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('Events could not be loaded.');
     expect(screen.getByRole('button', { name: 'Try again' })).toBeInTheDocument();
   });
-  it('shows four events per page and reaches the rest with the carousel, up to six', async () => {
+  it('shows four events per page, newest first, and reaches the rest with the carousel, up to six', async () => {
     const many: EventSummary[] = Array.from({ length: 8 }, (_, index) => ({
       ...freeUniversityEvent,
       id: 100 + index,
       name: `Event ${index + 1}`,
+      startsOn: `2027-01-${String(index + 1).padStart(2, '0')}`,
     }));
     listEvents.mockResolvedValue(many);
     renderHome();
 
-    expect(await screen.findByRole('heading', { name: 'Event 1' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Event 4' })).toBeInTheDocument();
-    expect(screen.queryByRole('heading', { name: 'Event 5' })).not.toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Event 8' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Event 5' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Event 4' })).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Next events' }));
 
-    expect(screen.getByRole('heading', { name: 'Event 5' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Event 6' })).toBeInTheDocument();
-    expect(screen.queryByRole('heading', { name: 'Event 7' })).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Event 4' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Event 3' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Event 2' })).not.toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'Event 8' })).not.toBeInTheDocument();
   });
 });

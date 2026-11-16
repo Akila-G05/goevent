@@ -1,6 +1,7 @@
 package com.goevent.controller;
 
 import com.goevent.dto.EventDTO;
+import com.goevent.dto.EventFilter;
 import com.goevent.enums.EventSort;
 import com.goevent.service.EventService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -15,6 +16,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -35,9 +37,20 @@ public class EventController {
     @GetMapping
     public Map<String, Object> list(
             @RequestParam(defaultValue = "24") int limit,
-            @RequestParam(defaultValue = "desc") String sort
+            @RequestParam(defaultValue = "desc") String sort,
+            @RequestParam(value = "q", required = false) String query,
+            @RequestParam(value = "category", required = false) String category,
+            @RequestParam(value = "audience", required = false) String audience,
+            @RequestParam(value = "tag", required = false) List<String> tags
     ) {
-        return Map.of("status", true, "events", eventService.listApproved(limit, EventSort.parse(sort)));
+        EventFilter filter = EventFilter.of(query, category, audience, tags);
+        return Map.of("status", true, "events", eventService.listApproved(limit, EventSort.parse(sort), filter));
+    }
+
+    /** Category, audience and tag options for the events-page filter. */
+    @GetMapping("/filters")
+    public Map<String, Object> filters() {
+        return Map.of("status", true, "options", eventService.filterOptions());
     }
 
     @GetMapping("/recommended")

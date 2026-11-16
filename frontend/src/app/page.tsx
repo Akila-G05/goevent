@@ -22,11 +22,11 @@ import {
 import { eventsApi } from '@/api/events';
 import { EventCarousel } from '@/components/events/event-carousel';
 import { EventRows } from '@/components/events/event-rows';
+import { filterAndSortEvents, type EventOrder } from '@/lib/event-sort';
 export default function HomePage() {
   // State for search filters
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCity, setSelectedCity] = useState('Surabaya');
-  const [selectedDateFilter, setSelectedDateFilter] = useState('Any Date');
+  const [sortOrder, setSortOrder] = useState<EventOrder>('newest');
 
   // Browsing cards: personalised on the server (student university, otherwise random)
   const recommendedQuery = useQuery({
@@ -86,100 +86,46 @@ export default function HomePage() {
             </h1>
           </div>
 
-          {/* Bottom Bar: Glassmorphic Search Form (Left) & Tour Spotlight Card (Right) */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-6 items-end">
-            {/* Left: Floating Search Box */}
-            <div className="lg:col-span-8">
-              <div className="bg-[#18181c]/65 backdrop-blur-xl border border-white/20 rounded-2xl p-4 sm:p-5 shadow-2xl space-y-3">
-                {/* Search Text Input */}
-                <div className="relative">
-                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 pointer-events-none" />
-                  <input
-                    type="text"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Search by artist, event, venue"
-                    className="w-full bg-white/10 hover:bg-white/15 focus:bg-white/20 border border-white/15 rounded-xl pl-11 pr-4 py-3 text-sm text-white placeholder-zinc-400 focus:outline-none focus:ring-1 focus:ring-white/40 transition-all"
-                  />
-                </div>
-
-                {/* Dropdowns & Search Button Row */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-center">
-                  {/* City Selector */}
-                  <div className="relative">
-                    <select
-                      value={selectedCity}
-                      onChange={(e) => setSelectedCity(e.target.value)}
-                      className="w-full appearance-none bg-white/10 hover:bg-white/15 border border-white/15 rounded-xl px-4 py-3 text-sm text-zinc-200 focus:outline-none cursor-pointer pr-10"
-                    >
-                      <option value="Surabaya" className="bg-[#1a1a20] text-white">Surabaya</option>
-                      <option value="Jakarta" className="bg-[#1a1a20] text-white">Jakarta</option>
-                      <option value="Bangkok" className="bg-[#1a1a20] text-white">Bangkok</option>
-                      <option value="Bali" className="bg-[#1a1a20] text-white">Bali</option>
-                      <option value="Kuala Lumpur" className="bg-[#1a1a20] text-white">Kuala Lumpur</option>
-                      <option value="Tokyo" className="bg-[#1a1a20] text-white">Tokyo</option>
-                    </select>
-                    <ChevronDown className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 pointer-events-none" />
-                  </div>
-
-                  {/* Date Selector */}
-                  <div className="relative">
-                    <select
-                      value={selectedDateFilter}
-                      onChange={(e) => setSelectedDateFilter(e.target.value)}
-                      className="w-full appearance-none bg-white/10 hover:bg-white/15 border border-white/15 rounded-xl px-4 py-3 text-sm text-zinc-200 focus:outline-none cursor-pointer pr-10"
-                    >
-                      <option value="Any Date" className="bg-[#1a1a20] text-white">Select Date</option>
-                      <option value="Today" className="bg-[#1a1a20] text-white">Today</option>
-                      <option value="This Weekend" className="bg-[#1a1a20] text-white">This Weekend</option>
-                      <option value="This Month" className="bg-[#1a1a20] text-white">This Month</option>
-                    </select>
-                    <ChevronDown className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 pointer-events-none" />
-                  </div>
-
-                  {/* Search Action Button */}
-                  <button
-                    onClick={() => {
-                      const browseElem = document.getElementById('browse');
-                      browseElem?.scrollIntoView({ behavior: 'smooth' });
-                    }}
-                    className="w-full bg-white text-black hover:bg-zinc-200 font-semibold text-sm py-3 px-5 rounded-xl flex items-center justify-center space-x-2 transition-all active:scale-[0.98] shadow-lg"
-                  >
-                    <CornerDownRight className="w-4 h-4 stroke-[2.5]" />
-                    <span>Search</span>
-                  </button>
-                </div>
+          {/* Search and sort the events listed below */}
+          <div className="max-w-3xl">
+            <div className="bg-[#18181c]/65 backdrop-blur-xl border border-white/20 rounded-2xl p-4 sm:p-5 shadow-2xl space-y-3">
+              <div className="relative">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 pointer-events-none" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search by event, category, venue"
+                  aria-label="Search events"
+                  className="w-full bg-white/10 hover:bg-white/15 focus:bg-white/20 border border-white/15 rounded-xl pl-11 pr-4 py-3 text-sm text-white placeholder-zinc-400 focus:outline-none focus:ring-1 focus:ring-white/40 transition-all"
+                />
               </div>
-            </div>
 
-            {/* Right: Featured Tour Spotlight Card */}
-            <div className="hidden lg:block lg:col-span-4">
-              <div className="bg-[#1a1a1f]/80 backdrop-blur-md border border-white/15 rounded-2xl p-3 shadow-2xl flex flex-col space-y-2 group cursor-pointer hover:border-white/30 transition-all">
-                <div className="relative h-36 w-full rounded-xl overflow-hidden">
-                  <Image
-                    src="https://images.unsplash.com/photo-1558047291-26cc184812b6?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=NHwxMjA3fDA%3D"
-                    alt="Metal Matters Tour"
-                    fill
-                    className="object-cover group-hover:scale-105 transition-transform duration-500"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
-                  <div className="absolute bottom-2 left-3 right-3 text-white">
-                    <span className="font-display text-sm tracking-wider uppercase text-zinc-300 font-bold block">
-                      Live Tour 2024
-                    </span>
-                    <h3 className="font-display text-lg text-white font-black leading-tight uppercase">
-                      THE METAL MATTERS TOUR 2024
-                    </h3>
-                  </div>
+              <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-3 items-center">
+                <div className="relative">
+                  <select
+                    aria-label="Sort events"
+                    value={sortOrder}
+                    onChange={(e) => setSortOrder(e.target.value as EventOrder)}
+                    className="w-full appearance-none bg-white/10 hover:bg-white/15 border border-white/15 rounded-xl px-4 py-3 text-sm text-zinc-200 focus:outline-none cursor-pointer pr-10"
+                  >
+                    <option value="newest" className="bg-[#1a1a20] text-white">Newest first</option>
+                    <option value="oldest" className="bg-[#1a1a20] text-white">Oldest first</option>
+                    <option value="name" className="bg-[#1a1a20] text-white">Name A-Z</option>
+                  </select>
+                  <ChevronDown className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 pointer-events-none" />
                 </div>
-                {/* Carousel Pagination Dots */}
-                <div className="flex items-center justify-center space-x-1.5 py-1">
-                  <span className="w-2 h-2 rounded-full bg-white" />
-                  <span className="w-1.5 h-1.5 rounded-full bg-white/40" />
-                  <span className="w-1.5 h-1.5 rounded-full bg-white/40" />
-                  <span className="w-1.5 h-1.5 rounded-full bg-white/40" />
-                  <span className="w-1.5 h-1.5 rounded-full bg-white/40" />
-                </div>
+
+                <Link
+                  href={`/events?${new URLSearchParams({
+                    ...(searchQuery.trim() ? { q: searchQuery.trim() } : {}),
+                    sort: sortOrder,
+                  }).toString()}`}
+                  className="w-full sm:w-auto bg-white text-black hover:bg-zinc-200 font-semibold text-sm py-3 px-6 rounded-xl flex items-center justify-center space-x-2 transition-all active:scale-[0.98] shadow-lg"
+                >
+                  <CornerDownRight className="w-4 h-4 stroke-[2.5]" />
+                  <span>Search</span>
+                </Link>
               </div>
             </div>
           </div>
@@ -190,10 +136,14 @@ export default function HomePage() {
           SECTION 2: BROWSING EVENTS (students: their university; others: random)
           ========================================================================= */}
       <section id="browse" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-24">
-        <div className="pb-6 border-b border-zinc-200">
+        <div className="flex flex-wrap items-end justify-between gap-4 pb-6 border-b border-zinc-200">
           <h2 className="font-display text-5xl sm:text-6xl lg:text-7xl font-black tracking-tight text-black leading-[0.9] uppercase">
             BROWSING<br />EVENTS
           </h2>
+          <Link href="/events" className="inline-flex items-center gap-1.5 rounded-full border border-zinc-300 px-4 py-2 text-xs font-semibold text-black transition-colors hover:border-black hover:bg-black hover:text-white">
+            View all events
+            <ArrowUpRight className="w-3.5 h-3.5" />
+          </Link>
         </div>
 
         {recommendedQuery.isPending && (
@@ -219,7 +169,11 @@ export default function HomePage() {
 
         {recommendedQuery.isSuccess && recommendedQuery.data.length > 0 && (
           <div className="mt-8">
-            <EventCarousel events={recommendedQuery.data} />
+            {filterAndSortEvents(recommendedQuery.data, searchQuery, sortOrder).length === 0 ? (
+              <p className="text-sm text-zinc-500">No events match your search.</p>
+            ) : (
+              <EventCarousel events={filterAndSortEvents(recommendedQuery.data, searchQuery, sortOrder)} />
+            )}
           </div>
         )}
       </section>

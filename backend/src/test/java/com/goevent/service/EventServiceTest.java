@@ -2,6 +2,7 @@ package com.goevent.service;
 
 import com.goevent.dto.EventDTO;
 import com.goevent.dto.EventDetails;
+import com.goevent.dto.EventFilter;
 import com.goevent.dto.EventSummary;
 import com.goevent.enums.EventSort;
 import com.goevent.enums.Status;
@@ -289,7 +290,20 @@ class EventServiceTest {
         service.recommended(6, request);
 
         verify(repo).approvedEventsForUniversity(Status.APPROVED.getId(), 2, 6);
-        verify(repo, never()).approvedEvents(anyInt(), any(), anyInt());
+    }
+
+    @Test
+    void fallsBackToTheNewestEventsWhenTheStudentsUniversityHasNone() {
+        signedIn(7);
+        Map<String, Object> account = new HashMap<>();
+        account.put("role_id", 4);
+        when(repo.account(7)).thenReturn(account);
+        when(repo.studentUniversityId(7)).thenReturn(Optional.of(2));
+        when(repo.approvedEventsForUniversity(Status.APPROVED.getId(), 2, 6)).thenReturn(List.of());
+
+        service.recommended(6, request);
+
+        verify(repo).approvedEvents(Status.APPROVED.getId(), EventSort.DESC, 6);
     }
 
     @Test
@@ -355,6 +369,17 @@ class EventServiceTest {
 
         assertEquals(1, events.size());
         assertEquals("PENDING", events.get(0).status());
+    }
+
+    @Test
+    void usesTheFilteredQueryWhenTheEventsPageSendsCriteria() {
+        when(repo.searchApproved(anyInt(), any(), any(), anyInt())).thenReturn(List.of());
+
+        service.listApproved(10, EventSort.DESC, EventFilter.of("jazz", null, null, List.of("Public")));
+
+        verify(repo).searchApproved(Status.APPROVED.getId(), EventFilter.of("jazz", null, null, List.of("Public")),
+                EventSort.DESC, 10);
+        verify(repo, never()).approvedEvents(anyInt(), any(), anyInt());
     }
 
     @Test

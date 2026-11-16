@@ -1,5 +1,6 @@
 package com.goevent.repository;
 
+import com.goevent.dto.EventFilter;
 import com.goevent.enums.EventSort;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
@@ -11,6 +12,8 @@ import java.sql.PreparedStatement;
 import java.sql.Statement;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -177,12 +180,74 @@ public class EventRepo {
                 Integer.class, userId).stream().findFirst();
     }
 
+    /**
+     * Approved upcoming events matching the filter. Text is bound as parameters
+     * (LIKE wildcards escaped); the sort comes from a fixed set of SQL fragments.
+     */
+    public List<Map<String, Object>> searchApproved(int statusId, EventFilter filter, EventSort sort, int limit) {
+        StringBuilder sql = new StringBuilder(SUMMARY_SELECT).append(" WHERE e.event_status_id = ?");
+        List<Object> args = new ArrayList<>();
+        args.add(statusId);
+
+        if (filter.query() != null) {
+            String like = "%" + escapeLike(filter.query()) + "%";
+            sql.append(" AND (e.name LIKE ? ESCAPE '\\\\' OR e.description LIKE ? ESCAPE '\\\\'"
+                    + " OR v.name LIKE ? ESCAPE '\\\\' OR v.city LIKE ? ESCAPE '\\\\' OR c.name LIKE ? ESCAPE '\\\\')");
+
+            for (int i = 0; i < 5; i++) {
+                args.add(like);
+            }
+        }
+
+        if (filter.category() != null) {
+            sql.append(" AND c.name = ?");
+            args.add(filter.category());
+        }
+
+        if (filter.audience() != null) {
+            sql.append(" AND a.type = ?");
+            args.add(filter.audience());
+        }
+
+        if (!filter.tags().isEmpty()) {
+            String marks = String.join(",", Collections.nCopies(filter.tags().size(), "?"));
+            sql.append(" AND EXISTS (SELECT 1 FROM event_has_tags eht JOIN tags t ON t.id = eht.tags_id"
+                    + " WHERE eht.event_id = e.id AND t.name IN (" + marks + "))");
+            args.addAll(filter.tags());
+        }
+
+        sql.append(' ').append(orderBy(sort)).append(" LIMIT ?");
+        args.add(limit);
+
+        return jdbc.queryForList(sql.toString(), args.toArray());
+    }
+
+    private static String escapeLike(String value) {
+        return value.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_");
+    }
+
+    /** Category names for the events-page filter. */
+    public List<String> categoryNames() {
+        return jdbc.queryForList("SELECT name FROM category ORDER BY name", String.class);
+    }
+
+    /** Audience names for the events-page filter. */
+    public List<String> audienceNames() {
+        return jdbc.queryForList("SELECT type FROM audience ORDER BY id", String.class);
+    }
+
+    /** Distinct tag names for the events-page filter. */
+    public List<String> tagNames() {
+        return jdbc.queryForList(
+                "SELECT DISTINCT name FROM tags WHERE name IS NOT NULL ORDER BY name", String.class);
+    }
     /** Fixed SQL per sort value; the enum is never concatenated from user input. */
     private static String orderBy(EventSort sort) {
         return switch (sort) {
             case ASC -> "ORDER BY next_date.date, e.id";
             case DESC -> "ORDER BY next_date.date DESC, e.id DESC";
             case RANDOM -> "ORDER BY RAND()";
+            case NAME -> "ORDER BY e.name, e.id";
         };
     }
     // --- public detail --------------------------------------------------

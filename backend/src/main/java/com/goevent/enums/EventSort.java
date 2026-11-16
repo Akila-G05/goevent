@@ -10,7 +10,10 @@ public enum EventSort {
     DESC,
 
     /** Random order, used for browsing when no personal scope applies. */
-    RANDOM;
+    RANDOM,
+
+    /** Alphabetical by event name. */
+    NAME;
 
     /** Unknown or missing values fall back to {@link #ASC}. */
     public static EventSort parse(String value) {
@@ -21,6 +24,7 @@ public enum EventSort {
         return switch (value.trim().toUpperCase()) {
             case "DESC" -> DESC;
             case "RANDOM" -> RANDOM;
+            case "NAME" -> NAME;
             default -> ASC;
         };
     }
