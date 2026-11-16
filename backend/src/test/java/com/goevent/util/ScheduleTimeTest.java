@@ -22,11 +22,10 @@ class ScheduleTimeTest {
     }
 
     @Test
-    void rejectsAnEndBeforeTheStart() {
-        IllegalArgumentException error = assertThrows(IllegalArgumentException.class,
-                () -> ScheduleTime.range("22:00", "18:00"));
-
-        assertTrue(error.getMessage().contains("after the start"));
+    void acceptsAnEndBeforeTheStartAsAnOvernightEvent() {
+        assertEquals("19:00 - 02:00", ScheduleTime.range("19:00", "02:00"));
+        assertEquals(LocalDateTime.of(2026, 12, 25, 2, 0),
+                ScheduleTime.endAt(LocalDate.of(2026, 12, 24), "19:00", "02:00"));
     }
 
     @Test

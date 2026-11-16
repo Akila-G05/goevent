@@ -159,7 +159,7 @@ public class EventRepo {
                         + " WHERE e.event_status_id = ?"
                         + " AND EXISTS (SELECT 1 FROM student_detail sd"
                         + " WHERE sd.user_id = e.published_by AND sd.university_id = ?)"
-                        + " ORDER BY next_date.date DESC, e.id DESC LIMIT ?",
+                        + " ORDER BY e.created_at DESC, e.id DESC LIMIT ?",
                 statusId, universityId, limit);
     }
 
@@ -172,6 +172,24 @@ public class EventRepo {
                         + " ORDER BY ed.date",
                 (rs, rowNum) -> rs.getDate(1).toLocalDate(),
                 statusId);
+    }
+    /** Approved upcoming events the user has saved, earliest first. */
+    public List<Map<String, Object>> approvedSavedBy(int userId, int statusId) {
+        return jdbc.queryForList(
+                SUMMARY_SELECT
+                        + " JOIN saved_event se ON se.event_id = e.id AND se.user_id = ?"
+                        + " WHERE e.event_status_id = ?"
+                        + " ORDER BY next_date.date, e.id",
+                userId, statusId);
+    }
+
+    /** Stores the save; saving twice is harmless because the pair is the primary key. */
+    public void saveEvent(int userId, long eventId) {
+        jdbc.update("INSERT IGNORE INTO saved_event(user_id, event_id) VALUES(?,?)", userId, eventId);
+    }
+
+    public void unsaveEvent(int userId, long eventId) {
+        jdbc.update("DELETE FROM saved_event WHERE user_id=? AND event_id=?", userId, eventId);
     }
     /** University of a student account, when one is recorded. */
     public Optional<Integer> studentUniversityId(int userId) {
@@ -248,6 +266,7 @@ public class EventRepo {
             case DESC -> "ORDER BY next_date.date DESC, e.id DESC";
             case RANDOM -> "ORDER BY RAND()";
             case NAME -> "ORDER BY e.name, e.id";
+            case CREATED -> "ORDER BY e.created_at DESC, e.id DESC";
         };
     }
     // --- public detail --------------------------------------------------

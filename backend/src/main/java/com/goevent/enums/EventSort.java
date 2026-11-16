@@ -13,7 +13,10 @@ public enum EventSort {
     RANDOM,
 
     /** Alphabetical by event name. */
-    NAME;
+    NAME,
+
+    /** Most recently added first, used for the home-page browsing list. */
+    CREATED;
 
     /** Unknown or missing values fall back to {@link #ASC}. */
     public static EventSort parse(String value) {
@@ -25,6 +28,7 @@ public enum EventSort {
             case "DESC" -> DESC;
             case "RANDOM" -> RANDOM;
             case "NAME" -> NAME;
+            case "CREATED" -> CREATED;
             default -> ASC;
         };
     }

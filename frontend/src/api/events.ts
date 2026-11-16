@@ -215,6 +215,21 @@ export const eventsApi = {
     return response.data.events;
   },
 
+  /** The signed-in user's saved events. Rejects with 401 when signed out. */
+  saved: async (): Promise<EventSummary[]> => {
+    const response = await apiClient.get<EventListResponse>(API_ROUTES.EVENTS.SAVED);
+
+    return response.data.events;
+  },
+
+  save: async (id: number): Promise<void> => {
+    await apiClient.post(API_ROUTES.EVENTS.SAVE(id));
+  },
+
+  unsave: async (id: number): Promise<void> => {
+    await apiClient.delete(API_ROUTES.EVENTS.SAVE(id));
+  },
+
   /** Category, audience and tag options for the events-page filter. */
   filters: async (): Promise<EventFilterOptions> => {
     const response = await apiClient.get<{ status: boolean; options: EventFilterOptions }>(

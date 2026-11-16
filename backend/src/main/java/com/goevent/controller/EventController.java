@@ -6,6 +6,7 @@ import com.goevent.enums.EventSort;
 import com.goevent.service.EventService;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.MediaType;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -61,6 +62,23 @@ public class EventController {
         return Map.of("status", true, "events", eventService.recommended(limit, httpRequest));
     }
 
+    /** The signed-in user's saved events. */
+    @GetMapping("/saved")
+    public Map<String, Object> saved(HttpServletRequest httpRequest) {
+        return Map.of("status", true, "events", eventService.saved(httpRequest));
+    }
+
+    @PostMapping("/{id}/save")
+    public Map<String, Object> save(@PathVariable("id") long id, HttpServletRequest httpRequest) {
+        eventService.save(id, httpRequest);
+        return Map.of("status", true, "saved", true);
+    }
+
+    @DeleteMapping("/{id}/save")
+    public Map<String, Object> unsave(@PathVariable("id") long id, HttpServletRequest httpRequest) {
+        eventService.unsave(id, httpRequest);
+        return Map.of("status", true, "saved", false);
+    }
     /** Upcoming dates reserved by approved events, for the organizer calendar. */
     @GetMapping("/calendar")
     public Map<String, Object> calendar() {

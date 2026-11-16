@@ -114,16 +114,15 @@ class EventServiceTest {
     }
 
     @Test
-    void rejectsAnOccurrenceWhoseEndTimeIsBeforeItsStart() {
+    void acceptsAnOvernightOccurrenceThatEndsTheNextDay() {
         signedIn(7);
         EventDTO payload = validPayload();
-        payload.getDates().get(0).setEndTime("17:00");
+        payload.getDates().get(0).setStartTime("19:00");
+        payload.getDates().get(0).setEndTime("02:00");
 
-        EventException error = assertThrows(EventException.class,
-                () -> service.create(payload, request));
+        service.create(payload, request);
 
-        assertEquals(HttpStatus.BAD_REQUEST, error.status());
-        verify(repo, never()).insertVenue(anyString(), any(), anyString(), any());
+        verify(repo).insertEventDate(anyLong(), eq(eventDate), eq("19:00 - 02:00"));
     }
 
     @Test
@@ -303,7 +302,7 @@ class EventServiceTest {
 
         service.recommended(6, request);
 
-        verify(repo).approvedEvents(Status.APPROVED.getId(), EventSort.DESC, 6);
+        verify(repo).approvedEvents(Status.APPROVED.getId(), EventSort.CREATED, 6);
     }
 
     @Test
@@ -312,11 +311,11 @@ class EventServiceTest {
         Map<String, Object> account = new HashMap<>();
         account.put("role_id", 2);
         when(repo.account(8)).thenReturn(account);
-        when(repo.approvedEvents(Status.APPROVED.getId(), EventSort.DESC, 6)).thenReturn(List.of());
+        when(repo.approvedEvents(Status.APPROVED.getId(), EventSort.CREATED, 6)).thenReturn(List.of());
 
         service.recommended(6, new MockHttpServletRequest());
 
-        verify(repo).approvedEvents(Status.APPROVED.getId(), EventSort.DESC, 6);
+        verify(repo).approvedEvents(Status.APPROVED.getId(), EventSort.CREATED, 6);
         verify(repo, never()).approvedEventsForUniversity(anyInt(), anyInt(), anyInt());
     }
 
@@ -380,6 +379,26 @@ class EventServiceTest {
         verify(repo).searchApproved(Status.APPROVED.getId(), EventFilter.of("jazz", null, null, List.of("Public")),
                 EventSort.DESC, 10);
         verify(repo, never()).approvedEvents(anyInt(), any(), anyInt());
+    }
+
+    @Test
+    void rejectsSavingWithoutASignedInUser() {
+        EventException error = assertThrows(EventException.class,
+                () -> service.save(9L, new MockHttpServletRequest()));
+
+        assertEquals(HttpStatus.UNAUTHORIZED, error.status());
+        verify(repo, never()).saveEvent(anyInt(), anyLong());
+    }
+
+    @Test
+    void rejectsSavingAnEventThatIsNotApproved() {
+        signedIn(7);
+        when(repo.approvedEventRow(9L, Status.APPROVED.getId())).thenReturn(null);
+
+        EventException error = assertThrows(EventException.class, () -> service.save(9L, request));
+
+        assertEquals(HttpStatus.NOT_FOUND, error.status());
+        verify(repo, never()).saveEvent(anyInt(), anyLong());
     }
 
     @Test

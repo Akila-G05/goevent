@@ -358,7 +358,7 @@ public class EventService {
             }
         }
 
-        return eventRepo.approvedEvents(Status.APPROVED.getId(), EventSort.DESC, size).stream()
+        return eventRepo.approvedEvents(Status.APPROVED.getId(), EventSort.CREATED, size).stream()
                 .map(EventService::summary)
                 .toList();
     }
@@ -369,6 +369,54 @@ public class EventService {
         return eventRepo.approvedEventDates(Status.APPROVED.getId()).stream()
                 .map(LocalDate::toString)
                 .toList();
+    }
+    /** The signed-in user's saved events that are still approved and upcoming. */
+    @Transactional(readOnly = true)
+    public List<EventSummary> saved(HttpServletRequest httpRequest) {
+
+        int userId = requireSignedIn(httpRequest);
+
+        return eventRepo.approvedSavedBy(userId, Status.APPROVED.getId()).stream()
+                .map(EventService::summary)
+                .toList();
+    }
+
+    @Transactional
+    public void save(long eventId, HttpServletRequest httpRequest) {
+
+        int userId = requireSignedIn(httpRequest);
+
+        if (eventRepo.approvedEventRow(eventId, Status.APPROVED.getId()) == null) {
+            throw EventException.notFound("Event not found.");
+        }
+
+        eventRepo.saveEvent(userId, eventId);
+    }
+
+    @Transactional
+    public void unsave(long eventId, HttpServletRequest httpRequest) {
+
+        int userId = requireSignedIn(httpRequest);
+        eventRepo.unsaveEvent(userId, eventId);
+    }
+
+    /** Any active account may save events; the user id comes from the session only. */
+    private int requireSignedIn(HttpServletRequest httpRequest) {
+
+        HttpSession session = httpRequest == null ? null : httpRequest.getSession(false);
+        Object sessionUser = session == null ? null : session.getAttribute("userId");
+
+        if (!(sessionUser instanceof Integer userId)) {
+            throw EventException.unauthorized("Sign in to save events.");
+        }
+
+        Map<String, Object> account = eventRepo.account(userId);
+
+        if (account == null) {
+            throw EventException.unauthorized("Sign in to save events.");
+        }
+
+        return userId;
     }
     private Optional<Integer> studentUniversityId(HttpServletRequest httpRequest) {
 
@@ -626,7 +674,7 @@ public class EventService {
             try {
                 timeRange = ScheduleTime.range(row.getStartTime(), row.getEndTime());
                 start = ScheduleTime.at(date, row.getStartTime());
-                end = ScheduleTime.at(date, row.getEndTime());
+                end = ScheduleTime.endAt(date, row.getStartTime(), row.getEndTime());
             } catch (IllegalArgumentException error) {
                 throw EventException.badRequest(label + ": " + error.getMessage());
             }

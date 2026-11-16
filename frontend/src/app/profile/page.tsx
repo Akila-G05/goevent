@@ -50,7 +50,7 @@ import { EventCalendar } from '@/components/shared/event-calendar';
 import { SavedEventsView } from '@/components/profile/saved-events-view';
 
 type RoleView = 'USER' | 'STUDENT' | 'ORGANIZER' | 'ADMIN';
-type TabType = 'overview' | 'my-events' | 'sales' | 'attendees' | 'saved' | 'settings';
+type TabType = 'overview' | 'my-events' | 'sales' | 'booked' | 'saved';
 
 const ROLE_VIEWS: RoleView[] = ['USER', 'STUDENT', 'ORGANIZER', 'ADMIN'];
 
@@ -191,7 +191,11 @@ export default function ProfilePage() {
 
   // Organizers and admins manage events; everyone else browses saved events.
   const isOrganizer = actualRole === 'ORGANIZER' || actualRole === 'ADMIN';
-  const enabledTabs: TabType[] = isOrganizer ? ['my-events', 'overview', 'settings'] : ['saved'];
+  // Only the default tab of each role is enabled; the others are shown disabled.
+  const visibleTabs: TabType[] = isOrganizer
+    ? ['overview', 'my-events', 'sales', 'saved']
+    : ['overview', 'saved', 'booked'];
+  const enabledTabs: TabType[] = isOrganizer ? ['my-events', 'saved'] : ['saved'];
   const selectedTab: TabType = activeTab ?? (isOrganizer ? 'my-events' : 'saved');
   const avatarSrc = resolveProfileImageUrl(profile?.profileImgUrl);
 
@@ -334,10 +338,9 @@ export default function ProfilePage() {
             { id: 'overview', label: 'Overview' },
             { id: 'my-events', label: `My Events (${myEventCount})` },
             { id: 'sales', label: 'Ticket Sales & Gate' },
-            { id: 'attendees', label: 'Attendees Roster' },
+            { id: 'booked', label: 'Booked Events' },
             { id: 'saved', label: 'Saved Events' },
-            { id: 'settings', label: 'Settings & Payouts' },
-          ].map((tab) => (
+          ].filter((tab) => visibleTabs.includes(tab.id as TabType)).map((tab) => (
             <button
               key={tab.id}
               type="button"

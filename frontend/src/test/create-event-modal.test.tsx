@@ -3,6 +3,12 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { CreateEventModal } from '@/components/events/create-event-modal';
 import { eventsApi } from '@/api/events';
+import { toast } from '@/lib/toast-store';
+
+vi.mock('@/lib/toast-store', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/toast-store')>();
+  return { ...actual, toast: { success: vi.fn(), error: vi.fn(), warning: vi.fn(), info: vi.fn() } };
+});
 
 vi.mock('@/api/events', () => ({
   eventsApi: {
@@ -138,7 +144,7 @@ describe('CreateEventModal', () => {
 
     fireEvent.change(coverInput, { target: { files: [file] } });
 
-    expect(screen.getByRole('alert')).toHaveTextContent('Choose a JPEG, PNG or WebP image.');
+    expect(toast.error).toHaveBeenCalledWith('Choose a JPEG, PNG or WebP image.', expect.anything());
   });
 
   it('sends the separate start and end times so the server can join them', async () => {
@@ -165,19 +171,20 @@ describe('CreateEventModal', () => {
     await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1));
   });
 
-  it('stops submission when the end time is not after the start time', async () => {
+  it('accepts an end time before the start as an overnight event', async () => {
+    createEvent.mockResolvedValue({ status: true, id: 12 });
     renderModal();
 
     fillRequiredFields();
     fireEvent.change(screen.getByLabelText(/^End time/), {
-      target: { value: '17:00' },
+      target: { value: '02:00' },
     });
     submitForm();
 
-    expect(
-      await screen.findByText('Schedule row 1: the end time must be after the start time.')
-    ).toBeInTheDocument();
-    expect(createEvent).not.toHaveBeenCalled();
+    await waitFor(() => expect(createEvent).toHaveBeenCalledTimes(1));
+    expect(createEvent).toHaveBeenCalledWith(expect.objectContaining({
+      dates: [expect.objectContaining({ endTime: '02:00' })],
+    }));
   });
 
   it('shows the backend error without closing the dialog', async () => {
@@ -188,9 +195,9 @@ describe('CreateEventModal', () => {
     fillRequiredFields();
     submitForm();
 
-    expect(
-      await screen.findByText('Only organizers can create events.')
-    ).toBeInTheDocument();
+    await waitFor(() =>
+      expect(toast.error).toHaveBeenCalledWith('Only organizers can create events.', expect.anything())
+    );
     expect(onClose).not.toHaveBeenCalled();
   });
 

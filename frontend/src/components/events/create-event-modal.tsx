@@ -193,7 +193,6 @@ export function CreateEventModal({ open, onClose, event = null }: CreateEventMod
     event?.imagePath ? `${API_BASE_URL}${event.imagePath}` : null
   );
   const [coverFile, setCoverFile] = useState<File | null>(null);
-  const [imageError, setImageError] = useState<string | null>(null);
   const [eventLevel, setEventLevel] = useState<EventLevel>('LISTING_ONLY');
   const [dates, setDates] = useState<DateRow[]>(() =>
     event
@@ -219,7 +218,6 @@ export function CreateEventModal({ open, onClose, event = null }: CreateEventMod
       : []
   );
   const [saving, setSaving] = useState(false);
-  const [formError, setFormError] = useState<string | null>(null);
 
   const objectUrls = useRef<string[]>([]);
 
@@ -233,7 +231,6 @@ export function CreateEventModal({ open, onClose, event = null }: CreateEventMod
   // Drop a stale error from a previous attempt every time the dialog reopens.
   useEffect(() => {
     if (open) {
-      setFormError(null);
     }
   }, [open]);
 
@@ -255,16 +252,14 @@ export function CreateEventModal({ open, onClose, event = null }: CreateEventMod
     }
 
     if (!ACCEPTED_IMAGE_TYPES.includes(file.type)) {
-      setImageError('Choose a JPEG, PNG or WebP image.');
+      reportError('Choose a JPEG, PNG or WebP image.');
       return;
     }
 
     if (file.size > MAX_IMAGE_BYTES) {
-      setImageError(`Image must be ${MAX_IMAGE_BYTES / (1024 * 1024)} MB or smaller.`);
+      reportError(`Image must be ${MAX_IMAGE_BYTES / (1024 * 1024)} MB or smaller.`);
       return;
     }
-
-    setImageError(null);
     const url = URL.createObjectURL(file);
     objectUrls.current.push(url);
     setCoverFile(file);
@@ -337,6 +332,10 @@ export function CreateEventModal({ open, onClose, event = null }: CreateEventMod
     );
   };
 
+  const reportError = (message: string) => {
+    toast.error(message, { title: 'Check the event form' });
+  };
+
   const resetForm = () => {
     formRef.current?.reset();
     setDates([{ key: 0, date: '', startTime: '', endTime: '' }]);
@@ -345,7 +344,6 @@ export function CreateEventModal({ open, onClose, event = null }: CreateEventMod
       { key: 0, quantity: '', price: '', description: '', saleStartAt: '', saleEndAt: '' },
     ]);
     setSelectedTags([]);
-    setFormError(null);
     dateKey.current = 1;
     linkKey.current = 1;
     ticketKey.current = 1;
@@ -359,8 +357,6 @@ export function CreateEventModal({ open, onClose, event = null }: CreateEventMod
       return;
     }
 
-    setFormError(null);
-
     const data = new FormData(submitEvent.currentTarget);
     const value = (field: string) => String(data.get(field) ?? '').trim();
 
@@ -371,27 +367,27 @@ export function CreateEventModal({ open, onClose, event = null }: CreateEventMod
     const venueCity = value('venueCity');
 
     if (!name) {
-      setFormError('Event name is required.');
+      reportError('Event name is required.');
       return;
     }
 
     if (!categoryName) {
-      setFormError('Choose a category.');
+      reportError('Choose a category.');
       return;
     }
 
     if (!audienceName) {
-      setFormError('Choose an audience.');
+      reportError('Choose an audience.');
       return;
     }
 
     if (!venueName) {
-      setFormError('Venue name is required.');
+      reportError('Venue name is required.');
       return;
     }
 
     if (!venueCity) {
-      setFormError('City is required.');
+      reportError('City is required.');
       return;
     }
 
@@ -407,21 +403,16 @@ export function CreateEventModal({ open, onClose, event = null }: CreateEventMod
       }
 
       if (!linkName || !url) {
-        setFormError(`${label} needs both a label and a URL.`);
+        reportError(`${label} needs both a label and a URL.`);
         return;
       }
 
       if (!/^https?:\/\//i.test(url)) {
-        setFormError(`${label} must start with http:// or https://.`);
+        reportError(`${label} must start with http:// or https://.`);
         return;
       }
 
       payloadLinks.push({ name: linkName, url });
-    }
-
-    if (payloadLinks.length === 0) {
-      setFormError('Add at least one event link.');
-      return;
     }
 
     const payloadDates: CreateEventDate[] = [];
@@ -430,18 +421,18 @@ export function CreateEventModal({ open, onClose, event = null }: CreateEventMod
       const label = `Schedule row ${index + 1}`;
 
       if (!row.date) {
-        setFormError(`${label}: choose a date.`);
+        reportError(`${label}: choose a date.`);
         return;
       }
 
       if (!row.startTime || !row.endTime) {
-        setFormError(`${label}: enter both a start and an end time.`);
+        reportError(`${label}: enter both a start and an end time.`);
         return;
       }
 
-      // Both inputs use zero-padded HH:mm, so a string compare is chronological.
-      if (row.endTime <= row.startTime) {
-        setFormError(`${label}: the end time must be after the start time.`);
+
+      if (row.endTime === row.startTime) {
+        reportError(`: the start and end times cannot be the same.`);
         return;
       }
 
@@ -508,7 +499,6 @@ export function CreateEventModal({ open, onClose, event = null }: CreateEventMod
       onClose();
     } catch (error) {
       const message = getErrorMessage(error, 'The event could not be created.');
-      setFormError(message);
       toast.error(message, { title: 'Could not create event' });
     } finally {
       setSaving(false);
@@ -629,11 +619,6 @@ export function CreateEventModal({ open, onClose, event = null }: CreateEventMod
             )}
           </div>
 
-          {imageError && (
-            <p role="alert" className="text-[11px] font-medium text-red-600">
-              {imageError}
-            </p>
-          )}
         </section>
 
         {/* Event details */}
@@ -1139,14 +1124,6 @@ export function CreateEventModal({ open, onClose, event = null }: CreateEventMod
           </div>
         </section>
 
-        {formError && (
-          <p
-            role="alert"
-            className="rounded-xl border border-red-200 bg-red-50 px-3.5 py-3 text-xs font-medium text-red-700"
-          >
-            {formError}
-          </p>
-        )}
       </form>
     </Dialog>
   );

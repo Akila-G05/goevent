@@ -49,8 +49,8 @@ public final class ScheduleTime {
         LocalTime from = parse(start);
         LocalTime to = parse(end);
 
-        if (!to.isAfter(from)) {
-            throw new IllegalArgumentException("End time must be after the start time");
+        if (to.equals(from)) {
+            throw new IllegalArgumentException("Start and end times cannot be the same");
         }
 
         return STORED.format(from) + SEPARATOR + STORED.format(to);
@@ -59,5 +59,17 @@ public final class ScheduleTime {
     /** Combines a date and a clock time; throws {@link IllegalArgumentException}. */
     public static LocalDateTime at(LocalDate date, String time) {
         return LocalDateTime.of(date, parse(time));
+    }
+
+    /**
+     * End of an occurrence that starts on {@code date}. An end earlier than the
+     * start means the event runs past midnight, so it ends on the next day
+     * (for example 19:00 - 02:00 ends at 02:00 the following morning).
+     */
+    public static LocalDateTime endAt(LocalDate date, String start, String end) {
+        LocalDateTime startAt = at(date, start);
+        LocalDateTime endAt = at(date, end);
+
+        return endAt.isAfter(startAt) ? endAt : endAt.plusDays(1);
     }
 }

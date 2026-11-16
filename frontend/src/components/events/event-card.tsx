@@ -5,6 +5,7 @@ import { ArrowUpRight, MapPin, Users } from 'lucide-react';
 import type { EventSummary } from '@/api/events';
 import { API_BASE_URL } from '@/api/routes';
 import { audienceLabel, levelStyle } from '@/lib/event-labels';
+import { SaveEventButton } from './save-event-button';
 
 function formatDate(isoDate: string) {
   const date = new Date(`${isoDate}T00:00:00`);
@@ -81,13 +82,16 @@ export function EventCard({ event }: { event: EventSummary }) {
           </span>
         </p>
 
-        <Link
-          href={`/events/${event.id}`}
-          className="mt-auto inline-flex items-center justify-center gap-1.5 rounded-full bg-black px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-zinc-800"
-        >
-          <span>Explore</span>
-          <ArrowUpRight className="w-3.5 h-3.5" aria-hidden="true" />
-        </Link>
+        <div className="mt-auto flex items-center gap-2">
+          <SaveEventButton eventId={event.id} className="shrink-0" />
+          <Link
+            href={`/events/${event.id}`}
+            className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-full bg-black px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-zinc-800"
+          >
+            <span>Explore</span>
+            <ArrowUpRight className="w-3.5 h-3.5" aria-hidden="true" />
+          </Link>
+        </div>
       </div>
     </article>
   );
