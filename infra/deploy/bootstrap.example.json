@@ -1,0 +1,24 @@
+{
+  "approved": false,
+  "mysql_tls_and_grants_reviewed": false,
+  "vault": "REVIEW-VAULT",
+  "managed_identity_client_id": "",
+  "reuse_protected_app_password": false,
+  "allowed_origins": [
+    "https://REVIEW-FRONTEND.invalid"
+  ],
+  "google_client_id": "REVIEW.apps.googleusercontent.com",
+  "secret_ids": {
+    "mysql-app-password": "https://REVIEW-VAULT.vault.azure.net/secrets/goevent-mysql-app-password/REVIEW_VERSION",
+    "mysql-migration-password": "https://REVIEW-VAULT.vault.azure.net/secrets/goevent-mysql-migration-password/REVIEW_VERSION",
+    "mysql-ca": "https://REVIEW-VAULT.vault.azure.net/secrets/goevent-mysql-ca/REVIEW_VERSION",
+    "mysql-server-cert": "https://REVIEW-VAULT.vault.azure.net/secrets/goevent-mysql-server-cert/REVIEW_VERSION",
+    "mysql-truststore-password": "https://REVIEW-VAULT.vault.azure.net/secrets/goevent-mysql-truststore-password/REVIEW_VERSION",
+    "redis-ca": "https://REVIEW-VAULT.vault.azure.net/secrets/goevent-redis-ca/REVIEW_VERSION",
+    "redis-server-cert": "https://REVIEW-VAULT.vault.azure.net/secrets/goevent-redis-server-cert/REVIEW_VERSION",
+    "redis-server-key": "https://REVIEW-VAULT.vault.azure.net/secrets/goevent-redis-server-key/REVIEW_VERSION",
+    "redis-backend-password": "https://REVIEW-VAULT.vault.azure.net/secrets/goevent-redis-backend-password/REVIEW_VERSION",
+    "redis-gateway-password": "https://REVIEW-VAULT.vault.azure.net/secrets/goevent-redis-gateway-password/REVIEW_VERSION",
+    "redis-health-password": "https://REVIEW-VAULT.vault.azure.net/secrets/goevent-redis-health-password/REVIEW_VERSION"
+  }
+}

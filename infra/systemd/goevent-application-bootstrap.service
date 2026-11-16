@@ -1,0 +1,17 @@
+# PROPOSED ONLY: explicitly invoked before dependencies/apps; never replaces goevent.service.
+[Unit]
+Description=GoEvent application runtime secret bootstrap
+Requisite=goevent.service
+After=goevent.service network-online.target
+[Service]
+Type=oneshot
+User=root
+UMask=0077
+ExecStart=/usr/bin/python3 -B /opt/goevent/releases/current/deploy/bootstrap.py --config /etc/goevent-release/bootstrap.json
+TimeoutStartSec=1200
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=strict
+ReadWritePaths=/run/goevent /run
+# No [Install]: no boot activation, container starts or change to MySQL ownership.

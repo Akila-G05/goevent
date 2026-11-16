@@ -82,10 +82,14 @@ are read-only; only the backend image-upload bind is writable. Missing source
 paths are never automatically created.
 
 `deploy/operator-policy.example.json` enumerates all runtime files under
-`/run/goevent`. Existing protected Key Vault bootstrap must produce these files;
-this bundle neither reads nor rewrites its existing `/run/goevent/secrets` or
-`/run/goevent/mysql-secrets` stores. Never print their contents. Stage only a
-reviewed inventory, not arbitrary files from a secret store.
+`/run/goevent`. The additive [application bootstrap](APPLICATION-BOOTSTRAP.md)
+uses host Managed Identity and pinned Key Vault secret versions to produce these
+16 files. It never rewrites the existing MySQL bootstrap stores. Explicit owner
+approval permits read-only reuse of the two matching protected **app** password
+copies; MySQL root password files are never read. Account creation, server TLS,
+certificate issuance and review remain owner prerequisites. Never print secrets.
+The bootstrap example and deployment policy remain disabled; bootstrap starts no
+containers. See the linked runbook for exact inventory checks and VM commands.
 
 - Backend: datasource password for **goevent_app**, separate **goevent_migration**
   password (or explicitly reviewed migration username override), PKCS12 MySQL CA
