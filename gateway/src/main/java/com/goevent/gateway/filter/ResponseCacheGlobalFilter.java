@@ -27,8 +27,7 @@ import java.util.Locale;
 import java.util.Map;
 
 @Component
-public class ResponseCacheGlobalFilter
-        implements GlobalFilter, Ordered {
+public class ResponseCacheGlobalFilter implements GlobalFilter, Ordered {
 
     private static final Logger log =
             LoggerFactory.getLogger(
