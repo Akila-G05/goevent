@@ -130,7 +130,7 @@ export const userApi = {
   },
 
   /**
-   * Upload a profile image (JPEG, PNG or WebP, max 2 MB).
+   * Upload a profile image (JPEG, PNG or WebP).
    */
   uploadProfileImage: async (file: File): Promise<ProfileImageUploadResponse> => {
     const formData = new FormData();

@@ -5,7 +5,6 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 import java.nio.file.Path;
-import java.util.Map;
 import java.util.Set;
 
 /**
@@ -28,33 +27,13 @@ public class FileStorageConfig {
     public static final Set<String> ALLOWED_CONTENT_TYPES =
             Set.of("image/jpeg", "image/png", "image/webp");
 
-    private static final long MB = 1024L * 1024L;
-
-    private static final Map<String, Long> MAX_SIZE_BY_SCOPE = Map.of(
-            SCOPE_PROFILE, 2 * MB,
-            SCOPE_EVENT, 5 * MB,
-            SCOPE_BANNER, 8 * MB
-    );
+    private static final Set<String> SCOPES = Set.of(SCOPE_PROFILE, SCOPE_EVENT, SCOPE_BANNER);
 
     /** Resolved storage configuration injected into the image service. */
     public record StorageSettings(Path root, String publicBaseUrl) {
 
         public boolean isScope(String scope) {
-            return scope != null && MAX_SIZE_BY_SCOPE.containsKey(scope);
-        }
-
-        public long maxSizeBytes(String scope) {
-            Long maxSize = scope != null ? MAX_SIZE_BY_SCOPE.get(scope) : null;
-
-            if (maxSize == null) {
-                throw new IllegalArgumentException("Unknown image scope: " + scope);
-            }
-
-            return maxSize;
-        }
-
-        public String maxSizeLabel(String scope) {
-            return (maxSizeBytes(scope) / MB) + " MB";
+            return scope != null && SCOPES.contains(scope);
         }
 
         /** Public URL prefix for a scope, always ending with a slash. */

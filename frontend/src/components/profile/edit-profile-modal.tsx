@@ -26,7 +26,6 @@ import { Dialog } from '@/components/ui/dialog';
 import { loading } from '@/lib/loading-store';
 import { getErrorMessage, toast } from '@/lib/toast-store';
 
-const MAX_IMAGE_BYTES = 2 * 1024 * 1024;
 const ACCEPTED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 
 interface ProfileFormValues {
@@ -232,11 +231,6 @@ export function EditProfileModal({ open, onClose, profile, onSaved }: EditProfil
       return;
     }
 
-    if (file.size > MAX_IMAGE_BYTES) {
-      toast.info('Image must be 2 MB or smaller.');
-      return;
-    }
-
     if (previewUrl) {
       URL.revokeObjectURL(previewUrl);
     }
@@ -404,7 +398,7 @@ export function EditProfileModal({ open, onClose, profile, onSaved }: EditProfil
               >
                 Change photo
               </button>
-              <p className="text-[11px] text-[#918c8a]">JPEG, PNG or WebP · up to 2 MB</p>
+              <p className="text-[11px] text-[#918c8a]">JPEG, PNG or WebP</p>
             </div>
           </div>
         </section>

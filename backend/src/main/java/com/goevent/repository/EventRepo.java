@@ -120,10 +120,6 @@ public class EventRepo {
 
     // --- public listing --------------------------------------------------
 
-    /**
-     * Columns and joins for one event card: the earliest upcoming date and time,
-     * the category, audience, level, venue and cover image.
-     */
     private static final String SUMMARY_SELECT = """
             SELECT e.id, e.name, e.description, c.name AS category,
                    a.type AS audience, l.name AS event_level,

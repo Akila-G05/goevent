@@ -19,7 +19,6 @@ import type { CreateEventDate, CreateEventLink, CreateEventPayload, EventDetails
 import { API_BASE_URL } from '@/api/routes';
 import { getErrorMessage, toast } from '@/lib/toast-store';
 
-const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 const ACCEPTED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 
 const CATEGORIES = [
@@ -256,10 +255,6 @@ export function CreateEventModal({ open, onClose, event = null }: CreateEventMod
       return;
     }
 
-    if (file.size > MAX_IMAGE_BYTES) {
-      reportError(`Image must be ${MAX_IMAGE_BYTES / (1024 * 1024)} MB or smaller.`);
-      return;
-    }
     const url = URL.createObjectURL(file);
     objectUrls.current.push(url);
     setCoverFile(file);
@@ -614,7 +609,7 @@ export function CreateEventModal({ open, onClose, event = null }: CreateEventMod
                   <ImageIcon className="h-5 w-5 text-[#1c1b1b]" />
                 </span>
                 <span className="text-sm font-semibold text-[#1c1b1b]">Upload cover image</span>
-                <span className="text-[11px]">JPEG, PNG or WebP · up to 5 MB</span>
+                <span className="text-[11px]">JPEG, PNG or WebP</span>
               </button>
             )}
           </div>

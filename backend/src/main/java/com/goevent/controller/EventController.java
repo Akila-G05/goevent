@@ -20,11 +20,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.util.List;
 import java.util.Map;
 
-/**
- * Event endpoints. Creating an event writes the listing only; free and paid
- * ticketing are rejected until their flows exist. The image is uploaded as a
- * separate multipart call once the event id exists.
- */
+
 @RestController
 @RequestMapping("/events")
 public class EventController {

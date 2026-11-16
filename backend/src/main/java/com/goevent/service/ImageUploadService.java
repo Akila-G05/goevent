@@ -99,11 +99,6 @@ public class ImageUploadService {
         return settings.publicPath(scope, owner, filename);
     }
 
-    /** Validates format and size without storing anything. */
-    public void validateImage(String scope, MultipartFile file) {
-        validate(scope, file);
-    }
-
     // --- serving and deleting -------------------------------------------
 
     /** Loads an image for the public read endpoint; empty for anything invalid. */
@@ -168,11 +163,6 @@ public class ImageUploadService {
 
         if (file == null || file.isEmpty()) {
             throw new ImageException(HttpStatus.BAD_REQUEST, "Please choose an image file");
-        }
-
-        if (file.getSize() > settings.maxSizeBytes(scope)) {
-            throw new ImageException(HttpStatus.BAD_REQUEST,
-                    "Image must be " + settings.maxSizeLabel(scope) + " or smaller");
         }
 
         DetectedImage image = detect(file);
