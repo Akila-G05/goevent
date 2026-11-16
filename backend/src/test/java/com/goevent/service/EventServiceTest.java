@@ -293,16 +293,16 @@ class EventServiceTest {
     }
 
     @Test
-    void showsOtherSignedInUsersAndVisitorsRandomEvents() {
+    void showsOtherSignedInUsersAndVisitorsNewestFirst() {
         signedIn(8);
         Map<String, Object> account = new HashMap<>();
         account.put("role_id", 2);
         when(repo.account(8)).thenReturn(account);
-        when(repo.approvedEvents(Status.APPROVED.getId(), EventSort.RANDOM, 6)).thenReturn(List.of());
+        when(repo.approvedEvents(Status.APPROVED.getId(), EventSort.DESC, 6)).thenReturn(List.of());
 
         service.recommended(6, new MockHttpServletRequest());
 
-        verify(repo).approvedEvents(Status.APPROVED.getId(), EventSort.RANDOM, 6);
+        verify(repo).approvedEvents(Status.APPROVED.getId(), EventSort.DESC, 6);
         verify(repo, never()).approvedEventsForUniversity(anyInt(), anyInt(), anyInt());
     }
 

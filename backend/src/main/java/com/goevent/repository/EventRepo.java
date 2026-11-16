@@ -156,7 +156,7 @@ public class EventRepo {
                         + " WHERE e.event_status_id = ?"
                         + " AND EXISTS (SELECT 1 FROM student_detail sd"
                         + " WHERE sd.user_id = e.published_by AND sd.university_id = ?)"
-                        + " ORDER BY next_date.date, e.id LIMIT ?",
+                        + " ORDER BY next_date.date DESC, e.id DESC LIMIT ?",
                 statusId, universityId, limit);
     }
 

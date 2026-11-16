@@ -335,7 +335,7 @@ public class EventService {
                     .toList();
         }
 
-        return eventRepo.approvedEvents(Status.APPROVED.getId(), EventSort.RANDOM, size).stream()
+        return eventRepo.approvedEvents(Status.APPROVED.getId(), EventSort.DESC, size).stream()
                 .map(EventService::summary)
                 .toList();
     }

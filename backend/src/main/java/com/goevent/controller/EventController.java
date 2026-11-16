@@ -35,7 +35,7 @@ public class EventController {
     @GetMapping
     public Map<String, Object> list(
             @RequestParam(defaultValue = "24") int limit,
-            @RequestParam(defaultValue = "asc") String sort
+            @RequestParam(defaultValue = "desc") String sort
     ) {
         return Map.of("status", true, "events", eventService.listApproved(limit, EventSort.parse(sort)));
     }

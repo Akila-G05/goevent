@@ -43,6 +43,7 @@ import {
 import { useLogout } from '@/hooks/use-logout';
 import { useMinimumLoading } from '@/hooks/use-minimum-loading';
 import { CreateEventModal } from '@/components/events/create-event-modal';
+import { MyEventsList } from '@/components/events/my-events-list';
 import { EditProfileModal } from '@/components/profile/edit-profile-modal';
 import { ReturnToAdmin } from '@/components/admin/return-to-admin';
 
@@ -156,7 +157,8 @@ export default function ProfilePage() {
     : 'USER';
 
   const [activeRoleView, setActiveRoleView] = useState<RoleView>(roleView);
-  const [activeTab, setActiveTab] = useState<TabType>('overview');
+  const [activeTab, setActiveTab] = useState<TabType>('my-events');
+  const [myEventCount, setMyEventCount] = useState(0);
   const [isScannerActive, setIsScannerActive] = useState(false);
 
   // Keep the switcher on the real role once the profile response arrives.
@@ -439,7 +441,7 @@ export default function ProfilePage() {
         <div className="w-full bg-white rounded-2xl p-1.5 shadow-sm border border-[#eae6e5] flex items-center gap-1.5 overflow-x-auto no-scrollbar">
           {[
             { id: 'overview', label: 'Overview' },
-            { id: 'my-events', label: 'My Events (14)' },
+            { id: 'my-events', label: `My Events (${myEventCount})` },
             { id: 'sales', label: 'Ticket Sales & Gate' },
             { id: 'attendees', label: 'Attendees Roster' },
             { id: 'saved', label: 'Saved Events' },
@@ -498,166 +500,18 @@ export default function ProfilePage() {
               </div>
             </div>
 
-            {/* Upcoming Published Events Section */}
+            {/* Organizer's own events, loaded from the backend */}
             <div className="flex flex-col gap-4">
               <div className="flex items-center justify-between">
                 <div>
                   <h2 className="font-display text-2xl uppercase tracking-wide text-[#1c1b1b]">
-                    Live Tour Dates & Events
+                    My events
                   </h2>
-                  <p className="text-xs text-[#736e6c]">
-                    Real-time capacity monitor and check-in velocity.
-                  </p>
-                </div>
-                <Link
-                  href="/#events"
-                  className="text-xs font-bold uppercase tracking-wider text-[#1c1b1b] hover:underline transition-colors flex items-center gap-1"
-                >
-                  View All (14) <ArrowUpRight className="w-3.5 h-3.5" />
-                </Link>
-              </div>
-
-              {/* Event 1 Card */}
-              <div className="bg-white border border-[#eae6e5] rounded-2xl p-5 shadow-sm flex flex-col md:flex-row gap-5 hover:shadow-md transition-all relative overflow-hidden">
-                <div className="w-full md:w-56 h-44 rounded-xl overflow-hidden shrink-0 relative bg-[#f5f2f1]">
-                  <img
-                    src="https://images.unsplash.com/photo-1470225620780-dba8ba36b745?auto=format&fit=crop&w=600&q=80"
-                    alt="LE PHARAOHS TOUR"
-                    className="w-full h-full object-cover"
-                  />
-                  <div className="absolute top-2.5 left-2.5 z-20 bg-[#1c1b1b] text-white px-2.5 py-1 rounded-lg text-center leading-none shadow-md">
-                    <span className="block text-[10px] font-bold text-red-400">MAY</span>
-                    <span className="font-display text-lg">18</span>
-                  </div>
-                </div>
-
-                <div className="flex-1 flex flex-col justify-between gap-4">
-                  <div className="flex flex-col gap-1.5">
-                    <div className="flex items-center justify-between">
-                      <span className="px-2 py-0.5 rounded bg-red-100 text-red-800 text-[10px] uppercase font-bold tracking-wider">
-                        SELLING FAST
-                      </span>
-                      <span className="text-[11px] text-[#736e6c] font-mono">Ref: #EVT-4819</span>
-                    </div>
-                    <h3 className="font-display text-2xl uppercase text-[#1c1b1b] tracking-wide">
-                      LE PHARAOHS X SERKONSER TOUR
-                    </h3>
-                    <div className="flex items-center gap-1.5 text-[#736e6c] text-xs">
-                      <MapPin className="w-3.5 h-3.5 text-[#918c8a]" />
-                      <span>Lapangan Merah, Surabaya • Main Stage A</span>
-                    </div>
-                  </div>
-
-                  {/* Progress bar */}
-                  <div className="flex flex-col gap-1.5 bg-[#f7f5f4] p-3 rounded-xl">
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="text-[#1c1b1b] font-semibold">Tickets Sold: 820 / 1,000</span>
-                      <span className="text-[#1c1b1b] font-bold">82% Filled</span>
-                    </div>
-                    <div className="w-full h-2 rounded-full bg-[#e8e4e3] overflow-hidden">
-                      <div className="h-full bg-[#1c1b1b] rounded-full" style={{ width: '82%' }} />
-                    </div>
-                    <div className="flex items-center justify-between text-[11px] text-[#736e6c] font-mono">
-                      <span>Gross: $41,000</span>
-                      <span>180 Passes remaining</span>
-                    </div>
-                  </div>
-
-                  <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
-                    <div className="flex items-center -space-x-2">
-                      <div className="w-7 h-7 rounded-full bg-[#e4dfde] border-2 border-white flex items-center justify-center text-[10px] font-bold text-[#1c1b1b]">AK</div>
-                      <div className="w-7 h-7 rounded-full bg-[#d6d0cf] border-2 border-white flex items-center justify-center text-[10px] font-bold text-[#1c1b1b]">JD</div>
-                      <div className="w-7 h-7 rounded-full bg-[#b8b0af] border-2 border-white flex items-center justify-center text-[10px] font-bold text-white">+818</div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        className="px-4 py-1.5 rounded-full bg-[#f0eceb] hover:bg-[#e4dfde] text-[#1c1b1b] text-xs font-semibold transition-all"
-                      >
-                        View 820 Attendees
-                      </button>
-                      <button
-                        type="button"
-                        className="px-4 py-1.5 rounded-full bg-[#1c1b1b] text-white hover:bg-[#333131] text-xs font-bold transition-all flex items-center gap-1 shadow-sm"
-                      >
-                        Manage Event <ArrowUpRight className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  </div>
+                  <p className="text-xs text-[#736e6c]">Events you published, with their review status.</p>
                 </div>
               </div>
-
-              {/* Event 2 Card */}
-              <div className="bg-white border border-[#eae6e5] rounded-2xl p-5 shadow-sm flex flex-col md:flex-row gap-5 hover:shadow-md transition-all relative overflow-hidden">
-                <div className="w-full md:w-56 h-44 rounded-xl overflow-hidden shrink-0 relative bg-[#f5f2f1]">
-                  <img
-                    src="https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?auto=format&fit=crop&w=600&q=80"
-                    alt="SOUND OF HERACLES METAL FEST"
-                    className="w-full h-full object-cover"
-                  />
-                  <div className="absolute top-2.5 left-2.5 z-20 bg-[#1c1b1b] text-white px-2.5 py-1 rounded-lg text-center leading-none shadow-md">
-                    <span className="block text-[10px] font-bold text-purple-300">JUN</span>
-                    <span className="font-display text-lg">24</span>
-                  </div>
-                </div>
-
-                <div className="flex-1 flex flex-col justify-between gap-4">
-                  <div className="flex flex-col gap-1.5">
-                    <div className="flex items-center justify-between">
-                      <span className="px-2 py-0.5 rounded bg-[#ede9e8] text-[#1c1b1b] text-[10px] uppercase font-bold tracking-wider">
-                        PUBLISHED • TIER 2
-                      </span>
-                      <span className="text-[11px] text-[#736e6c] font-mono">Ref: #EVT-4932</span>
-                    </div>
-                    <h3 className="font-display text-2xl uppercase text-[#1c1b1b] tracking-wide">
-                      SOUND OF HERACLES METAL FEST
-                    </h3>
-                    <div className="flex items-center gap-1.5 text-[#736e6c] text-xs">
-                      <MapPin className="w-3.5 h-3.5 text-[#918c8a]" />
-                      <span>Gedung Serbaguna, Surabaya • Indoor Arena</span>
-                    </div>
-                  </div>
-
-                  {/* Progress bar */}
-                  <div className="flex flex-col gap-1.5 bg-[#f7f5f4] p-3 rounded-xl">
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="text-[#1c1b1b] font-semibold">Tickets Sold: 540 / 600</span>
-                      <span className="text-[#1c1b1b] font-bold">90% Filled</span>
-                    </div>
-                    <div className="w-full h-2 rounded-full bg-[#e8e4e3] overflow-hidden">
-                      <div className="h-full bg-[#1c1b1b] rounded-full" style={{ width: '90%' }} />
-                    </div>
-                    <div className="flex items-center justify-between text-[11px] text-[#736e6c] font-mono">
-                      <span>Gross: $27,000</span>
-                      <span>60 VIP Passes left</span>
-                    </div>
-                  </div>
-
-                  <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
-                    <div className="flex items-center -space-x-2">
-                      <div className="w-7 h-7 rounded-full bg-[#e4dfde] border-2 border-white flex items-center justify-center text-[10px] font-bold text-[#1c1b1b]">MR</div>
-                      <div className="w-7 h-7 rounded-full bg-[#d6d0cf] border-2 border-white flex items-center justify-center text-[10px] font-bold text-[#1c1b1b]">SL</div>
-                      <div className="w-7 h-7 rounded-full bg-[#b8b0af] border-2 border-white flex items-center justify-center text-[10px] font-bold text-white">+538</div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        className="px-4 py-1.5 rounded-full bg-[#f0eceb] hover:bg-[#e4dfde] text-[#1c1b1b] text-xs font-semibold transition-all"
-                      >
-                        View 540 Attendees
-                      </button>
-                      <button
-                        type="button"
-                        className="px-4 py-1.5 rounded-full bg-[#1c1b1b] text-white hover:bg-[#333131] text-xs font-bold transition-all flex items-center gap-1 shadow-sm"
-                      >
-                        Manage Event <ArrowUpRight className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
+              <MyEventsList onCountChange={setMyEventCount} />
             </div>
-
             {/* Recent Bookings Table */}
             <div className="bg-white border border-[#eae6e5] rounded-2xl p-5 shadow-sm flex flex-col gap-4">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">

@@ -352,8 +352,8 @@ export function CreateEventModal({ open, onClose, event = null }: CreateEventMod
     clearPreview();
   };
 
-  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  const handleSubmit = async (submitEvent: React.FormEvent<HTMLFormElement>) => {
+    submitEvent.preventDefault();
 
     if (saving) {
       return;
@@ -361,7 +361,7 @@ export function CreateEventModal({ open, onClose, event = null }: CreateEventMod
 
     setFormError(null);
 
-    const data = new FormData(event.currentTarget);
+    const data = new FormData(submitEvent.currentTarget);
     const value = (field: string) => String(data.get(field) ?? '').trim();
 
     const name = value('name');
