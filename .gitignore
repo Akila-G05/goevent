@@ -47,6 +47,9 @@ pnpm-debug.log*
 
 # Test and Coverage
 /infra/validation/admin-ui/
+/infra/validation/coordinator-ui/
+# Disposable runtime credentials and browser profiles.
+/infra/validation/tmp*/
 coverage/
 *.lcov
 test-results/

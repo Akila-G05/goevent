@@ -30,6 +30,19 @@ spring:
       server:
         webflux:
           routes:
+            # Session-based workflow APIs never pass through a response cache.
+            - id: goevent-workflows
+              uri: ${BACKEND_URL:http://localhost:8081}
+              order: -20
+              predicates:
+                - Path=/goevent/api/coordinator/**,/goevent/api/coordinator-requests/**,/goevent/api/admin/**
+              filters:
+                - name: RequestRateLimiter
+                  args:
+                    key-resolver: "#{@ipKeyResolver}"
+                    redis-rate-limiter.replenishRate: 10
+                    redis-rate-limiter.burstCapacity: 30
+
             # 1. Strict rate limit
             - id: test-strict
               uri: ${BACKEND_URL:http://localhost:8081}

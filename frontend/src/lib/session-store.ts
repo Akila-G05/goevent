@@ -87,11 +87,6 @@ export function getRoleLabel(roleId?: string): string {
   return ROLE_LABELS[roleId] ?? roleId;
 }
 
-/** Organizers, admins and contributors may publish events. */
-export function canCreateEvents(roleId?: string): boolean {
-  return roleId === 'ORGANIZER' || roleId === 'ADMIN' || roleId === 'CONTRIBUTOR';
-}
-
 /** Name shown in the UI, falling back to the email address. */
 export function getDisplayName(user: SessionUser | null): string {
   return user?.name || user?.email || 'GoEvent member';

@@ -31,6 +31,7 @@ export const adminApi = {
  list: async (section: Exclude<AdminSection,'statistics'>, params: Record<string,string|number>) =>
   (await apiClient.get<{status:boolean;data:AdminRecord[]}>(`${base}/${section}`, {params})).data.data,
  statistics: async (params: Record<string,string|number>) => (await apiClient.get<{status:boolean;data:Statistics}>(`${base}/statistics`, {params})).data.data,
+ memberships: async (id:number) => (await apiClient.get<{status:boolean;data:AdminRecord[]}>(`${base}/accounts/${id}/memberships`)).data.data,
  detail: async (section:string, id:number) => (await apiClient.get<{status:boolean;data:AdminRecord}>(`${base}/${section}/${id}`)).data.data,
  async write(method:'POST'|'PUT'|'DELETE', path:string, body:unknown) {
   const csrf=await this.csrf();

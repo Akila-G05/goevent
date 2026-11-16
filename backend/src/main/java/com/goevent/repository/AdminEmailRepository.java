@@ -9,11 +9,17 @@ import java.util.Map;
 public class AdminEmailRepository {
     private final AdminRepository db;
     private final TransactionTemplate transactions;
-    public AdminEmailRepository(AdminRepository db,PlatformTransactionManager manager) { this.db=db; transactions=new TransactionTemplate(manager); }
+    private final boolean campaignsEnabled;
+    public AdminEmailRepository(AdminRepository db,PlatformTransactionManager manager) { this(db,manager,true); }
+    @org.springframework.beans.factory.annotation.Autowired
+    public AdminEmailRepository(AdminRepository db,PlatformTransactionManager manager,
+        @org.springframework.beans.factory.annotation.Value("#{${app.coordinator.enabled:true} && ${app.coordinator.campaigns-enabled:false}}") boolean campaignsEnabled) {
+        this.db=db; this.campaignsEnabled=campaignsEnabled; transactions=new TransactionTemplate(manager);
+    }
     public Map<String,Object> claim() {
         return transactions.execute(status -> {
             db.update("UPDATE admin_email_outbox SET status='FAILED',leased_at=NULL WHERE status='PROCESSING' AND attempts>=5 AND leased_at<UTC_TIMESTAMP(6)-INTERVAL 10 MINUTE");
-            var row=db.one("SELECT * FROM admin_email_outbox WHERE attempts<5 AND ((status='QUEUED' AND available_at<=UTC_TIMESTAMP(6)) OR (status='PROCESSING' AND leased_at<UTC_TIMESTAMP(6)-INTERVAL 10 MINUTE)) ORDER BY id LIMIT 1 FOR UPDATE SKIP LOCKED");
+            var row=db.one("SELECT * FROM admin_email_outbox WHERE (campaign_id IS NULL OR ?) AND attempts<5 AND ((status='QUEUED' AND available_at<=UTC_TIMESTAMP(6)) OR (status='PROCESSING' AND leased_at<UTC_TIMESTAMP(6)-INTERVAL 10 MINUTE)) ORDER BY id LIMIT 1 FOR UPDATE SKIP LOCKED",campaignsEnabled);
             if(row==null) return null;
             db.update("UPDATE admin_email_outbox SET status='PROCESSING',attempts=attempts+1,leased_at=UTC_TIMESTAMP(6) WHERE id=?",row.get("id"));
             row.put("attempts",((Number)row.get("attempts")).intValue()+1); return row;

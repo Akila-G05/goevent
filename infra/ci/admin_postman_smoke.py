@@ -38,12 +38,30 @@ def check(query, backend_port, gateway_port, temporary):
         "INSERT INTO `event`(name,category_id,venue_id,event_status_id,audience_id,event_level_id,img_id,link_id,published_by,aproved_by) "
         f"VALUES('Postman',1,@v,1,1,1,@i,@l,{ids['publisher']},NULL);")
     event = query("SELECT id FROM `event` WHERE name='Postman'")
+    # V5 reviews a frozen revision; direct admin edits may not bypass it.
+    query("INSERT INTO user_has_organize(user_id,organization_id,position,registered_date,access_state) "
+        f"VALUES({ids['publisher']},{organization},'Chair',UTC_TIMESTAMP(),'APPROVED');")
+    query("INSERT INTO private_document(owner_id,purpose,media_type,byte_size,sha256,content,created_at) "
+        f"VALUES({ids['publisher']},'EVENT','application/pdf',1,REPEAT('0',64),X'00',UTC_TIMESTAMP());")
+    event_proof=query('SELECT MAX(id) FROM private_document')
+    content={'name':'Postman updated','description':'Test','categoryId':1,'audienceId':2,'eventLevelId':1,
+        'venueName':'Postman','venueAddress':'','venueCity':'Colombo','timezone':'Asia/Colombo',
+        'startsAt':'2027-12-01T03:30:00Z','endsAt':'2027-12-01T11:30:00Z','imagePath':'','bannerPath':'',
+        'videoUrl':'','approvalDocumentId':int(event_proof),'confirmationMessage':'','currency':'LKR',
+        'packages':[],'universityIds':[],'minimumAge':0,'bookingLimit':5,'qrIntended':False}
+    serialized=json.dumps(content).replace("'","''")
+    query("INSERT INTO event_revision(event_id,version,content,review_state,created_by,created_at,submitted_at) "
+        f"VALUES({event},1,'{serialized}','PENDING',{ids['publisher']},UTC_TIMESTAMP(),UTC_TIMESTAMP()); "
+        f"UPDATE event SET organization_id={organization},working_revision_id=LAST_INSERT_ID(),revision=1 WHERE id={event};")
+    query("INSERT INTO private_document(owner_id,purpose,media_type,byte_size,sha256,content,created_at) "
+        f"VALUES({ids['member']},'AUTHORIZATION','application/pdf',1,REPEAT('0',64),X'00',UTC_TIMESTAMP());")
+    member_proof=query('SELECT MAX(id) FROM private_document')
     # Booking prevents destructive event deletion and exercises the real FK guard.
     query(f"INSERT INTO booking(user_id,event_id,booking_reference,total_amount,created_at) VALUES({ids['member']},{event},'POSTMAN',12.50,UTC_TIMESTAMP());")
     values = {'baseUrl': f'http://127.0.0.1:{backend_port}/goevent/api',
         'gatewayUrl': f'http://127.0.0.1:{gateway_port}/goevent/api',
         'password': password, 'organizationId': organization, 'eventId': event,
-        'adminId': ids['admin'], 'memberId': ids['member']}
+        'adminId': ids['admin'], 'memberId': ids['member'], 'proofId':member_proof}
     environment = temporary/'postman.environment.json'
     environment.write_text(json.dumps({'name':'Disposable admin test', 'values':[
         {'key':key,'value':value,'enabled':True} for key,value in values.items()]}))

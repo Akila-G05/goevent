@@ -71,7 +71,7 @@ public class AdminRepository {
     public boolean organization(int id) { return count("SELECT COUNT(*) FROM organization WHERE id=?",id)==1; }
     public Map<String,Object> coordinator(long id) { return one("SELECT r.*,u.email FROM `request` r JOIN `user` u ON u.id=r.user_id WHERE r.id=? AND r.role_id=2",id); }
     public List<Map<String,Object>> coordinators(Integer status,int limit,int offset) {
-        return rows("SELECT r.id,r.user_id,r.msg,r.organization_id,r.position,r.status_id,r.created_at,r.reviewed_at,r.decision_reason,u.email FROM `request` r JOIN `user` u ON u.id=r.user_id WHERE r.role_id=2 AND (? IS NULL OR r.status_id=?) ORDER BY r.id DESC LIMIT ? OFFSET ?",status,status,limit,offset);
+        return rows("SELECT r.id,r.user_id,r.msg,r.organization_id,r.position,r.status_id,r.created_at,r.reviewed_at,r.decision_reason,r.proposed_name,r.proposed_type_id,r.contact_email,r.contact_phone,r.explanation,r.proof_id,r.revoked_at,u.email FROM `request` r JOIN `user` u ON u.id=r.user_id WHERE r.role_id=2 AND (? IS NULL OR r.status_id=?) ORDER BY r.id DESC LIMIT ? OFFSET ?",status,status,limit,offset);
     }
     public List<Map<String,Object>> ownRequests(int user) { return rows("SELECT id,msg,status_id,organization_id,position,created_at,reviewed_at,decision_reason FROM `request` WHERE user_id=? AND role_id=2 ORDER BY id DESC LIMIT 100",user); }
     public long requestCoordinator(int user,int org,String position,String message) {
@@ -81,11 +81,15 @@ public class AdminRepository {
         update("UPDATE `request` SET status_id=?,aproved_by=?,reviewed_at=UTC_TIMESTAMP(6),decision_reason=? WHERE id=?",approve?2:3,actor,reason,id);
     }
     public void grantCoordinator(int user,int org,String position) {
-        update("UPDATE `user` SET coordinator_previous_role_id=CASE WHEN role_id IN (1,4) THEN role_id ELSE coordinator_previous_role_id END,role_id=2 WHERE id=?",user);
+        update("UPDATE `user` SET coordinator_previous_role_id=CASE WHEN role_id IN (1,4) THEN role_id ELSE coordinator_previous_role_id END,role_id=CASE WHEN role_id IN (1,2,4) THEN 2 ELSE role_id END WHERE id=?",user);
         // Append the approved assignment rather than overwriting prior organizations.
-        update("INSERT INTO user_has_organize(user_id,organization_id,position,registered_date) VALUES(?,?,?,UTC_TIMESTAMP())",user,org,position);
+        update("UPDATE user_has_organize SET access_state='REVOKED' WHERE user_id=? AND organization_id=? AND access_state='APPROVED'",user,org);
+        update("INSERT INTO user_has_organize(user_id,organization_id,position,registered_date,access_state) VALUES(?,?,?,UTC_TIMESTAMP(),'APPROVED')",user,org,position);
     }
-    public void revokeCoordinator(int id) { update("UPDATE `user` SET role_id=COALESCE(coordinator_previous_role_id,1),coordinator_previous_role_id=NULL WHERE id=? AND role_id=2",id); }
+    public void revokeCoordinator(int id) {
+        update("UPDATE user_has_organize SET access_state='REVOKED' WHERE user_id=? AND access_state='APPROVED'",id);
+        update("UPDATE `request` SET revoked_at=UTC_TIMESTAMP(6) WHERE user_id=? AND role_id=2 AND status_id=2 AND revoked_at IS NULL",id);
+        update("UPDATE `user` SET role_id=COALESCE(coordinator_previous_role_id,1),coordinator_previous_role_id=NULL WHERE id=? AND role_id=2",id); }
     public Map<String,Object> event(int id) { return one("SELECT e.*,u.email AS coordinator_email FROM `event` e JOIN `user` u ON u.id=e.published_by WHERE e.id=?",id); }
     public List<Map<String,Object>> events(Integer status,String phase,int limit,int offset) {
         String phaseSql=switch(phase) {
@@ -95,7 +99,7 @@ public class AdminRepository {
             case "UNKNOWN" -> " AND starts_at IS NULL";
             default -> "";
         };
-        return rows("SELECT * FROM `event` WHERE (? IS NULL OR event_status_id=?)"+phaseSql+" ORDER BY id DESC LIMIT ? OFFSET ?",status,status,limit,offset);
+        return rows("SELECT e.*,r.review_state FROM `event` e LEFT JOIN event_revision r ON r.id=e.working_revision_id WHERE (? IS NULL OR e.event_status_id=?)"+phaseSql+" ORDER BY e.id DESC LIMIT ? OFFSET ?",status,status,limit,offset);
     }
     public void decideEvent(int id,int actor,boolean approve,String reason) {
         update("UPDATE `event` SET event_status_id=?,aproved_by=?,moderation_reason=?,revision=revision+1 WHERE id=?",approve?2:3,actor,reason,id);

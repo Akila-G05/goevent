@@ -38,7 +38,7 @@ def get(port, path, headers=None):
         return json.loads(response.read())
 
 
-def main(api_check=None):
+def main(api_check=None, extra_env=None):
     prefix = 'goevent-upgrade-' + uuid.uuid4().hex[:8]
     processes, containers = [], []
     validation = ROOT / 'infra/validation'
@@ -108,7 +108,9 @@ def main(api_check=None):
                 'BACKEND_URL': f'http://127.0.0.1:{backend_port}',
                 'SPRING_CONFIG_IMPORT': '',
                 'APP_EMAIL_ENABLED': 'false',
+                'APP_COORDINATOR_CAMPAIGNS_ENABLED': 'false',
             }
+            environment.update(extra_env or {})
             services = [
                 ('backend', 'backend/target/goevent-1.0-SNAPSHOT.war', backend_port),
                 ('gateway', 'gateway/target/gateway-1.0-SNAPSHOT.jar', gateway_port),
