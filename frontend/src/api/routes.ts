@@ -39,6 +39,8 @@ export const API_ROUTES = {
     LIST: `${API_PREFIX}/events`,
     DETAIL: (id: number) => `${API_PREFIX}/events/${id}`,
     RECOMMENDED: `${API_PREFIX}/events/recommended`,
+    MINE: `${API_PREFIX}/events/mine`,
+    MINE_DETAIL: (id: number) => `${API_PREFIX}/events/mine/${id}`,
     CREATE: `${API_PREFIX}/events`,
     IMAGE: (id: number) => `${API_PREFIX}/events/${id}/image`,
   },

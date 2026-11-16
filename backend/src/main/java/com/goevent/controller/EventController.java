@@ -8,6 +8,7 @@ import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -47,6 +48,28 @@ public class EventController {
         return Map.of("status", true, "events", eventService.recommended(limit, httpRequest));
     }
 
+    /** The signed-in organizer's own events, in any review state. */
+    @GetMapping("/mine")
+    public Map<String, Object> mine(HttpServletRequest httpRequest) {
+        return Map.of("status", true, "events", eventService.mine(httpRequest));
+    }
+
+    /** Full detail of one of the organizer's own events, used to prefill the edit form. */
+    @GetMapping("/mine/{id}")
+    public Map<String, Object> ownerDetail(@PathVariable("id") long id, HttpServletRequest httpRequest) {
+        return Map.of("status", true, "event", eventService.ownerDetail(id, httpRequest));
+    }
+
+    /** Replaces the listing details of an event the caller owns (or any event, for an administrator). */
+    @PutMapping("/{id}")
+    public Map<String, Object> update(
+            @PathVariable("id") long id,
+            @RequestBody EventDTO input,
+            HttpServletRequest httpRequest
+    ) {
+        long updated = eventService.update(id, input, httpRequest);
+        return Map.of("status", true, "id", updated);
+    }
     @GetMapping("/{id}")
     public Map<String, Object> detail(@PathVariable("id") long id) {
         return Map.of("status", true, "event", eventService.detail(id));

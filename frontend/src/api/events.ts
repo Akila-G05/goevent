@@ -119,7 +119,46 @@ export interface UploadEventImageResponse {
   message?: string;
 }
 
+/** One of the organizer's own events, in any review state. */
+export interface OwnedEvent {
+  id: number;
+  name: string;
+  category: string;
+  audience: string;
+  /** `LISTING_ONLY`, `FREE` or `PAYED`. */
+  eventLevel: string;
+  /** `PENDING`, `APPROVED`, `REJECTED` or `DRAFT`. */
+  status: string;
+  venueName: string;
+  venueCity: string;
+  imagePath: string | null;
+  /** Earliest scheduled date, `yyyy-MM-dd`; null when no date is stored. */
+  startsOn: string | null;
+  timeRange: string | null;
+}
+
 export const eventsApi = {
+  /** The signed-in organizer's events, every review state, for the profile page. */
+  mine: async (): Promise<OwnedEvent[]> => {
+    const response = await apiClient.get<{ status: boolean; events: OwnedEvent[] }>(API_ROUTES.EVENTS.MINE);
+
+    return response.data.events;
+  },
+
+  /** Full detail of one of the organizer's events, used to prefill the edit form. */
+  mineDetail: async (id: number): Promise<EventDetails> => {
+    const response = await apiClient.get<EventDetailResponse>(API_ROUTES.EVENTS.MINE_DETAIL(id));
+
+    return response.data.event;
+  },
+
+  /** Replaces an event's listing details. The server checks ownership and keeps the review status. */
+  update: async (id: number, payload: CreateEventPayload): Promise<CreateEventResponse> => {
+    const response = await apiClient.put<CreateEventResponse>(API_ROUTES.EVENTS.DETAIL(id), payload);
+
+    return response.data;
+  },
+
   /** One approved event for the detail page. Rejects with a 404 for unknown or unapproved events. */
   detail: async (id: number): Promise<EventDetails> => {
     const response = await apiClient.get<EventDetailResponse>(API_ROUTES.EVENTS.DETAIL(id));

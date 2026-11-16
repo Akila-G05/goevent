@@ -15,7 +15,8 @@ import {
 } from 'lucide-react';
 import { Dialog } from '@/components/ui/dialog';
 import { eventsApi } from '@/api/events';
-import type { CreateEventDate, CreateEventLink } from '@/api/events';
+import type { CreateEventDate, CreateEventLink, CreateEventPayload, EventDetails } from '@/api/events';
+import { API_BASE_URL } from '@/api/routes';
 import { getErrorMessage, toast } from '@/lib/toast-store';
 
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
@@ -166,27 +167,57 @@ function SectionHeading({
 export interface CreateEventModalProps {
   open: boolean;
   onClose: () => void;
+  /** When set, the form edits this event instead of creating one. */
+  event?: EventDetails | null;
 }
 
-export function CreateEventModal({ open, onClose }: CreateEventModalProps) {
+/** Matches a stored upper-case value (e.g. TECHNOLOGY) to a form option label (Technology). */
+function matchOption(options: readonly string[], stored: string | undefined): string {
+  return options.find((option) => option.toUpperCase() === (stored ?? '').toUpperCase()) ?? '';
+}
+
+/** Splits the stored `HH:mm - HH:mm` range into its two clock values. */
+function splitTimeRange(range: string): [string, string] {
+  const [start = '', end = ''] = range.split(' - ').map((part) => part.trim());
+  return [start, end];
+}
+
+export function CreateEventModal({ open, onClose, event = null }: CreateEventModalProps) {
   const formRef = useRef<HTMLFormElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
-  const dateKey = useRef(1);
-  const linkKey = useRef(1);
+  const dateKey = useRef(Math.max(1, event?.dates.length ?? 0));
+  const linkKey = useRef(Math.max(1, event?.links.length ?? 0));
   const ticketKey = useRef(1);
 
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(
+    event?.imagePath ? `${API_BASE_URL}${event.imagePath}` : null
+  );
   const [coverFile, setCoverFile] = useState<File | null>(null);
   const [imageError, setImageError] = useState<string | null>(null);
   const [eventLevel, setEventLevel] = useState<EventLevel>('LISTING_ONLY');
-  const [dates, setDates] = useState<DateRow[]>([
-    { key: 0, date: '', startTime: '', endTime: '' },
-  ]);
-  const [links, setLinks] = useState<LinkRow[]>([{ key: 0, name: '', url: '' }]);
+  const [dates, setDates] = useState<DateRow[]>(() =>
+    event
+      ? event.dates.map((slot, index) => {
+          const [startTime, endTime] = splitTimeRange(slot.time);
+          return { key: index, date: slot.date, startTime, endTime };
+        })
+      : [{ key: 0, date: '', startTime: '', endTime: '' }]
+  );
+  const [links, setLinks] = useState<LinkRow[]>(() =>
+    event && event.links.length > 0
+      ? event.links.map((link, index) => ({ key: index, name: link.name, url: link.url }))
+      : [{ key: 0, name: '', url: '' }]
+  );
   const [tickets, setTickets] = useState<TicketRow[]>([
     { key: 0, quantity: '', price: '', description: '', saleStartAt: '', saleEndAt: '' },
   ]);
-  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [selectedTags, setSelectedTags] = useState<string[]>(() =>
+    event
+      ? Array.from(TAG_NAMES.entries())
+          .filter(([, name]) => event.tags.includes(name))
+          .map(([id]) => id)
+      : []
+  );
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
@@ -424,7 +455,7 @@ export function CreateEventModal({ open, onClose }: CreateEventModalProps) {
     setSaving(true);
 
     try {
-      const created = await eventsApi.create({
+      const payload: CreateEventPayload = {
         name,
         description: value('description') || undefined,
         categoryName,
@@ -441,17 +472,22 @@ export function CreateEventModal({ open, onClose }: CreateEventModalProps) {
         tags: selectedTags
           .map((id) => TAG_NAMES.get(id))
           .filter((tag): tag is string => Boolean(tag)),
-      });
+      };
 
-      if (!created.status || created.id === undefined) {
-        throw new Error(created.message || 'The event could not be created.');
+      const saved = event
+        ? await eventsApi.update(event.id, payload)
+        : await eventsApi.create(payload);
+      const savedId = event ? event.id : saved.id;
+
+      if (!saved.status || savedId === undefined) {
+        throw new Error(saved.message || 'The event could not be saved.');
       }
 
       let imageWarning: string | null = null;
 
       if (coverFile) {
         try {
-          await eventsApi.uploadImage(created.id, coverFile);
+          await eventsApi.uploadImage(savedId, coverFile);
         } catch (error) {
           // The event already exists, so a failed image upload must not look
           // like a failed creation. Report it separately and keep the event.
@@ -462,7 +498,7 @@ export function CreateEventModal({ open, onClose }: CreateEventModalProps) {
         }
       }
 
-      toast.success(`"${name}" was created.`);
+      toast.success(`"${name}" was ${event ? 'updated' : 'created'}.`);
 
       if (imageWarning) {
         toast.warning(imageWarning, { title: 'Image not uploaded' });
@@ -483,7 +519,7 @@ export function CreateEventModal({ open, onClose }: CreateEventModalProps) {
     <Dialog
       open={open}
       onClose={onClose}
-      title="Create event"
+      title={event ? 'Edit event' : 'Create event'}
       description="Set up a new event. Fields marked * are required."
       panelClassName="max-w-3xl"
       footer={
@@ -506,7 +542,13 @@ export function CreateEventModal({ open, onClose }: CreateEventModalProps) {
             ) : (
               <Plus className="h-4 w-4" />
             )}
-            {saving ? 'Creating…' : 'Create event'}
+            {event
+              ? saving
+                ? 'Saving…'
+                : 'Save changes'
+              : saving
+                ? 'Creating…'
+                : 'Create event'}
           </button>
         </>
       }
@@ -607,7 +649,7 @@ export function CreateEventModal({ open, onClose }: CreateEventModalProps) {
             </label>
             <input
               id="event-name"
-              name="name"
+              name="name" defaultValue={event?.name ?? ''}
               type="text"
               maxLength={100}
               placeholder="e.g. Tech Fest 2026"
@@ -621,7 +663,7 @@ export function CreateEventModal({ open, onClose }: CreateEventModalProps) {
             </label>
             <textarea
               id="event-description"
-              name="description"
+              name="description" defaultValue={event?.description ?? ''}
               rows={4}
               placeholder="What should attendees know before they register?"
               className={`${inputClass} resize-y`}
@@ -633,7 +675,7 @@ export function CreateEventModal({ open, onClose }: CreateEventModalProps) {
               <label htmlFor="event-category" className={labelClass}>
                 Category <RequiredMark />
               </label>
-              <select id="event-category" name="categoryName" defaultValue="" className={inputClass}>
+              <select id="event-category" name="categoryName" defaultValue={matchOption(CATEGORIES, event?.category)} className={inputClass}>
                 <option value="">Select a category</option>
                 {CATEGORIES.map((category) => (
                   <option key={category} value={category}>
@@ -647,7 +689,7 @@ export function CreateEventModal({ open, onClose }: CreateEventModalProps) {
               <label htmlFor="event-audience" className={labelClass}>
                 Audience <RequiredMark />
               </label>
-              <select id="event-audience" name="audienceName" defaultValue="" className={inputClass}>
+              <select id="event-audience" name="audienceName" defaultValue={matchOption(AUDIENCES, event?.audience)} className={inputClass}>
                 <option value="">Select an audience</option>
                 {AUDIENCES.map((audience) => (
                   <option key={audience} value={audience}>
@@ -733,7 +775,7 @@ export function CreateEventModal({ open, onClose }: CreateEventModalProps) {
               </label>
               <input
                 id="event-venue-name"
-                name="venueName"
+                name="venueName" defaultValue={event?.venue.name ?? ''}
                 type="text"
                 maxLength={45}
                 placeholder="e.g. Main Auditorium"
@@ -747,7 +789,7 @@ export function CreateEventModal({ open, onClose }: CreateEventModalProps) {
               </label>
               <input
                 id="event-venue-city"
-                name="venueCity"
+                name="venueCity" defaultValue={event?.venue.city ?? ''}
                 type="text"
                 maxLength={45}
                 placeholder="e.g. Colombo"
@@ -761,7 +803,7 @@ export function CreateEventModal({ open, onClose }: CreateEventModalProps) {
               </label>
               <input
                 id="event-venue-address"
-                name="venueAddress"
+                name="venueAddress" defaultValue={event?.venue.address ?? ''}
                 type="text"
                 maxLength={150}
                 placeholder="Street, building, floor"
@@ -777,7 +819,7 @@ export function CreateEventModal({ open, onClose }: CreateEventModalProps) {
                 <MapPin className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#a8a4a3]" />
                 <input
                   id="event-venue-link"
-                  name="venueLink"
+                  name="venueLink" defaultValue={event?.venue.link ?? ''}
                   type="url"
                   maxLength={150}
                   placeholder="https://maps.google.com/..."

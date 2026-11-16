@@ -177,31 +177,112 @@ public class EventRepo {
     }
     // --- public detail --------------------------------------------------
 
-    /** One event with its category, audience, level, venue and cover image; null when not found. */
+    /** SQL for one event's full detail row; callers add the status condition they need. */
+    private static final String DETAIL_ROW_SQL = """
+            SELECT e.id, e.name, e.description, c.name AS category,
+                   a.type AS audience, l.name AS event_level,
+                   v.name AS venue_name, v.address AS venue_address,
+                   v.city AS venue_city, v.link AS venue_link,
+                   i.path AS image_path, i.bannerpath AS banner_path,
+                   CONCAT(u.fname, ' ', u.lname) AS organizer_name,
+                   YEAR(u.registered_date) AS organizer_since
+            FROM `event` e
+            JOIN category c ON c.id = e.category_id
+            JOIN audience a ON a.id = e.audience_id
+            JOIN event_level l ON l.id = e.event_level_id
+            JOIN venue v ON v.id = e.venue_id
+            JOIN `user` u ON u.id = e.published_by
+            LEFT JOIN img i ON i.id = e.img_id
+            WHERE e.id = ?
+            """;
+
+    /** One approved event with its category, audience, level, venue and cover image; null when not found. */
     public Map<String, Object> approvedEventRow(long eventId, int statusId) {
         List<Map<String, Object>> rows = jdbc.queryForList(
-                """
-                SELECT e.id, e.name, e.description, c.name AS category,
-                       a.type AS audience, l.name AS event_level,
-                       v.name AS venue_name, v.address AS venue_address,
-                       v.city AS venue_city, v.link AS venue_link,
-                       i.path AS image_path, i.bannerpath AS banner_path,
-                       CONCAT(u.fname, ' ', u.lname) AS organizer_name,
-                       YEAR(u.registered_date) AS organizer_since
-                FROM `event` e
-                JOIN category c ON c.id = e.category_id
-                JOIN audience a ON a.id = e.audience_id
-                JOIN event_level l ON l.id = e.event_level_id
-                JOIN venue v ON v.id = e.venue_id
-                JOIN `user` u ON u.id = e.published_by
-                LEFT JOIN img i ON i.id = e.img_id
-                WHERE e.id = ? AND e.event_status_id = ?
-                """,
-                eventId, statusId);
+                DETAIL_ROW_SQL + " AND e.event_status_id = ?", eventId, statusId);
 
         return rows.isEmpty() ? null : rows.get(0);
     }
 
+    /** Any event's detail row regardless of review status, for its owner or an administrator. */
+    public Map<String, Object> eventRowById(long eventId) {
+        List<Map<String, Object>> rows = jdbc.queryForList(DETAIL_ROW_SQL, eventId);
+
+        return rows.isEmpty() ? null : rows.get(0);
+    }
+
+    /** Every event the user published, in any review state, latest first. */
+    public List<Map<String, Object>> ownedEventRows(int userId) {
+        return jdbc.queryForList(
+                """
+                SELECT e.id, e.name, c.name AS category, a.type AS audience,
+                       l.name AS event_level, s.name AS status,
+                       v.name AS venue_name, v.city AS venue_city,
+                       i.path AS image_path,
+                       first_date.date AS starts_on, first_date.time AS time_range
+                FROM `event` e
+                JOIN category c ON c.id = e.category_id
+                JOIN audience a ON a.id = e.audience_id
+                JOIN event_level l ON l.id = e.event_level_id
+                JOIN status s ON s.id = e.event_status_id
+                JOIN venue v ON v.id = e.venue_id
+                LEFT JOIN img i ON i.id = e.img_id
+                LEFT JOIN event_dates first_date ON first_date.id = (
+                    SELECT ed.id FROM event_dates ed
+                    WHERE ed.event_id = e.id
+                    ORDER BY ed.date, ed.id LIMIT 1)
+                WHERE e.published_by = ?
+                ORDER BY e.created_at DESC, e.id DESC
+                """,
+                userId);
+    }
+
+    /** Venue and cover-image ownership fields needed before an update. */
+    public Map<String, Object> eventOwnerRow(long eventId) {
+        List<Map<String, Object>> rows = jdbc.queryForList(
+                "SELECT published_by, venue_id, img_id FROM `event` WHERE id=?", eventId);
+
+        return rows.isEmpty() ? null : rows.get(0);
+    }
+
+    public void updateEvent(long eventId, String name, String description, int categoryId,
+                            int audienceId, LocalDateTime startsAt, LocalDateTime endsAt, Long linkId) {
+        jdbc.update(
+                "UPDATE `event` SET name=?, description=?, category_id=?, audience_id=?,"
+                        + " starts_at=?, ends_at=?, link_id=? WHERE id=?",
+                name, description, categoryId, audienceId, startsAt, endsAt, linkId, eventId);
+    }
+
+    public void updateVenue(long venueId, String name, String address, String city, String link) {
+        jdbc.update(
+                "UPDATE venue SET name=?, address=?, city=?, link=? WHERE id=?",
+                name, address, city, link, venueId);
+    }
+
+    public List<Long> eventLinkIds(long eventId) {
+        return jdbc.queryForList(
+                "SELECT link_id FROM event_has_links WHERE event_id=?", Long.class, eventId);
+    }
+
+    /** Removes the event's link associations; the link rows themselves are removed separately. */
+    public void clearEventLinks(long eventId) {
+        jdbc.update("DELETE FROM event_has_links WHERE event_id=?", eventId);
+    }
+
+    /** Deletes a link row only when no event still uses it. */
+    public void deleteLinkIfUnused(long linkId) {
+        jdbc.update(
+                "DELETE FROM link WHERE id=? AND id NOT IN (SELECT link_id FROM event_has_links)",
+                linkId);
+    }
+
+    public void clearEventDates(long eventId) {
+        jdbc.update("DELETE FROM event_dates WHERE event_id=?", eventId);
+    }
+
+    public void clearEventTags(long eventId) {
+        jdbc.update("DELETE FROM event_has_tags WHERE event_id=?", eventId);
+    }
     public List<Map<String, Object>> eventDateRows(long eventId) {
         return jdbc.queryForList(
                 "SELECT `date`, `time` FROM event_dates WHERE event_id=? ORDER BY `date`, id",

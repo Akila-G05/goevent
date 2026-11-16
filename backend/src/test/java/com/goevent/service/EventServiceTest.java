@@ -306,6 +306,57 @@ class EventServiceTest {
         verify(repo, never()).approvedEventsForUniversity(anyInt(), anyInt(), anyInt());
     }
 
+    @Test
+    void updatesTheOwnersEventAndReplacesItsDatesLinksAndTags() {
+        signedIn(7);
+        when(repo.eventOwnerRow(99L)).thenReturn(Map.of("published_by", 7, "venue_id", 5, "img_id", 3));
+        when(repo.eventLinkIds(99L)).thenReturn(List.of(51L));
+
+        long id = service.update(99L, validPayload(), request);
+
+        assertEquals(99L, id);
+        verify(repo).updateVenue(eq(5L), anyString(), any(), anyString(), any());
+        verify(repo).clearEventDates(99L);
+        verify(repo).clearEventTags(99L);
+        verify(repo).deleteLinkIfUnused(51L);
+        verify(repo).updateEvent(eq(99L), anyString(), any(), anyInt(), anyInt(), any(), any(), any());
+    }
+
+    @Test
+    void rejectsEditingAnotherOrganizersEvent() {
+        signedIn(7);
+        when(repo.eventOwnerRow(99L)).thenReturn(Map.of("published_by", 8, "venue_id", 5, "img_id", 3));
+
+        EventException error = assertThrows(EventException.class,
+                () -> service.update(99L, validPayload(), request));
+
+        assertEquals(HttpStatus.FORBIDDEN, error.status());
+        verify(repo, never()).updateEvent(anyLong(), anyString(), any(), anyInt(), anyInt(), any(), any(), any());
+    }
+
+    @Test
+    void listsEveryReviewStateForTheOrganizer() {
+        signedIn(7);
+        Map<String, Object> row = new HashMap<>();
+        row.put("id", 9);
+        row.put("name", "Pending Fest");
+        row.put("category", "TECHNOLOGY");
+        row.put("audience", "PUBLIC");
+        row.put("event_level", "LISTING_ONLY");
+        row.put("status", "PENDING");
+        row.put("venue_name", "Hall A");
+        row.put("venue_city", "Colombo");
+        row.put("image_path", null);
+        row.put("starts_on", java.sql.Date.valueOf("2027-05-01"));
+        row.put("time_range", "10:00 - 12:00");
+        when(repo.ownedEventRows(7)).thenReturn(List.of(row));
+
+        var events = service.mine(request);
+
+        assertEquals(1, events.size());
+        assertEquals("PENDING", events.get(0).status());
+    }
+
     private void signedIn(int userId) {
         MockHttpSession session = new MockHttpSession();
         session.setAttribute("userId", userId);

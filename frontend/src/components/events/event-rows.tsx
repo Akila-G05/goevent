@@ -31,7 +31,11 @@ export function EventRows({ events, actionLabel, variant = 'light' }: EventRowsP
                 dark ? 'hover:bg-white/[0.03]' : 'px-4 py-5 hover:bg-zinc-100/60'
               }`}
             >
-              <div className="relative h-16 overflow-hidden rounded-lg bg-zinc-200 md:col-span-2">
+              <div
+                className={`relative overflow-hidden rounded-lg bg-zinc-200 md:col-span-2 ${
+                  dark ? 'h-16' : 'h-28'
+                }`}
+              >
                 <Image
                   src={imageUrl}
                   alt=""

@@ -4,6 +4,7 @@ import com.goevent.config.FileStorageConfig;
 import com.goevent.dto.EventDTO;
 import com.goevent.dto.EventDetails;
 import com.goevent.dto.EventSummary;
+import com.goevent.dto.OwnedEventSummary;
 import com.goevent.enums.EventSort;
 import com.goevent.enums.Role;
 import com.goevent.enums.Status;
@@ -58,6 +59,123 @@ public class EventService {
     public long create(EventDTO input, HttpServletRequest httpRequest) {
 
         int actor = requireOrganizer(httpRequest);
+        Prepared event = prepare(input);
+
+        long venueId = eventRepo.insertVenue(event.venueName(), event.venueAddress(), event.venueCity(), event.venueLink());
+        List<Long> linkIds = insertLinks(event.links());
+
+        long eventId = eventRepo.insertEvent(
+                event.name(),
+                event.description(),
+                event.categoryId(),
+                venueId,
+                Status.APPROVED.getId(),
+                event.audienceId(),
+                LISTING_ONLY,
+                linkIds.isEmpty() ? null : linkIds.get(0),
+                actor,
+                startsAt(event),
+                endsAt(event));
+
+        for (long linkId : linkIds) {
+            eventRepo.linkEvent(eventId, linkId);
+        }
+
+        writeSchedule(eventId, event);
+        writeTags(eventId, event);
+
+        logger.info("Created listing event {} for user {} ({} dates, {} links, {} tags).",
+                eventId, actor, event.schedules().size(), linkIds.size(), event.tagIds().size());
+
+        return eventId;
+    }
+
+    /**
+     * Replaces an event's listing details. The owner or an administrator may edit.
+     * The review status is kept, so an approved event stays visible while it is edited.
+     */
+    @Transactional
+    public long update(long eventId, EventDTO input, HttpServletRequest httpRequest) {
+
+        int actor = requireOrganizer(httpRequest);
+        Map<String, Object> owner = requireOwnedEvent(eventId, actor);
+        Prepared event = prepare(input);
+
+        eventRepo.updateVenue(number(owner, "venue_id"), event.venueName(), event.venueAddress(),
+                event.venueCity(), event.venueLink());
+
+        List<Long> previousLinks = eventRepo.eventLinkIds(eventId);
+        eventRepo.clearEventLinks(eventId);
+        List<Long> linkIds = insertLinks(event.links());
+
+        for (long linkId : linkIds) {
+            eventRepo.linkEvent(eventId, linkId);
+        }
+
+        for (long linkId : previousLinks) {
+            eventRepo.deleteLinkIfUnused(linkId);
+        }
+
+        eventRepo.updateEvent(eventId, event.name(), event.description(), event.categoryId(),
+                event.audienceId(), startsAt(event), endsAt(event),
+                linkIds.isEmpty() ? null : linkIds.get(0));
+
+        eventRepo.clearEventDates(eventId);
+        writeSchedule(eventId, event);
+
+        eventRepo.clearEventTags(eventId);
+        writeTags(eventId, event);
+
+        logger.info("Updated listing event {} by user {}.", eventId, actor);
+
+        return eventId;
+    }
+
+    /** Every event the signed-in organizer published, in any review state. */
+    @Transactional(readOnly = true)
+    public List<OwnedEventSummary> mine(HttpServletRequest httpRequest) {
+
+        int actor = requireOrganizer(httpRequest);
+
+        return eventRepo.ownedEventRows(actor).stream()
+                .map(EventService::owned)
+                .toList();
+    }
+
+    /** Full detail of one of the organizer's own events, whatever its review state. */
+    @Transactional(readOnly = true)
+    public EventDetails ownerDetail(long eventId, HttpServletRequest httpRequest) {
+
+        int actor = requireOrganizer(httpRequest);
+        requireOwnedEvent(eventId, actor);
+
+        Map<String, Object> row = eventRepo.eventRowById(eventId);
+
+        if (row == null) {
+            throw EventException.notFound("Event not found.");
+        }
+
+        return toDetails(eventId, row);
+    }
+
+    /** Event row and owner check: the owner or an administrator only. */
+    private Map<String, Object> requireOwnedEvent(long eventId, int actor) {
+
+        Map<String, Object> owner = eventRepo.eventOwnerRow(eventId);
+
+        if (owner == null) {
+            throw EventException.notFound("Event not found.");
+        }
+
+        if (number(owner, "published_by") != actor && !isAdmin(actor)) {
+            throw EventException.forbidden("You can only change your own events.");
+        }
+
+        return owner;
+    }
+
+    /** Validates a submission once, for both create and update. */
+    private Prepared prepare(EventDTO input) {
 
         if (input == null) {
             throw EventException.badRequest("Event details are required.");
@@ -81,51 +199,52 @@ public class EventService {
         String venueAddress = optional(venueInput.getAddress(), 150, "Venue address");
         String venueLink = optionalUrl(venueInput.getLink(), 150, "Map link");
 
-        List<LinkRow> links = validLinks(input.getLinks());
-        List<Schedule> schedules = validSchedules(input.getDates());
-        List<Integer> tagIds = resolveTags(input.getTags());
+        return new Prepared(
+                name,
+                description,
+                categoryId,
+                audienceId,
+                venueName,
+                venueAddress,
+                venueCity,
+                venueLink,
+                validLinks(input.getLinks()),
+                validSchedules(input.getDates()),
+                resolveTags(input.getTags()));
+    }
 
-        long venueId = eventRepo.insertVenue(venueName, venueAddress, venueCity, venueLink);
+    private List<Long> insertLinks(List<LinkRow> links) {
 
         List<Long> linkIds = new ArrayList<>();
+
         for (LinkRow link : links) {
             linkIds.add(eventRepo.insertLink(link.name(), link.url()));
         }
 
-        LocalDateTime startsAt = schedules.get(0).start();
-        LocalDateTime endsAt = schedules.get(schedules.size() - 1).end();
-
-        long eventId = eventRepo.insertEvent(
-                name,
-                description,
-                categoryId,
-                venueId,
-                Status.APPROVED.getId(),
-                audienceId,
-                LISTING_ONLY,
-                linkIds.isEmpty() ? null : linkIds.get(0),
-                actor,
-                startsAt,
-                endsAt);
-
-        for (long linkId : linkIds) {
-            eventRepo.linkEvent(eventId, linkId);
-        }
-
-        for (Schedule schedule : schedules) {
-            eventRepo.insertEventDate(eventId, schedule.date(), schedule.timeRange());
-        }
-
-        for (int tagId : tagIds) {
-            eventRepo.attachTag(eventId, tagId);
-        }
-
-        logger.info("Created listing event {} for user {} ({} dates, {} links, {} tags).",
-                eventId, actor, schedules.size(), linkIds.size(), tagIds.size());
-
-        return eventId;
+        return linkIds;
     }
 
+    private void writeSchedule(long eventId, Prepared event) {
+
+        for (Schedule schedule : event.schedules()) {
+            eventRepo.insertEventDate(eventId, schedule.date(), schedule.timeRange());
+        }
+    }
+
+    private void writeTags(long eventId, Prepared event) {
+
+        for (int tagId : event.tagIds()) {
+            eventRepo.attachTag(eventId, tagId);
+        }
+    }
+
+    private static LocalDateTime startsAt(Prepared event) {
+        return event.schedules().get(0).start();
+    }
+
+    private static LocalDateTime endsAt(Prepared event) {
+        return event.schedules().get(event.schedules().size() - 1).end();
+    }
     /**
      * Stores the event's cover image (and an optional banner) and points
      * {@code event.img_id} at the resulting {@code img} row. The owner of the
@@ -253,6 +372,11 @@ public class EventService {
             throw EventException.notFound("Event not found.");
         }
 
+        return toDetails(eventId, row);
+    }
+
+    private EventDetails toDetails(long eventId, Map<String, Object> row) {
+
         List<EventDetails.DateSlot> dates = eventRepo.eventDateRows(eventId).stream()
                 .map(date -> new EventDetails.DateSlot(text(date, "date"), text(date, "time")))
                 .toList();
@@ -285,6 +409,20 @@ public class EventService {
                 eventRepo.eventTagNames(eventId));
     }
 
+    private static OwnedEventSummary owned(Map<String, Object> row) {
+        return new OwnedEventSummary(
+                number(row, "id"),
+                text(row, "name"),
+                text(row, "category"),
+                text(row, "audience"),
+                text(row, "event_level"),
+                text(row, "status"),
+                text(row, "venue_name"),
+                text(row, "venue_city"),
+                text(row, "image_path"),
+                text(row, "starts_on"),
+                text(row, "time_range"));
+    }
     private static EventSummary summary(Map<String, Object> row) {
         return new EventSummary(
                 number(row, "id"),
@@ -567,6 +705,20 @@ public class EventService {
 
     // --- internal value types -------------------------------------------
 
+    /** A validated submission, shared by create and update. */
+    private record Prepared(
+            String name,
+            String description,
+            int categoryId,
+            int audienceId,
+            String venueName,
+            String venueAddress,
+            String venueCity,
+            String venueLink,
+            List<LinkRow> links,
+            List<Schedule> schedules,
+            List<Integer> tagIds) {
+    }
     private record LinkRow(String name, String url) {
     }
 
