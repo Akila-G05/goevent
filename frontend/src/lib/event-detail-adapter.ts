@@ -54,7 +54,11 @@ export function toListingDetail(event: EventDetails): EventDetail {
   }));
 
   const addressLine = [event.venue.address, event.venue.city].filter(Boolean).join(', ');
-  const mapQuery = [event.venue.name, event.venue.address, event.venue.city].filter(Boolean).join(' ');
+  // The exact pin from the saved Google link beats a text search, which can
+  // match a different place with the same name.
+  const mapQuery =
+    event.venue.coordinates ??
+    [event.venue.name, event.venue.address, event.venue.city].filter(Boolean).join(' ');
   const googleLink =
     event.venue.link && WEB_URL.test(event.venue.link)
       ? event.venue.link

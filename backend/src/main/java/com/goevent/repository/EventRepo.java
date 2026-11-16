@@ -1,5 +1,6 @@
 package com.goevent.repository;
 
+import com.goevent.enums.EventSort;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.jdbc.support.KeyHolder;
@@ -117,34 +118,63 @@ public class EventRepo {
     // --- public listing --------------------------------------------------
 
     /**
-     * Approved events that still have an upcoming date, ordered by their first
-     * upcoming date. Each row carries the earliest upcoming date and time only.
+     * Columns and joins for one event card: the earliest upcoming date and time,
+     * the category, audience, level, venue and cover image.
      */
-    public List<Map<String, Object>> approvedEvents(int statusId, int limit) {
+    private static final String SUMMARY_SELECT = """
+            SELECT e.id, e.name, e.description, c.name AS category,
+                   a.type AS audience, l.name AS event_level,
+                   v.name AS venue_name, v.city AS venue_city,
+                   i.path AS image_path,
+                   next_date.date AS starts_on, next_date.time AS time_range
+            FROM `event` e
+            JOIN category c ON c.id = e.category_id
+            JOIN audience a ON a.id = e.audience_id
+            JOIN event_level l ON l.id = e.event_level_id
+            JOIN venue v ON v.id = e.venue_id
+            LEFT JOIN img i ON i.id = e.img_id
+            JOIN event_dates next_date ON next_date.id = (
+                SELECT ed.id FROM event_dates ed
+                WHERE ed.event_id = e.id AND ed.date >= CURDATE()
+                ORDER BY ed.date, ed.id LIMIT 1)
+            """;
+
+    /** Approved events that still have an upcoming date, in the requested order. */
+    public List<Map<String, Object>> approvedEvents(int statusId, EventSort sort, int limit) {
         return jdbc.queryForList(
-                """
-                SELECT e.id, e.name, e.description, c.name AS category,
-                       a.type AS audience, l.name AS event_level,
-                       v.name AS venue_name, v.city AS venue_city,
-                       i.path AS image_path,
-                       next_date.date AS starts_on, next_date.time AS time_range
-                FROM `event` e
-                JOIN category c ON c.id = e.category_id
-                JOIN audience a ON a.id = e.audience_id
-                JOIN event_level l ON l.id = e.event_level_id
-                JOIN venue v ON v.id = e.venue_id
-                LEFT JOIN img i ON i.id = e.img_id
-                JOIN event_dates next_date ON next_date.id = (
-                    SELECT ed.id FROM event_dates ed
-                    WHERE ed.event_id = e.id AND ed.date >= CURDATE()
-                    ORDER BY ed.date, ed.id LIMIT 1)
-                WHERE e.event_status_id = ?
-                ORDER BY next_date.date, e.id
-                LIMIT ?
-                """,
+                SUMMARY_SELECT + " WHERE e.event_status_id = ? " + orderBy(sort) + " LIMIT ?",
                 statusId, limit);
     }
 
+    /**
+     * Approved upcoming events published by a student of the given university,
+     * earliest first.
+     */
+    public List<Map<String, Object>> approvedEventsForUniversity(int statusId, int universityId, int limit) {
+        return jdbc.queryForList(
+                SUMMARY_SELECT
+                        + " WHERE e.event_status_id = ?"
+                        + " AND EXISTS (SELECT 1 FROM student_detail sd"
+                        + " WHERE sd.user_id = e.published_by AND sd.university_id = ?)"
+                        + " ORDER BY next_date.date, e.id LIMIT ?",
+                statusId, universityId, limit);
+    }
+
+    /** University of a student account, when one is recorded. */
+    public Optional<Integer> studentUniversityId(int userId) {
+        return jdbc.queryForList(
+                "SELECT university_id FROM student_detail WHERE user_id=? ORDER BY id LIMIT 1",
+                Integer.class, userId).stream().findFirst();
+    }
+
+    /** Fixed SQL per sort value; the enum is never concatenated from user input. */
+    private static String orderBy(EventSort sort) {
+        return switch (sort) {
+            case ASC -> "ORDER BY next_date.date, e.id";
+            case DESC -> "ORDER BY next_date.date DESC, e.id DESC";
+            case RANDOM -> "ORDER BY RAND()";
+        };
+    }
     // --- public detail --------------------------------------------------
 
     /** One event with its category, audience, level, venue and cover image; null when not found. */

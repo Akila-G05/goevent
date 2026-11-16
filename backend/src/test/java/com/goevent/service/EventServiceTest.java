@@ -3,6 +3,7 @@ package com.goevent.service;
 import com.goevent.dto.EventDTO;
 import com.goevent.dto.EventDetails;
 import com.goevent.dto.EventSummary;
+import com.goevent.enums.EventSort;
 import com.goevent.enums.Status;
 import com.goevent.exception.EventException;
 import com.goevent.repository.EventRepo;
@@ -41,6 +42,7 @@ class EventServiceTest {
 
     private EventRepo repo;
     private ImageUploadService images;
+    private MapLinkResolver mapLinks;
     private EventService service;
     private MockHttpServletRequest request;
     private LocalDate eventDate;
@@ -49,7 +51,8 @@ class EventServiceTest {
     void setUp() {
         repo = mock(EventRepo.class);
         images = mock(ImageUploadService.class);
-        service = new EventService(repo, images);
+        mapLinks = mock(MapLinkResolver.class);
+        service = new EventService(repo, images, mapLinks);
         request = new MockHttpServletRequest();
         eventDate = LocalDate.now(UTC).plusDays(30);
 
@@ -212,9 +215,9 @@ class EventServiceTest {
         row.put("starts_on", java.sql.Date.valueOf("2027-05-01"));
         row.put("time_range", "10:00 - 12:00");
 
-        when(repo.approvedEvents(Status.APPROVED.getId(), 50)).thenReturn(List.of(row));
+        when(repo.approvedEvents(Status.APPROVED.getId(), EventSort.ASC, 50)).thenReturn(List.of(row));
 
-        List<EventSummary> events = service.listApproved(500);
+        List<EventSummary> events = service.listApproved(500, EventSort.ASC);
 
         assertEquals(1, events.size());
         EventSummary summary = events.get(0);
@@ -238,13 +241,14 @@ class EventServiceTest {
         row.put("venue_name", "Hall A");
         row.put("venue_address", "1 Road");
         row.put("venue_city", "Colombo");
-        row.put("venue_link", null);
+        row.put("venue_link", "https://maps.app.goo.gl/abc");
         row.put("image_path", null);
         row.put("banner_path", null);
         row.put("organizer_name", "Akila Gimhana");
         row.put("organizer_since", 2026);
 
         when(repo.approvedEventRow(9L, Status.APPROVED.getId())).thenReturn(row);
+        when(mapLinks.coordinatesFor("https://maps.app.goo.gl/abc")).thenReturn(Optional.of("6.8508767,80.2641585"));
         when(repo.eventDateRows(9L)).thenReturn(List.of(
                 Map.of("date", java.sql.Date.valueOf("2027-05-01"), "time", "10:00 - 12:00")));
         when(repo.eventLinkRows(9L)).thenReturn(List.of(
@@ -254,6 +258,7 @@ class EventServiceTest {
         EventDetails event = service.detail(9L);
 
         assertEquals("Hall A", event.venue().name());
+        assertEquals("6.8508767,80.2641585", event.venue().coordinates());
         assertEquals("Akila Gimhana", event.organizer().name());
         assertEquals("2026", event.organizer().memberSince());
         assertEquals("2027-05-01", event.dates().get(0).date());
@@ -271,6 +276,35 @@ class EventServiceTest {
     }
 
     // --- fixtures --------------------------------------------------------
+
+    @Test
+    void showsAStudentTheEventsOfTheirUniversity() {
+        signedIn(7);
+        Map<String, Object> account = new HashMap<>();
+        account.put("role_id", 4);
+        when(repo.account(7)).thenReturn(account);
+        when(repo.studentUniversityId(7)).thenReturn(Optional.of(2));
+        when(repo.approvedEventsForUniversity(Status.APPROVED.getId(), 2, 6)).thenReturn(List.of());
+
+        service.recommended(6, request);
+
+        verify(repo).approvedEventsForUniversity(Status.APPROVED.getId(), 2, 6);
+        verify(repo, never()).approvedEvents(anyInt(), any(), anyInt());
+    }
+
+    @Test
+    void showsOtherSignedInUsersAndVisitorsRandomEvents() {
+        signedIn(8);
+        Map<String, Object> account = new HashMap<>();
+        account.put("role_id", 2);
+        when(repo.account(8)).thenReturn(account);
+        when(repo.approvedEvents(Status.APPROVED.getId(), EventSort.RANDOM, 6)).thenReturn(List.of());
+
+        service.recommended(6, new MockHttpServletRequest());
+
+        verify(repo).approvedEvents(Status.APPROVED.getId(), EventSort.RANDOM, 6);
+        verify(repo, never()).approvedEventsForUniversity(anyInt(), anyInt(), anyInt());
+    }
 
     private void signedIn(int userId) {
         MockHttpSession session = new MockHttpSession();

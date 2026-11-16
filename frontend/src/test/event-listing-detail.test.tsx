@@ -27,6 +27,7 @@ const event: EventDetails = {
     address: '1 Hall Road',
     city: 'Colombo',
     link: 'https://maps.example.com/main-hall',
+    coordinates: '6.8508767,80.2641585',
   },
   organizer: { name: 'Akila Gimhana', memberSince: '2026' },
   imagePath: null,
@@ -94,6 +95,17 @@ describe('EventListingDetail', () => {
     expect(screen.queryByRole('link', { name: 'Unsafe' })).not.toBeInTheDocument();
     expect(screen.queryByRole('link', { name: /Reserve seat/i })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Follow' })).not.toBeInTheDocument();
+  });
+
+  it('embeds the Google map at the saved location', async () => {
+    loadDetail.mockResolvedValue(event);
+    renderDetail();
+
+    await screen.findByRole('heading', { level: 1, name: 'Campus Hack' });
+
+    const map = screen.getByTitle('Google Map of Main Hall');
+    expect(map.getAttribute('src')).toContain('q=6.8508767%2C80.2641585');
+    expect(map.getAttribute('src')).toContain('output=embed');
   });
 
   it('links the other events to their own pages', async () => {

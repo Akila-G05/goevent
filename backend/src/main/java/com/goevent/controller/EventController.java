@@ -1,6 +1,7 @@
 package com.goevent.controller;
 
 import com.goevent.dto.EventDTO;
+import com.goevent.enums.EventSort;
 import com.goevent.service.EventService;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.MediaType;
@@ -30,10 +31,25 @@ public class EventController {
         this.eventService = eventService;
     }
 
-    /** Public list of approved events for the home page. */
+    /** Public list of approved events, ordered by sort=asc (default), desc or random. */
     @GetMapping
-    public Map<String, Object> list(@RequestParam(defaultValue = "24") int limit) {
-        return Map.of("status", true, "events", eventService.listApproved(limit));
+    public Map<String, Object> list(
+            @RequestParam(defaultValue = "24") int limit,
+            @RequestParam(defaultValue = "asc") String sort
+    ) {
+        return Map.of("status", true, "events", eventService.listApproved(limit, EventSort.parse(sort)));
+    }
+
+    /**
+     * Home-page browsing list: a student's university events, otherwise a random
+     * selection. The scope comes from the session, never from the request.
+     */
+    @GetMapping("/recommended")
+    public Map<String, Object> recommended(
+            @RequestParam(defaultValue = "6") int limit,
+            HttpServletRequest httpRequest
+    ) {
+        return Map.of("status", true, "events", eventService.recommended(limit, httpRequest));
     }
 
     /** Public detail of one approved event. Unapproved or unknown ids return 404. */

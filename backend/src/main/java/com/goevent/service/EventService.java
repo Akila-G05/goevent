@@ -4,6 +4,7 @@ import com.goevent.config.FileStorageConfig;
 import com.goevent.dto.EventDTO;
 import com.goevent.dto.EventDetails;
 import com.goevent.dto.EventSummary;
+import com.goevent.enums.EventSort;
 import com.goevent.enums.Role;
 import com.goevent.enums.Status;
 import com.goevent.enums.UserStatus;
@@ -26,6 +27,7 @@ import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
+import java.util.Optional;
 import java.util.List;
 import java.util.Map;
 
@@ -44,10 +46,12 @@ public class EventService {
 
     private final EventRepo eventRepo;
     private final ImageUploadService imageUploadService;
+    private final MapLinkResolver mapLinks;
 
-    public EventService(EventRepo eventRepo, ImageUploadService imageUploadService) {
+    public EventService(EventRepo eventRepo, ImageUploadService imageUploadService, MapLinkResolver mapLinks) {
         this.eventRepo = eventRepo;
         this.imageUploadService = imageUploadService;
+        this.mapLinks = mapLinks;
     }
 
     @Transactional
@@ -186,13 +190,57 @@ public class EventService {
 
     /** Public listing: approved events only, capped so one request stays bounded. */
     @Transactional(readOnly = true)
-    public List<EventSummary> listApproved(int limit) {
+    public List<EventSummary> listApproved(int limit, EventSort sort) {
 
-        int size = Math.max(1, Math.min(limit, MAX_LIST_SIZE));
+        int size = clampSize(limit);
 
-        return eventRepo.approvedEvents(Status.APPROVED.getId(), size).stream()
+        return eventRepo.approvedEvents(Status.APPROVED.getId(), sort, size).stream()
                 .map(EventService::summary)
                 .toList();
+    }
+
+    /**
+     * Browsing list for the home page. A signed-in student sees approved events
+     * published by students of their university, earliest first. Everyone else,
+     * including anonymous visitors and organizers, gets a random selection.
+     */
+    @Transactional(readOnly = true)
+    public List<EventSummary> recommended(int limit, HttpServletRequest httpRequest) {
+
+        int size = clampSize(limit);
+        Optional<Integer> universityId = studentUniversityId(httpRequest);
+
+        if (universityId.isPresent()) {
+            return eventRepo.approvedEventsForUniversity(Status.APPROVED.getId(), universityId.get(), size).stream()
+                    .map(EventService::summary)
+                    .toList();
+        }
+
+        return eventRepo.approvedEvents(Status.APPROVED.getId(), EventSort.RANDOM, size).stream()
+                .map(EventService::summary)
+                .toList();
+    }
+
+    private Optional<Integer> studentUniversityId(HttpServletRequest httpRequest) {
+
+        HttpSession session = httpRequest == null ? null : httpRequest.getSession(false);
+        Object sessionUser = session == null ? null : session.getAttribute("userId");
+
+        if (!(sessionUser instanceof Integer userId)) {
+            return Optional.empty();
+        }
+
+        Map<String, Object> account = eventRepo.account(userId);
+
+        if (account == null || number(account, "role_id") != Role.STUDENT.getId()) {
+            return Optional.empty();
+        }
+
+        return eventRepo.studentUniversityId(userId);
+    }
+
+    private static int clampSize(int limit) {
+        return Math.max(1, Math.min(limit, MAX_LIST_SIZE));
     }
 
     /** Public detail: approved events only; anything else is reported as not found. */
@@ -217,7 +265,8 @@ public class EventService {
                 text(row, "venue_name"),
                 text(row, "venue_address"),
                 text(row, "venue_city"),
-                text(row, "venue_link")
+                text(row, "venue_link"),
+                mapLinks.coordinatesFor(text(row, "venue_link")).orElse(null)
         );
 
         return new EventDetails(

@@ -39,6 +39,8 @@ export interface EventDetails {
     address: string | null;
     city: string;
     link: string | null;
+    /** `latitude,longitude` resolved from the saved Google link, or null. */
+    coordinates: string | null;
   };
   organizer: {
     name: string;

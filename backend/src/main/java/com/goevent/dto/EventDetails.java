@@ -29,7 +29,8 @@ public record EventDetails(
     public record Organizer(String name, String memberSince) {
     }
 
-    public record Venue(String name, String address, String city, String link) {
+    /** {@code coordinates} is {@code latitude,longitude} resolved from the saved Google link, or null. */
+    public record Venue(String name, String address, String city, String link, String coordinates) {
     }
 
     public record DateSlot(String date, String time) {
