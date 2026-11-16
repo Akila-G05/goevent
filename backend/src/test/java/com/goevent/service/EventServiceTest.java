@@ -1,6 +1,7 @@
 package com.goevent.service;
 
 import com.goevent.dto.EventDTO;
+import com.goevent.enums.Status;
 import com.goevent.exception.EventException;
 import com.goevent.repository.EventRepo;
 import org.junit.jupiter.api.BeforeEach;
@@ -9,9 +10,11 @@ import org.mockito.ArgumentCaptor;
 import org.springframework.http.HttpStatus;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpSession;
+import org.springframework.mock.web.MockMultipartFile;
 
 import java.time.LocalDate;
 import java.time.ZoneId;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -23,6 +26,7 @@ import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -33,6 +37,7 @@ class EventServiceTest {
     private static final ZoneId UTC = ZoneId.of("UTC");
 
     private EventRepo repo;
+    private ImageUploadService images;
     private EventService service;
     private MockHttpServletRequest request;
     private LocalDate eventDate;
@@ -40,7 +45,8 @@ class EventServiceTest {
     @BeforeEach
     void setUp() {
         repo = mock(EventRepo.class);
-        service = new EventService(repo);
+        images = mock(ImageUploadService.class);
+        service = new EventService(repo, images);
         request = new MockHttpServletRequest();
         eventDate = LocalDate.now(UTC).plusDays(30);
 
@@ -51,7 +57,7 @@ class EventServiceTest {
         when(repo.insertVenue(anyString(), any(), anyString(), any())).thenReturn(41L);
         when(repo.insertLink(anyString(), anyString())).thenReturn(51L, 52L);
         when(repo.insertEvent(anyString(), any(), anyInt(), anyLong(), anyInt(), anyInt(), anyInt(),
-                anyInt(), any(), any())).thenReturn(99L);
+                any(), anyInt(), any(), any())).thenReturn(99L);
     }
 
     @Test
@@ -61,7 +67,7 @@ class EventServiceTest {
 
         assertEquals(HttpStatus.UNAUTHORIZED, error.status());
         verify(repo, never()).insertEvent(anyString(), any(), anyInt(), anyLong(), anyInt(),
-                anyInt(), anyInt(), anyInt(), any(), any());
+                anyInt(), anyInt(), any(), anyInt(), any(), any());
     }
 
     @Test
@@ -114,6 +120,18 @@ class EventServiceTest {
     }
 
     @Test
+    void storesNewEventsWithTheApprovedStatus() {
+        signedIn(7);
+
+        service.create(validPayload(), request);
+
+        ArgumentCaptor<Integer> status = ArgumentCaptor.forClass(Integer.class);
+        verify(repo).insertEvent(anyString(), any(), anyInt(), anyLong(), status.capture(),
+                anyInt(), anyInt(), any(), anyInt(), any(), any());
+        assertEquals(Status.APPROVED.getId(), status.getValue());
+    }
+
+    @Test
     void storesEveryLinkAndTheJoinedTimeRange() {
         signedIn(7);
 
@@ -132,10 +150,48 @@ class EventServiceTest {
         assertEquals("18:00 - 22:00", range.getValue());
 
         verify(repo).insertEvent(
-                eq("Tech Fest 2026"), eq("Design preview"), eq(2), eq(41L), eq(1), eq(1), eq(1),
+                eq("Tech Fest 2026"), eq("Design preview"), eq(2), eq(41L),
+                eq(Status.APPROVED.getId()), eq(1), eq(1), eq(51L),
                 eq(7), any(), any());
 
         verify(repo).attachTag(99L, 7);
+    }
+
+    @Test
+    void storesTheCoverImageOnTheEvent() {
+        signedIn(7);
+
+        Map<String, Object> row = new HashMap<>();
+        row.put("published_by", 7);
+        row.put("img_id", null);
+
+        when(repo.eventImageRow(99L)).thenReturn(row);
+        when(repo.insertImage(anyString(), isNull())).thenReturn(5L);
+        when(images.uploadEventImage(eq(99), any()))
+                .thenReturn("/goevent/api/images/event/99/cover.png");
+
+        Map<String, Object> result = service.attachImage(
+                99L, imageFile(), null, request);
+
+        assertEquals("/goevent/api/images/event/99/cover.png", result.get("imagePath"));
+        verify(repo).setEventImage(99L, 5L);
+    }
+
+    @Test
+    void rejectsAnImageUploadForAnotherOrganizersEvent() {
+        signedIn(7);
+
+        Map<String, Object> row = new HashMap<>();
+        row.put("published_by", 8);
+        row.put("img_id", null);
+
+        when(repo.eventImageRow(99L)).thenReturn(row);
+
+        EventException error = assertThrows(EventException.class,
+                () -> service.attachImage(99L, imageFile(), null, request));
+
+        assertEquals(HttpStatus.FORBIDDEN, error.status());
+        verify(images, never()).uploadEventImage(anyInt(), any());
     }
 
     // --- fixtures --------------------------------------------------------
@@ -144,6 +200,10 @@ class EventServiceTest {
         MockHttpSession session = new MockHttpSession();
         session.setAttribute("userId", userId);
         request.setSession(session);
+    }
+
+    private MockMultipartFile imageFile() {
+        return new MockMultipartFile("file", "cover.png", "image/png", new byte[]{1, 2, 3});
     }
 
     private EventDTO validPayload() {

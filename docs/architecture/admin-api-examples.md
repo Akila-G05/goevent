@@ -194,7 +194,9 @@ Fetch `GET /admin/events/789` and use its current `revision` for edits/decisions
 {"approve":true,"revision":0,"reason":"Event details reviewed"}
 ```
 
-Only pending, enabled events can be reviewed. Approval requires an active
+Only pending, enabled events can be reviewed. Organizer-created listing events
+are stored as APPROVED, so they are not review candidates unless they were left
+PENDING (for example imported or legacy records). Approval requires an active
 coordinator/admin publisher. Send explicit `approve:false` for rejection.
 `PUT /admin/events/789`:
 

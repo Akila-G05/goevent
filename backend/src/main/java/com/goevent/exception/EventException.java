@@ -32,4 +32,8 @@ public class EventException extends RuntimeException {
     public static EventException forbidden(String message) {
         return new EventException(HttpStatus.FORBIDDEN, message);
     }
+
+    public static EventException notFound(String message) {
+        return new EventException(HttpStatus.NOT_FOUND, message);
+    }
 }

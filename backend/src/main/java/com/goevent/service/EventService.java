@@ -1,7 +1,9 @@
 package com.goevent.service;
 
+import com.goevent.config.FileStorageConfig;
 import com.goevent.dto.EventDTO;
 import com.goevent.enums.Role;
+import com.goevent.enums.Status;
 import com.goevent.enums.UserStatus;
 import com.goevent.exception.EventException;
 import com.goevent.repository.EventRepo;
@@ -12,6 +14,7 @@ import jakarta.servlet.http.HttpSession;
 import org.slf4j.Logger;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.net.URI;
 import java.time.LocalDate;
@@ -20,6 +23,7 @@ import java.time.ZoneId;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -29,16 +33,17 @@ public class EventService {
     private static final Logger logger = AppUtil.getLogger(EventService.class);
 
     private static final int LISTING_ONLY = 1;
-    private static final int PENDING = 1;
     private static final int MAX_LINKS = 10;
     private static final int MAX_DATES = 30;
     private static final int MAX_TAGS = 20;
     private static final ZoneId UTC = ZoneId.of("UTC");
 
     private final EventRepo eventRepo;
+    private final ImageUploadService imageUploadService;
 
-    public EventService(EventRepo eventRepo) {
+    public EventService(EventRepo eventRepo, ImageUploadService imageUploadService) {
         this.eventRepo = eventRepo;
+        this.imageUploadService = imageUploadService;
     }
 
     @Transactional
@@ -87,9 +92,10 @@ public class EventService {
                 description,
                 categoryId,
                 venueId,
-                PENDING,
+                Status.APPROVED.getId(),
                 audienceId,
                 LISTING_ONLY,
+                linkIds.isEmpty() ? null : linkIds.get(0),
                 actor,
                 startsAt,
                 endsAt);
@@ -110,6 +116,73 @@ public class EventService {
                 eventId, actor, schedules.size(), linkIds.size(), tagIds.size());
 
         return eventId;
+    }
+
+    /**
+     * Stores the event's cover image (and an optional banner) and points
+     * {@code event.img_id} at the resulting {@code img} row. The owner of the
+     * event, or an administrator, may upload.
+     */
+    @Transactional
+    public Map<String, Object> attachImage(
+            long eventId,
+            MultipartFile image,
+            MultipartFile banner,
+            HttpServletRequest httpRequest
+    ) {
+
+        int actor = requireOrganizer(httpRequest);
+
+        Map<String, Object> eventRow = eventRepo.eventImageRow(eventId);
+
+        if (eventRow == null) {
+            throw EventException.notFound("Event not found.");
+        }
+
+        if (number(eventRow, "published_by") != actor && !isAdmin(actor)) {
+            throw EventException.forbidden("You can only add images to your own events.");
+        }
+
+        String imagePath = imageUploadService.uploadEventImage((int) eventId, image);
+        String bannerPath = banner == null || banner.isEmpty()
+                ? null
+                : imageUploadService.uploadEventBanner((int) eventId, banner);
+
+        try {
+            Object existing = eventRow.get("img_id");
+
+            if (existing instanceof Number imageId) {
+                eventRepo.updateImage(imageId.longValue(), imagePath, bannerPath);
+            } else {
+                eventRepo.setEventImage(eventId, eventRepo.insertImage(imagePath, bannerPath));
+            }
+        } catch (RuntimeException error) {
+            // The files are already written; remove them so a failed write leaves nothing behind.
+            imageUploadService.deleteByPath(FileStorageConfig.SCOPE_EVENT, imagePath);
+
+            if (bannerPath != null) {
+                imageUploadService.deleteByPath(FileStorageConfig.SCOPE_BANNER, bannerPath);
+            }
+
+            throw error;
+        }
+
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("status", true);
+        result.put("imagePath", imagePath);
+
+        if (bannerPath != null) {
+            result.put("bannerPath", bannerPath);
+        }
+
+        logger.info("Stored the image for event {} (uploaded by user {}).", eventId, actor);
+
+        return result;
+    }
+
+    private boolean isAdmin(int userId) {
+        Map<String, Object> account = eventRepo.account(userId);
+        return account != null && number(account, "role_id") == Role.ADMIN.getId();
     }
 
     // --- authorisation ---------------------------------------------------

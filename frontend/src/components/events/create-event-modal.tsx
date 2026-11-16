@@ -5,6 +5,7 @@ import {
   CalendarDays,
   Image as ImageIcon,
   Link2,
+  Loader2,
   MapPin,
   Plus,
   Sparkles,
@@ -13,10 +14,11 @@ import {
   Trash2,
 } from 'lucide-react';
 import { Dialog } from '@/components/ui/dialog';
-import { toast } from '@/lib/toast-store';
+import { eventsApi } from '@/api/events';
+import type { CreateEventDate, CreateEventLink } from '@/api/events';
+import { getErrorMessage, toast } from '@/lib/toast-store';
 
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
-const MAX_BANNER_BYTES = 8 * 1024 * 1024;
 const ACCEPTED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 
 const CATEGORIES = [
@@ -41,6 +43,12 @@ const CATEGORIES = [
 const AUDIENCES = ['University', 'Public', 'Both'];
 
 type EventLevel = 'LISTING_ONLY' | 'FREE' | 'PAYED';
+
+const EVENT_LEVEL_IDS: Record<EventLevel, number> = {
+  LISTING_ONLY: 1,
+  FREE: 2,
+  PAYED: 3,
+};
 
 const EVENT_LEVELS: Array<{ id: EventLevel; label: string; hint: string; available: boolean }> = [
   {
@@ -94,10 +102,24 @@ const TAG_GROUPS: Array<{ group: string; options: Array<{ id: string; name: stri
   },
 ];
 
+/** Maps the synthetic option ids used in the UI to the tag names the API expects. */
+const TAG_NAMES: ReadonlyMap<string, string> = new Map(
+  TAG_GROUPS.flatMap((group) =>
+    group.options.map((option) => [option.id, option.name] as const)
+  )
+);
+
 interface DateRow {
   key: number;
   date: string;
-  time: string;
+  startTime: string;
+  endTime: string;
+}
+
+interface LinkRow {
+  key: number;
+  name: string;
+  url: string;
 }
 
 interface TicketRow {
@@ -147,20 +169,26 @@ export interface CreateEventModalProps {
 }
 
 export function CreateEventModal({ open, onClose }: CreateEventModalProps) {
+  const formRef = useRef<HTMLFormElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
-  const bannerInputRef = useRef<HTMLInputElement>(null);
   const dateKey = useRef(1);
+  const linkKey = useRef(1);
   const ticketKey = useRef(1);
 
   const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [bannerPreview, setBannerPreview] = useState<string | null>(null);
+  const [coverFile, setCoverFile] = useState<File | null>(null);
   const [imageError, setImageError] = useState<string | null>(null);
   const [eventLevel, setEventLevel] = useState<EventLevel>('LISTING_ONLY');
-  const [dates, setDates] = useState<DateRow[]>([{ key: 0, date: '', time: '' }]);
+  const [dates, setDates] = useState<DateRow[]>([
+    { key: 0, date: '', startTime: '', endTime: '' },
+  ]);
+  const [links, setLinks] = useState<LinkRow[]>([{ key: 0, name: '', url: '' }]);
   const [tickets, setTickets] = useState<TicketRow[]>([
     { key: 0, quantity: '', price: '', description: '', saleStartAt: '', saleEndAt: '' },
   ]);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [saving, setSaving] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
 
   const objectUrls = useRef<string[]>([]);
 
@@ -170,6 +198,13 @@ export function CreateEventModal({ open, onClose }: CreateEventModalProps) {
     },
     []
   );
+
+  // Drop a stale error from a previous attempt every time the dialog reopens.
+  useEffect(() => {
+    if (open) {
+      setFormError(null);
+    }
+  }, [open]);
 
   const replacePreview = (
     setter: React.Dispatch<React.SetStateAction<string | null>>,
@@ -183,7 +218,7 @@ export function CreateEventModal({ open, onClose }: CreateEventModalProps) {
     });
   };
 
-  const handleFile = (file: File | undefined, kind: 'image' | 'banner') => {
+  const handleFile = (file: File | undefined) => {
     if (!file) {
       return;
     }
@@ -193,48 +228,55 @@ export function CreateEventModal({ open, onClose }: CreateEventModalProps) {
       return;
     }
 
-    const limit = kind === 'banner' ? MAX_BANNER_BYTES : MAX_IMAGE_BYTES;
-
-    if (file.size > limit) {
-      setImageError(`Image must be ${limit / (1024 * 1024)} MB or smaller.`);
+    if (file.size > MAX_IMAGE_BYTES) {
+      setImageError(`Image must be ${MAX_IMAGE_BYTES / (1024 * 1024)} MB or smaller.`);
       return;
     }
 
     setImageError(null);
     const url = URL.createObjectURL(file);
     objectUrls.current.push(url);
-
-    if (kind === 'image') {
-      replacePreview(setImagePreview, url);
-    } else {
-      replacePreview(setBannerPreview, url);
-    }
+    setCoverFile(file);
+    replacePreview(setImagePreview, url);
   };
 
-  const clearPreview = (kind: 'image' | 'banner') => {
-    if (kind === 'image') {
-      replacePreview(setImagePreview, null);
-      if (imageInputRef.current) {
-        imageInputRef.current.value = '';
-      }
-    } else {
-      replacePreview(setBannerPreview, null);
-      if (bannerInputRef.current) {
-        bannerInputRef.current.value = '';
-      }
+  const clearPreview = () => {
+    replacePreview(setImagePreview, null);
+    setCoverFile(null);
+    if (imageInputRef.current) {
+      imageInputRef.current.value = '';
     }
   };
 
   const addDate = () => {
-    setDates((previous) => [...previous, { key: dateKey.current++, date: '', time: '' }]);
+    setDates((previous) => [
+      ...previous,
+      { key: dateKey.current++, date: '', startTime: '', endTime: '' },
+    ]);
   };
 
   const removeDate = (key: number) => {
     setDates((previous) => (previous.length > 1 ? previous.filter((row) => row.key !== key) : previous));
   };
 
-  const updateDate = (key: number, field: 'date' | 'time', value: string) => {
+  const updateDate = (key: number, field: keyof Omit<DateRow, 'key'>, value: string) => {
     setDates((previous) =>
+      previous.map((row) => (row.key === key ? { ...row, [field]: value } : row))
+    );
+  };
+
+  const addLink = () => {
+    setLinks((previous) => [...previous, { key: linkKey.current++, name: '', url: '' }]);
+  };
+
+  const removeLink = (key: number) => {
+    setLinks((previous) =>
+      previous.length > 1 ? previous.filter((row) => row.key !== key) : previous
+    );
+  };
+
+  const updateLink = (key: number, field: 'name' | 'url', value: string) => {
+    setLinks((previous) =>
       previous.map((row) => (row.key === key ? { ...row, [field]: value } : row))
     );
   };
@@ -264,9 +306,177 @@ export function CreateEventModal({ open, onClose }: CreateEventModalProps) {
     );
   };
 
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  const resetForm = () => {
+    formRef.current?.reset();
+    setDates([{ key: 0, date: '', startTime: '', endTime: '' }]);
+    setLinks([{ key: 0, name: '', url: '' }]);
+    setTickets([
+      { key: 0, quantity: '', price: '', description: '', saleStartAt: '', saleEndAt: '' },
+    ]);
+    setSelectedTags([]);
+    setFormError(null);
+    dateKey.current = 1;
+    linkKey.current = 1;
+    ticketKey.current = 1;
+    clearPreview();
+  };
+
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    toast.info('Create Event is a design preview — saving will be connected next.');
+
+    if (saving) {
+      return;
+    }
+
+    setFormError(null);
+
+    const data = new FormData(event.currentTarget);
+    const value = (field: string) => String(data.get(field) ?? '').trim();
+
+    const name = value('name');
+    const categoryName = value('categoryName');
+    const audienceName = value('audienceName');
+    const venueName = value('venueName');
+    const venueCity = value('venueCity');
+
+    if (!name) {
+      setFormError('Event name is required.');
+      return;
+    }
+
+    if (!categoryName) {
+      setFormError('Choose a category.');
+      return;
+    }
+
+    if (!audienceName) {
+      setFormError('Choose an audience.');
+      return;
+    }
+
+    if (!venueName) {
+      setFormError('Venue name is required.');
+      return;
+    }
+
+    if (!venueCity) {
+      setFormError('City is required.');
+      return;
+    }
+
+    const payloadLinks: CreateEventLink[] = [];
+
+    for (const [index, row] of links.entries()) {
+      const label = `Link ${index + 1}`;
+      const linkName = row.name.trim();
+      const url = row.url.trim();
+
+      if (!linkName && !url) {
+        continue;
+      }
+
+      if (!linkName || !url) {
+        setFormError(`${label} needs both a label and a URL.`);
+        return;
+      }
+
+      if (!/^https?:\/\//i.test(url)) {
+        setFormError(`${label} must start with http:// or https://.`);
+        return;
+      }
+
+      payloadLinks.push({ name: linkName, url });
+    }
+
+    if (payloadLinks.length === 0) {
+      setFormError('Add at least one event link.');
+      return;
+    }
+
+    const payloadDates: CreateEventDate[] = [];
+
+    for (const [index, row] of dates.entries()) {
+      const label = `Schedule row ${index + 1}`;
+
+      if (!row.date) {
+        setFormError(`${label}: choose a date.`);
+        return;
+      }
+
+      if (!row.startTime || !row.endTime) {
+        setFormError(`${label}: enter both a start and an end time.`);
+        return;
+      }
+
+      // Both inputs use zero-padded HH:mm, so a string compare is chronological.
+      if (row.endTime <= row.startTime) {
+        setFormError(`${label}: the end time must be after the start time.`);
+        return;
+      }
+
+      payloadDates.push({
+        date: row.date,
+        startTime: row.startTime,
+        endTime: row.endTime,
+      });
+    }
+
+    setSaving(true);
+
+    try {
+      const created = await eventsApi.create({
+        name,
+        description: value('description') || undefined,
+        categoryName,
+        audienceName,
+        eventLevelId: EVENT_LEVEL_IDS[eventLevel],
+        venue: {
+          name: venueName,
+          city: venueCity,
+          address: value('venueAddress') || undefined,
+          link: value('venueLink') || undefined,
+        },
+        links: payloadLinks,
+        dates: payloadDates,
+        tags: selectedTags
+          .map((id) => TAG_NAMES.get(id))
+          .filter((tag): tag is string => Boolean(tag)),
+      });
+
+      if (!created.status || created.id === undefined) {
+        throw new Error(created.message || 'The event could not be created.');
+      }
+
+      let imageWarning: string | null = null;
+
+      if (coverFile) {
+        try {
+          await eventsApi.uploadImage(created.id, coverFile);
+        } catch (error) {
+          // The event already exists, so a failed image upload must not look
+          // like a failed creation. Report it separately and keep the event.
+          imageWarning = getErrorMessage(
+            error,
+            'The event was created, but the image could not be uploaded.'
+          );
+        }
+      }
+
+      toast.success(`"${name}" was created.`);
+
+      if (imageWarning) {
+        toast.warning(imageWarning, { title: 'Image not uploaded' });
+      }
+
+      resetForm();
+      onClose();
+    } catch (error) {
+      const message = getErrorMessage(error, 'The event could not be created.');
+      setFormError(message);
+      toast.error(message, { title: 'Could not create event' });
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -288,18 +498,32 @@ export function CreateEventModal({ open, onClose }: CreateEventModalProps) {
           <button
             type="submit"
             form="create-event-form"
-            className="flex items-center gap-2 rounded-full bg-[#1c1b1b] px-6 py-2.5 text-xs font-bold tracking-wider text-white transition-colors hover:bg-[#333131]"
+            disabled={saving}
+            className="flex items-center gap-2 rounded-full bg-[#1c1b1b] px-6 py-2.5 text-xs font-bold tracking-wider text-white transition-colors hover:bg-[#333131] disabled:cursor-not-allowed disabled:opacity-60"
           >
-            <Plus className="h-4 w-4" />
-            Create event
+            {saving ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Plus className="h-4 w-4" />
+            )}
+            {saving ? 'Creating…' : 'Create event'}
           </button>
         </>
       }
     >
-      <form id="create-event-form" onSubmit={handleSubmit} noValidate className="space-y-7">
+      <form
+        ref={formRef}
+        id="create-event-form"
+        onSubmit={handleSubmit}
+        noValidate
+        className="space-y-7"
+      >
         <div className="flex items-start gap-2 rounded-xl border border-[#e0dbd9] bg-[#faf8f7] px-3.5 py-3 text-xs text-[#736e6c]">
           <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-[#1c1b1b]" />
-          <span>Design preview — this form is not saved to the backend yet.</span>
+          <span>
+            Listing-only events are published as soon as you create them. Images are
+            optional and only previewed locally for now.
+          </span>
         </div>
 
         {/* Event image */}
@@ -307,7 +531,7 @@ export function CreateEventModal({ open, onClose }: CreateEventModalProps) {
           <SectionHeading
             icon={<ImageIcon className="h-4 w-4 text-[#1c1b1b]" />}
             title="Event image"
-            hint="JPEG, PNG or WebP"
+            hint="Optional - preview only, uploads coming soon"
           />
 
           <input
@@ -317,7 +541,7 @@ export function CreateEventModal({ open, onClose }: CreateEventModalProps) {
             accept={ACCEPTED_IMAGE_TYPES.join(',')}
             className="hidden"
             onChange={(event) => {
-              handleFile(event.target.files?.[0], 'image');
+              handleFile(event.target.files?.[0]);
               event.target.value = '';
             }}
           />
@@ -341,7 +565,7 @@ export function CreateEventModal({ open, onClose }: CreateEventModalProps) {
                   </button>
                   <button
                     type="button"
-                    onClick={() => clearPreview('image')}
+                    onClick={() => clearPreview()}
                     className="rounded-full bg-black/40 px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-black/60"
                   >
                     Remove
@@ -359,57 +583,6 @@ export function CreateEventModal({ open, onClose }: CreateEventModalProps) {
                 </span>
                 <span className="text-sm font-semibold text-[#1c1b1b]">Upload cover image</span>
                 <span className="text-[11px]">JPEG, PNG or WebP · up to 5 MB</span>
-              </button>
-            )}
-          </div>
-
-          <div>
-            <label htmlFor="event-banner" className={labelClass}>
-              Banner <span className="font-medium normal-case tracking-normal text-[#918c8a]">(optional)</span>
-            </label>
-            <input
-              ref={bannerInputRef}
-              id="event-banner"
-              type="file"
-              accept={ACCEPTED_IMAGE_TYPES.join(',')}
-              className="hidden"
-              onChange={(event) => {
-                handleFile(event.target.files?.[0], 'banner');
-                event.target.value = '';
-              }}
-            />
-            {bannerPreview ? (
-              <div className="relative overflow-hidden rounded-xl border border-[#e0dbd9]">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={bannerPreview} alt="Event banner preview" className="h-24 w-full object-cover" />
-                <div className="absolute right-2 top-2 flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => bannerInputRef.current?.click()}
-                    className="rounded-full bg-white/90 px-3 py-1.5 text-[11px] font-semibold text-[#1c1b1b] hover:bg-white"
-                  >
-                    Change
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => clearPreview('banner')}
-                    className="rounded-full bg-black/40 px-3 py-1.5 text-[11px] font-semibold text-white hover:bg-black/60"
-                  >
-                    Remove
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <button
-                type="button"
-                onClick={() => bannerInputRef.current?.click()}
-                className="flex w-full items-center justify-between rounded-xl border border-dashed border-[#ddd8d6] bg-[#faf8f7] px-4 py-3 text-xs text-[#736e6c] transition-colors hover:bg-[#f0eceb]/60"
-              >
-                <span className="flex items-center gap-2">
-                  <ImageIcon className="h-4 w-4" />
-                  Add a wide banner for the event page
-                </span>
-                <span className="font-semibold text-[#1c1b1b]">Upload · up to 8 MB</span>
               </button>
             )}
           </div>
@@ -460,7 +633,7 @@ export function CreateEventModal({ open, onClose }: CreateEventModalProps) {
               <label htmlFor="event-category" className={labelClass}>
                 Category <RequiredMark />
               </label>
-              <select id="event-category" name="categoryId" defaultValue="" className={inputClass}>
+              <select id="event-category" name="categoryName" defaultValue="" className={inputClass}>
                 <option value="">Select a category</option>
                 {CATEGORIES.map((category) => (
                   <option key={category} value={category}>
@@ -474,7 +647,7 @@ export function CreateEventModal({ open, onClose }: CreateEventModalProps) {
               <label htmlFor="event-audience" className={labelClass}>
                 Audience <RequiredMark />
               </label>
-              <select id="event-audience" name="audienceId" defaultValue="" className={inputClass}>
+              <select id="event-audience" name="audienceName" defaultValue="" className={inputClass}>
                 <option value="">Select an audience</option>
                 {AUDIENCES.map((audience) => (
                   <option key={audience} value={audience}>
@@ -615,43 +788,71 @@ export function CreateEventModal({ open, onClose }: CreateEventModalProps) {
           </div>
         </section>
 
-        {/* External link */}
+        {/* External links */}
         <section className="space-y-4 border-t border-[#f0eceb] pt-5">
           <SectionHeading
             icon={<Link2 className="h-4 w-4 text-[#1c1b1b]" />}
-            title="Event link"
-            hint="Registration page, website or social post"
+            title="Event links"
+            hint="Registration page, website or social posts"
           />
 
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div>
-              <label htmlFor="event-link-name" className={labelClass}>
-                Link label <RequiredMark />
-              </label>
-              <input
-                id="event-link-name"
-                name="linkName"
-                type="text"
-                maxLength={45}
-                placeholder="e.g. Register here"
-                className={inputClass}
-              />
-            </div>
+          <div className="space-y-3">
+            {links.map((row, index) => (
+              <div
+                key={row.key}
+                className="grid grid-cols-1 gap-3 rounded-xl border border-[#eae6e5] bg-[#faf8f7] p-3 sm:grid-cols-[1fr_1.4fr_auto] sm:items-end"
+              >
+                <div>
+                  <label htmlFor={`event-link-name-${row.key}`} className={labelClass}>
+                    Link label {index === 0 && <RequiredMark />}
+                  </label>
+                  <input
+                    id={`event-link-name-${row.key}`}
+                    type="text"
+                    maxLength={45}
+                    placeholder="e.g. Register here"
+                    value={row.name}
+                    onChange={(event) => updateLink(row.key, 'name', event.target.value)}
+                    className={inputClass}
+                  />
+                </div>
 
-            <div>
-              <label htmlFor="event-link-url" className={labelClass}>
-                URL <RequiredMark />
-              </label>
-              <input
-                id="event-link-url"
-                name="linkUrl"
-                type="url"
-                maxLength={200}
-                placeholder="https://..."
-                className={inputClass}
-              />
-            </div>
+                <div>
+                  <label htmlFor={`event-link-url-${row.key}`} className={labelClass}>
+                    URL {index === 0 && <RequiredMark />}
+                  </label>
+                  <input
+                    id={`event-link-url-${row.key}`}
+                    type="url"
+                    maxLength={200}
+                    placeholder="https://..."
+                    value={row.url}
+                    onChange={(event) => updateLink(row.key, 'url', event.target.value)}
+                    className={inputClass}
+                  />
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => removeLink(row.key)}
+                  disabled={links.length === 1}
+                  aria-label={`Remove link ${index + 1}`}
+                  className="flex h-11 w-11 items-center justify-center rounded-xl border border-[#e0dbd9] bg-white text-[#736e6c] transition-colors hover:border-red-200 hover:bg-red-50 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </div>
+            ))}
           </div>
+
+          <button
+            type="button"
+            onClick={addLink}
+            className="inline-flex items-center gap-1.5 rounded-full bg-[#f0eceb] px-4 py-2 text-xs font-semibold text-[#1c1b1b] transition-colors hover:bg-[#e4dfde]"
+          >
+            <Plus className="h-3.5 w-3.5" />
+            Add another link
+          </button>
         </section>
 
         {/* Schedule */}
@@ -666,7 +867,7 @@ export function CreateEventModal({ open, onClose }: CreateEventModalProps) {
             {dates.map((row, index) => (
               <div
                 key={row.key}
-                className="grid grid-cols-1 gap-3 rounded-xl border border-[#eae6e5] bg-[#faf8f7] p-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end"
+                className="grid grid-cols-1 gap-3 rounded-xl border border-[#eae6e5] bg-[#faf8f7] p-3 sm:grid-cols-[1.1fr_1fr_1fr_auto] sm:items-end"
               >
                 <div>
                   <label htmlFor={`event-date-${row.key}`} className={labelClass}>
@@ -682,14 +883,27 @@ export function CreateEventModal({ open, onClose }: CreateEventModalProps) {
                 </div>
 
                 <div>
-                  <label htmlFor={`event-time-${row.key}`} className={labelClass}>
+                  <label htmlFor={`event-start-time-${row.key}`} className={labelClass}>
                     Start time {index === 0 && <RequiredMark />}
                   </label>
                   <input
-                    id={`event-time-${row.key}`}
+                    id={`event-start-time-${row.key}`}
                     type="time"
-                    value={row.time}
-                    onChange={(event) => updateDate(row.key, 'time', event.target.value)}
+                    value={row.startTime}
+                    onChange={(event) => updateDate(row.key, 'startTime', event.target.value)}
+                    className={inputClass}
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor={`event-end-time-${row.key}`} className={labelClass}>
+                    End time {index === 0 && <RequiredMark />}
+                  </label>
+                  <input
+                    id={`event-end-time-${row.key}`}
+                    type="time"
+                    value={row.endTime}
+                    onChange={(event) => updateDate(row.key, 'endTime', event.target.value)}
                     className={inputClass}
                   />
                 </div>
@@ -706,6 +920,18 @@ export function CreateEventModal({ open, onClose }: CreateEventModalProps) {
               </div>
             ))}
           </div>
+
+          {dates.some((row) => row.startTime && row.endTime) && (
+            <p className="text-[11px] text-[#918c8a]">
+              Saved time range:{' '}
+              <span className="font-semibold text-[#1c1b1b]">
+                {dates
+                  .filter((row) => row.startTime && row.endTime)
+                  .map((row) => `${row.startTime} - ${row.endTime}`)
+                  .join(', ')}
+              </span>
+            </p>
+          )}
 
           <button
             type="button"
@@ -870,6 +1096,15 @@ export function CreateEventModal({ open, onClose }: CreateEventModalProps) {
             ))}
           </div>
         </section>
+
+        {formError && (
+          <p
+            role="alert"
+            className="rounded-xl border border-red-200 bg-red-50 px-3.5 py-3 text-xs font-medium text-red-700"
+          >
+            {formError}
+          </p>
+        )}
       </form>
     </Dialog>
   );

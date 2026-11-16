@@ -34,6 +34,12 @@ export const API_ROUTES = {
     IMAGE: `${API_PREFIX}/user/image`,
   },
 
+  // Event endpoints
+  EVENTS: {
+    CREATE: `${API_PREFIX}/events`,
+    IMAGE: (id: number) => `${API_PREFIX}/events/${id}/image`,
+  },
+
   // Content endpoints (cached via gateway)
   CONTENT: {
     INITIAL_DATA: `${API_PREFIX}/content/initial-data`,

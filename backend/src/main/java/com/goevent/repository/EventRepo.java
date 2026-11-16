@@ -84,13 +84,16 @@ public class EventRepo {
                 name, url);
     }
 
-    public long insertEvent(String name, String description, int categoryId, long venueId, int statusId, int audienceId, int levelId, int publishedBy, LocalDateTime startsAt, LocalDateTime endsAt) {
+    public long insertEvent(String name, String description, int categoryId, long venueId, int statusId, int audienceId, int levelId, Long linkId, int publishedBy, LocalDateTime startsAt, LocalDateTime endsAt) {
+        // `link_id` is the legacy single-link column: it keeps the first link so
+        // older readers still resolve something. Every link, including the first,
+        // is also written to `event_has_links` by `linkEvent`.
         return insert(
                 "INSERT INTO `event`(name,description,category_id,venue_id,event_status_id,"
                         + "audience_id,event_level_id,img_id,link_id,published_by,aproved_by,"
-                        + "starts_at,ends_at) VALUES(?,?,?,?,?,?,?,NULL,NULL,?,NULL,?,?)",
+                        + "starts_at,ends_at) VALUES(?,?,?,?,?,?,?,NULL,?,?,NULL,?,?)",
                 name, description, categoryId, venueId, statusId,
-                audienceId, levelId, publishedBy, startsAt, endsAt);
+                audienceId, levelId, linkId, publishedBy, startsAt, endsAt);
     }
 
     public void linkEvent(long eventId, long linkId) {
@@ -109,6 +112,32 @@ public class EventRepo {
         jdbc.update(
                 "INSERT INTO event_has_tags(event_id,tags_id) VALUES(?,?)",
                 eventId, tagId);
+    }
+
+    // --- images ----------------------------------------------------------
+
+    /**
+     * Owner and current {@code img_id} of an event, used to authorise an upload
+     * and to replace a previous image instead of leaking orphan rows.
+     */
+    public Map<String, Object> eventImageRow(long eventId) {
+        List<Map<String, Object>> rows = jdbc.queryForList(
+                "SELECT published_by, img_id FROM `event` WHERE id=?", eventId);
+
+        return rows.isEmpty() ? null : rows.get(0);
+    }
+
+    public long insertImage(String path, String bannerPath) {
+        return insert("INSERT INTO img(path,bannerpath) VALUES(?,?)", path, bannerPath);
+    }
+
+    public void updateImage(long imageId, String path, String bannerPath) {
+        jdbc.update("UPDATE img SET path=?, bannerpath=? WHERE id=?",
+                path, bannerPath, imageId);
+    }
+
+    public void setEventImage(long eventId, long imageId) {
+        jdbc.update("UPDATE `event` SET img_id=? WHERE id=?", imageId, eventId);
     }
 
     // --- helpers ---------------------------------------------------------

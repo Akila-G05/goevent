@@ -92,7 +92,10 @@ profile/session access; ordinary login also rejects suspended accounts.
 
 ## Events and statistics
 
-Review state IDs: PENDING=1, APPROVED=2, REJECTED=3, DRAFT=4. Schedule phase is
+Review state IDs: PENDING=1, APPROVED=2, REJECTED=3, DRAFT=4. Events created by
+an organizer through the listing flow are stored as APPROVED (the creator
+publishes directly), so the decision endpoint below only applies to records that
+are still PENDING, such as imported or legacy events. Schedule phase is
 independent: ALL, UPCOMING, ONGOING, COMPLETED, UNKNOWN. Start/end inputs must be
 explicit ISO-8601 instants, e.g. `2026-12-01T09:00:00+05:30`; display scheduling
 in Asia/Colombo. No legacy free-text event time is parsed or invented. Event
