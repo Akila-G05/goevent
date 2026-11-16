@@ -8,11 +8,13 @@ import { eventsApi } from '@/api/events';
 vi.mock('@/api/events', () => ({
   eventsApi: {
     list: vi.fn(),
+    recommended: vi.fn(),
   },
 }));
 
 beforeEach(() => {
   vi.mocked(eventsApi.list).mockResolvedValue([]);
+  vi.mocked(eventsApi.recommended).mockResolvedValue([]);
 });
 
 const renderHome = () =>
@@ -32,7 +34,7 @@ describe('HomePage Component', () => {
   it('opens the reservation modal and links Book Now to the event detail page', () => {
     renderHome();
 
-    fireEvent.click(screen.getAllByRole('button', { name: /Find Tickets/i })[0]);
+    fireEvent.click(screen.getByRole('button', { name: /See Detail/i }));
 
     expect(screen.getByText(/Ticket Reservation/i)).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /Book Now/i })).toHaveAttribute(

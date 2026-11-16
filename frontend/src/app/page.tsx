@@ -37,7 +37,7 @@ export default function HomePage() {
   // Events panel lists newest first; the discover list lists oldest first
   const eventsDescQuery = useQuery({
     queryKey: ['events', 'approved', 'desc'],
-    queryFn: () => eventsApi.list(50, 'desc'),
+    queryFn: () => eventsApi.list(6, 'desc'),
   });
 
   const eventsAscQuery = useQuery({

@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { beforeEach, describe, it, expect, vi } from 'vitest';
 import HomePage from '@/app/page';
@@ -8,10 +8,11 @@ import { eventsApi, type EventSummary } from '@/api/events';
 vi.mock('@/api/events', () => ({
   eventsApi: {
     list: vi.fn(),
+    recommended: vi.fn(),
   },
 }));
 
-const listEvents = vi.mocked(eventsApi.list);
+const listEvents = vi.mocked(eventsApi.recommended);
 
 const freeUniversityEvent: EventSummary = {
   id: 10,
@@ -50,6 +51,7 @@ const renderHome = () =>
 
 beforeEach(() => {
   listEvents.mockReset();
+  vi.mocked(eventsApi.list).mockResolvedValue([]);
 });
 
 describe('Home page event cards', () => {
@@ -90,7 +92,7 @@ describe('Home page event cards', () => {
     listEvents.mockResolvedValue([]);
     renderHome();
 
-    expect(await screen.findByText('No events are published yet.')).toBeInTheDocument();
+    expect(await screen.findByText('No events to show yet.')).toBeInTheDocument();
   });
 
   it('shows an error with a retry action when the events cannot be loaded', async () => {
@@ -99,5 +101,25 @@ describe('Home page event cards', () => {
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Events could not be loaded.');
     expect(screen.getByRole('button', { name: 'Try again' })).toBeInTheDocument();
+  });
+  it('shows four events per page and reaches the rest with the carousel, up to six', async () => {
+    const many: EventSummary[] = Array.from({ length: 8 }, (_, index) => ({
+      ...freeUniversityEvent,
+      id: 100 + index,
+      name: `Event ${index + 1}`,
+    }));
+    listEvents.mockResolvedValue(many);
+    renderHome();
+
+    expect(await screen.findByRole('heading', { name: 'Event 1' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Event 4' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Event 5' })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Next events' }));
+
+    expect(screen.getByRole('heading', { name: 'Event 5' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Event 6' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Event 7' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Event 8' })).not.toBeInTheDocument();
   });
 });

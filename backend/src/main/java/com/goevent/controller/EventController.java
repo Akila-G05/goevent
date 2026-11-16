@@ -31,7 +31,6 @@ public class EventController {
         this.eventService = eventService;
     }
 
-    /** Public list of approved events, ordered by sort=asc (default), desc or random. */
     @GetMapping
     public Map<String, Object> list(
             @RequestParam(defaultValue = "24") int limit,
@@ -40,10 +39,6 @@ public class EventController {
         return Map.of("status", true, "events", eventService.listApproved(limit, EventSort.parse(sort)));
     }
 
-    /**
-     * Home-page browsing list: a student's university events, otherwise a random
-     * selection. The scope comes from the session, never from the request.
-     */
     @GetMapping("/recommended")
     public Map<String, Object> recommended(
             @RequestParam(defaultValue = "6") int limit,
@@ -52,7 +47,6 @@ public class EventController {
         return Map.of("status", true, "events", eventService.recommended(limit, httpRequest));
     }
 
-    /** Public detail of one approved event. Unapproved or unknown ids return 404. */
     @GetMapping("/{id}")
     public Map<String, Object> detail(@PathVariable("id") long id) {
         return Map.of("status", true, "event", eventService.detail(id));
@@ -67,11 +61,6 @@ public class EventController {
         return Map.of("status", true, "id", id);
     }
 
-    /**
-     * Uploads the cover image (form field {@code file}) and an optional banner
-     * ({@code banner}) for an existing event, then stores the paths on the
-     * event's {@code img} row.
-     */
     @PostMapping(value = "/{id}/image", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public Map<String, Object> uploadImage(
             @PathVariable("id") long id,
