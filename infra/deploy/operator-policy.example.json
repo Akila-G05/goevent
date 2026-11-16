@@ -1,6 +1,7 @@
 {
   "enabled": false,
   "disk_uuid": "20cc86bf-a088-472a-aae8-a7e53b19abb0",
+  "upload_disk_uuid": "OWNER_ACTION_REQUIRED",
   "mysql_mount": "/srv/goevent/mysql",
   "mysql_data": "/srv/goevent/mysql/data",
   "registry": "acrgoevent.azurecr.io",

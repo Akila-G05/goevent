@@ -11,7 +11,12 @@ ws.addEventListener('message',event=>{const m=JSON.parse(event.data);if(m.id){co
 function send(method,params={}){return new Promise((resolve,reject)=>{const id=++sequence;pending.set(id,{resolve,reject});ws.send(JSON.stringify({id,method,params}));});}
 async function evaluate(expression){const result=await send('Runtime.evaluate',{expression,returnByValue:true,awaitPromise:true});if(result.exceptionDetails)throw new Error(result.exceptionDetails.exception?.description || 'Browser script failed');return result.result.value;}
 async function until(expression){const started=Date.now();while(Date.now()-started<60000){if(await evaluate(expression))return;await new Promise(r=>setTimeout(r,250));}throw new Error('Timed out waiting for browser condition: '+expression);}
-async function click(label){await evaluate(`(()=>{const b=${label==='Sign In'?`document.querySelector('form button[type="submit"]')`:`[...document.querySelectorAll('button')].find(b=>b.textContent.trim()===${JSON.stringify(label)})`};if(!b)throw Error('Missing button');b.click();})()`);}
+async function click(label){
+ const button=label==='Sign In'?`document.querySelector('form button[type="submit"]')`:`[...document.querySelectorAll('button')].find(b=>b.textContent.trim()===${JSON.stringify(label)} && !b.disabled)`;
+ // Wait for remote prerequisites instead of silently clicking a disabled button.
+ await until(`!!(${button}) && !(${button}).disabled`);
+ await evaluate(`(${button}).click()`);
+}
 async function fill(fields){await evaluate(`(()=>{const set=Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set;const select=Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype,'value').set;const text=Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype,'value').set;for(const [selector,value] of ${JSON.stringify(Object.entries(fields))}){const el=document.querySelector(selector);if(!el)throw Error(selector);(el.tagName==='SELECT'?select:el.tagName==='TEXTAREA'?text:set).call(el,value);el.dispatchEvent(new Event(el.tagName==='SELECT'?'change':'input',{bubbles:true}));}})()`);}
 async function file(selector){await evaluate(`(()=>{const el=document.querySelector(${JSON.stringify(selector)});const transfer=new DataTransfer();transfer.items.add(new File([${JSON.stringify('%PDF-1.4\n1 0 obj <<>> endobj\n%%EOF')}],'proof.pdf',{type:'application/pdf'}));el.files=transfer.files;el.dispatchEvent(new Event('change',{bubbles:true}));})()`);}
 async function navigate(path){await send('Page.navigate',{url:site+path});}

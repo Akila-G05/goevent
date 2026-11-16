@@ -4,6 +4,8 @@ import datetime as dt
 import json
 from pathlib import Path
 import subprocess
+import stat
+from types import SimpleNamespace
 import sys
 import tempfile
 import unittest
@@ -11,7 +13,7 @@ from unittest.mock import patch
 import yaml
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'deploy'))
-from pull import deploy, validate_model, network_preflight, protected_tree
+from pull import deploy, validate_model, network_preflight, protected_tree, upload_preflight
 from policy import validate_blob_policy
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -42,6 +44,53 @@ class DeploymentTests(unittest.TestCase):
         value = copy.deepcopy(valid); value['services']['backend']['volumes'][0]['read_only'] = False; variants.append(value)
         for value in variants:
             with self.assertRaises(ValueError): validate_model(value, self.intent['images'])
+
+    def test_upload_bind_is_the_only_writable_persistent_mount(self):
+        valid = model(self.intent['images'])
+        mount = valid['services']['backend']['volumes'][2]
+        self.assertEqual(mount['source'], '/var/lib/goevent-uploads')
+        self.assertEqual(mount['target'], '/app/uploads')
+        self.assertFalse(mount['read_only'])
+        for changed in [dict(source='/srv/goevent/mysql/data'), dict(target='/app'),
+                        dict(read_only=True), dict(type='volume'),
+                        dict(bind={'create_host_path': True}),
+                        dict(bind={'create_host_path': False, 'propagation': 'shared'})]:
+            value = copy.deepcopy(valid)
+            value['services']['backend']['volumes'][2].update(changed)
+            with self.assertRaises(ValueError): validate_model(value,self.intent['images'])
+        value = copy.deepcopy(valid)
+        value['services']['backend']['volumes'][1] = value['services']['backend']['volumes'][0]
+        with self.assertRaises(ValueError): validate_model(value,self.intent['images'])
+        value = copy.deepcopy(valid)
+        value['services']['gateway']['volumes'].append(copy.deepcopy(mount))
+        with self.assertRaises(ValueError): validate_model(value,self.intent['images'])
+        self.assertIn('app.storage.root=/app/uploads',
+            (ROOT/'infra/config/backend/application.properties').read_text())
+
+    def test_upload_permissions_symlinks_and_mysql_filesystem_fail_closed(self):
+        uuid = '11111111-1111-1111-1111-111111111111'
+        good = dict(st_mode=stat.S_IFDIR|0o700,st_uid=10001,st_gid=10001,st_dev=2)
+        for changed in [{},dict(st_mode=stat.S_IFDIR|0o755),dict(st_uid=0),
+                        dict(st_gid=0),dict(st_mode=stat.S_IFLNK|0o700),dict(st_dev=1)]:
+            info = SimpleNamespace(**(good|changed))
+            with patch('pull.protected'), patch.object(Path,'is_symlink',return_value=False), \
+                 patch.object(Path,'lstat',return_value=info), \
+                 patch.object(Path,'stat',return_value=SimpleNamespace(st_dev=1)), \
+                 patch('pull.run',return_value=uuid.encode()):
+                if changed:
+                    with self.assertRaises(ValueError): upload_preflight('/var/lib/goevent-uploads','/srv/goevent/mysql/data',uuid)
+                else:
+                    upload_preflight('/var/lib/goevent-uploads','/srv/goevent/mysql/data',uuid)
+        with patch('pull.protected'), patch.object(Path,'is_symlink',return_value=False), \
+             patch.object(Path,'lstat',return_value=SimpleNamespace(**good)), \
+             patch.object(Path,'stat',return_value=SimpleNamespace(st_dev=1)), patch('pull.run',return_value=b''):
+            with self.assertRaises(ValueError): upload_preflight('/var/lib/goevent-uploads','/srv/goevent/mysql/data',uuid)
+        for invalid in ['', 'OWNER_ACTION_REQUIRED']:
+            with self.assertRaises(ValueError): upload_preflight('/var/lib/goevent-uploads','/srv/goevent/mysql/data',invalid)
+        with patch('pull.protected'), patch.object(Path,'is_symlink',return_value=True):
+            with self.assertRaises(ValueError): upload_preflight('/var/lib/goevent-uploads','/srv/goevent/mysql/data',uuid)
+        with tempfile.TemporaryDirectory() as directory, patch('pull.protected'):
+            with self.assertRaises(FileNotFoundError): upload_preflight(Path(directory)/'missing',directory,uuid)
 
     def test_dependency_contract(self):
         dependencies = yaml.safe_load((ROOT/'infra/compose/dependencies.yml').read_text())

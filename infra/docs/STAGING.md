@@ -3,11 +3,38 @@
 For the custom Caddy build, scoped ACR prerequisites and dependency approval,
 read [Caddy security remediation](CADDY-SECURITY-FIX.md) before staging.
 
-This change starts from clean commit `032e8e3` (the audited revision). No audit
-finding was assumed fixed by an intervening revision. The task branch is
-`vinura/staging-readiness`. No VM/Azure change, commit, push or deployment is part
-of this work. The operator policy remains disabled. Promotion additionally has a
+The inert bundle originated from audit revision `032e8e3`; the final repository
+blocker update builds on `c9da6e7` on `vinura/coordinator-dashboard`. No VM/Azure
+change, commit, push or deployment is part of this final update. The operator policy remains disabled. Promotion additionally has a
 literal false repository kill switch; changing a GitHub variable cannot activate it.
+
+## Final repository blocker review (2026-11-16)
+
+The final changes affect upload persistence, filesystem permissions, legacy
+cookie-authenticated mutations and their frontend clients. They do not change
+schema, payment state, MySQL ownership, OIDC, image provenance, release approvals
+or backup guards. The upload mount and deployment validator must change together;
+rollback to an older application bundle must preserve the host upload directory.
+CSRF tokens are fetched before each auth/profile mutation, including login and
+logout; mutations are never automatically replayed after a 403 or network error.
+Existing API clients must adopt the token header before this backend rolls out.
+Validation covers missing/stale tokens, session replacement, revoked users,
+JSON/multipart requests, symlink rejection, mount restrictions and persistence.
+
+Validation of this update: backend verify/repackage passed (68 tests), gateway
+verify passed (2), frozen Bun install, frontend tests (89), typecheck/lint and an
+isolated production build passed. Infrastructure tests passed (34); isolated
+browser/runtime smoke passed, including Postman (74 requests/83 assertions),
+CSRF login/logout, revocation, Redis outage/recovery and migration failure.
+A disposable host-bind test confirmed UID 10001 writes and replacement-container
+reads; Redis TLS/ACL checks passed. Security gates passed using the authoritative
+GHCR vulnerability DB for the frontend scan after the default mirror timed out;
+no repository scanner settings or thresholds were changed. Fresh full image
+scanning remains unverified: Caddy build stalled on Go dependency downloads and
+Java DB downloads could not finish promptly, so those local processes were stopped.
+Do not treat this as an image security pass; rerun the unchanged image gate before
+application activation. No VM/Azure operation, shared-data migration or real email
+was performed. Inert bundle installation remains distinct from startup approval.
 
 ## Impact and boundaries
 
@@ -50,8 +77,9 @@ Install `config/{backend,gateway}/application.properties` as external config, an
 `caddy/Caddyfile`. Use `config/caddy/Caddyfile.staging` instead on isolated staging.
 Every config/runtime directory must be root:10001, mode 0750; every file root:10001,
 mode 0640. Do not give human users membership in GID 10001. No symlinks, special
-files, group-writable or world-readable runtime/config files are accepted. Binds
-are read-only and missing source paths are never automatically created.
+files, group-writable or world-readable runtime/config files are accepted. Configuration/secret binds
+are read-only; only the backend image-upload bind is writable. Missing source
+paths are never automatically created.
 
 `deploy/operator-policy.example.json` enumerates all runtime files under
 `/run/goevent`. Existing protected Key Vault bootstrap must produce these files;
@@ -85,9 +113,52 @@ Caddy certificate state is the sole persistent dependency bind; its owner is UID
 
 Secure/HttpOnly/SameSite=None cookies support the explicitly approved cross-site
 HTTPS origin. Validate real browser login, cookie scope and CSRF protection before
-production; this task does not install full Spring Security/ownership enforcement.
+production. The existing Spring Security chain now protects all implemented
+state-changing API families, including legacy auth/profile JSON and multipart
+requests. GET /goevent/api/auth/csrf is public and returns a session-bound token;
+clients send its X-CSRF-TOKEN header before each mutation, including login/logout.
+Login replaces the session, so pre-login tokens cannot be reused. Public content
+and exact managed-image reads remain accessible; there is no directory listing.
 Management is health-only, not routed publicly. Production app logs are WARN;
 query strings and Google credentials are not logged by the changed paths.
+
+## Persistent image storage
+
+The only writable persistent application bind is host `/var/lib/goevent-uploads`
+→ backend `/app/uploads`; the production backend config fixes `app.storage.root`
+to that container path. Gateway has no access to this bind. Keep its parent
+root-owned and non-writable by application users; the leaf must be **10001:10001,
+0700**, without symlink ancestors. Image directories/files are created 0700/0600.
+Only managed scope/owner/UUID paths can be served. Symlink paths are rejected for
+upload/read/delete; no static directory handler or file browser is installed.
+Private authorization documents remain in MySQL, not this public-image directory.
+
+Use the VM OS filesystem or a separately approved persistent upload disk, never
+`/srv/goevent/mysql` or the protected MySQL filesystem. Deployment preflight rejects
+uploads on the same filesystem as MySQL and rejects missing/unsafe directories.
+Set `upload_disk_uuid` in the reviewed operator policy to the UUID returned by
+`findmnt --target /var/lib/goevent-uploads --output UUID` after provisioning.
+The disabled example intentionally contains OWNER_ACTION_REQUIRED. Preflight
+requires that exact UUID on every release; a missing mount cannot silently fall
+back to a different filesystem after reboot. UUID-less/ephemeral storage fails closed.
+Provision and verify the approved filesystem before startup; Docker must not
+create it implicitly. On isolated staging only, after checking the filesystem:
+
+```sh
+sudo findmnt --target /var/lib --output TARGET,SOURCE,FSTYPE,UUID
+# Verify this is persistent storage separate from the protected MySQL disk.
+# Create only if absent; never recursively chown existing customer data.
+sudo sh -eu -c 'test ! -L /var/lib/goevent-uploads; mkdir -m 0700 /var/lib/goevent-uploads; chown 10001:10001 /var/lib/goevent-uploads'
+sudo stat -c '%u:%g %a %F' /var/lib/goevent-uploads
+sudo findmnt --noheadings --raw --target /var/lib/goevent-uploads --output UUID
+```
+
+For an existing directory, inspect it rather than recreating or changing it.
+The bind survives container replacement and host reboot; applications still stay
+off after reboot until the existing approval/startup procedure runs. Monitor disk
+capacity and include images in a separately approved backup/restore policy. Never
+remove uploads during application rollback or inert bundle removal. Uploads need
+no new secret and do not change the database backup approval contract.
 
 ## Package and install WITHOUT activation
 
@@ -198,7 +269,9 @@ The fetch adapter requires exactly intents/BUILD_RUN_ID-PROMOTION_RUN_ID.json pl
 an independently approved content SHA-256. The release container is exclusively
 stgoevent/goevent-release-intents. Verify its locked immutability/retention and
 private access separately; a name/hash check does not establish Azure immutability.
-Keep GOEVENT_BLOB_DELIVERY_APPROVED=false and enabled=false. Removing the literal
+Keep GOEVENT_BLOB_DELIVERY_APPROVED=false and enabled=false. Before any future
+promotion, configure AZURE_ACR_LOGIN_SERVER in goevent-production as well as the
+publisher environment; promote.py validates candidates against it. Removing the literal
 promotion kill switch or enabling policy requires a separate reviewed activation.
 
 Production additionally requires successful trusted-main scans/SBOMs/attestations,

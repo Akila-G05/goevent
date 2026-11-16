@@ -29,11 +29,14 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 class AdminSecurityConfigTest {
     @Configuration @EnableWebMvc @EnableWebSecurity
-    @Import({AdminSecurityConfig.class, ApiPrefixConfig.class, AdminAuthenticationController.class,
+    @Import({AdminSecurityConfig.class, CorsConfig.class, ApiPrefixConfig.class, AdminAuthenticationController.class,
+        com.goevent.controller.AuthenticationController.class, com.goevent.controller.UserController.class,
         AdminController.class,CoordinatorRequestController.class,ContactController.class,com.goevent.controller.CoordinatorController.class})
     static class Config {
         @Bean com.goevent.service.CoordinatorService coordinator(){return mock(com.goevent.service.CoordinatorService.class);}
         @Bean com.goevent.service.ImageUploadService images(){return mock(com.goevent.service.ImageUploadService.class);}
+        @Bean com.goevent.service.AuthenticationService authentication() { return mock(com.goevent.service.AuthenticationService.class); }
+        @Bean com.goevent.service.UserService users() { return mock(com.goevent.service.UserService.class); }
         @Bean AdminAccessRepository access() { return mock(AdminAccessRepository.class); }
         @Bean AdminAuthenticationService service() { return mock(AdminAuthenticationService.class); }
         @Bean AdminManagementService management() { return mock(AdminManagementService.class); }
@@ -132,4 +135,85 @@ class AdminSecurityConfigTest {
             .andExpect(status().isUnauthorized());
         verifyNoInteractions(context.getBean(AdminAuthenticationService.class));
     }
+    private com.google.gson.JsonObject token(MockHttpSession session) throws Exception {
+        var result = mvc.perform(get("/api/auth/csrf").session(session))
+            .andExpect(status().isOk()).andReturn();
+        return JsonParser.parseString(result.getResponse().getContentAsString()).getAsJsonObject();
+    }
+    @Test void legacyMutationsRejectMissingInvalidTokensAndUntrustedOrigins() throws Exception {
+        for (String path : List.of("manual", "google", "register", "logout")) {
+            mvc.perform(post("/api/auth/"+path).contentType("application/json").content("{}"))
+                .andExpect(status().isForbidden());
+            mvc.perform(post("/api/auth/"+path).header("X-CSRF-TOKEN", "invalid")
+                .contentType("application/json").content("{}"))
+                .andExpect(status().isForbidden());
+        }
+        var session = new MockHttpSession(); var csrf = token(session);
+        mvc.perform(post("/api/auth/manual").session(session).header("Origin", "https://untrusted.invalid")
+            .header("X-CSRF-TOKEN", csrf.get("token").getAsString())
+            .contentType("application/json").content("{}"))
+            .andExpect(status().isForbidden());
+        verifyNoInteractions(context.getBean(com.goevent.service.AuthenticationService.class));
+    }
+    @Test void loginRotationRejectsOldTokenAndLogoutWorksWithFreshToken() throws Exception {
+        var service = context.getBean(com.goevent.service.AuthenticationService.class);
+        when(service.handleManualAuthentication(anyMap(), any())).thenAnswer(call -> {
+            jakarta.servlet.http.HttpServletRequest request = call.getArgument(1);
+            request.getSession(false).invalidate(); request.getSession(true).setAttribute("userId",7);
+            return "{\"status\":true}";
+        });
+        when(service.handleLogout(any())).thenAnswer(call -> {
+            jakarta.servlet.http.HttpServletRequest request = call.getArgument(0);
+            request.getSession(false).invalidate(); return "{\"status\":true}";
+        });
+        var before = new MockHttpSession(); var old = token(before);
+        var login = mvc.perform(post("/api/auth/manual").session(before)
+            .header("X-CSRF-TOKEN",old.get("token").getAsString())
+            .contentType("application/json").content("{}"))
+            .andExpect(status().isOk()).andReturn();
+        Assertions.assertTrue(before.isInvalid());
+        var after = (MockHttpSession)login.getRequest().getSession(false);
+        mvc.perform(post("/api/auth/logout").session(after)
+            .header("X-CSRF-TOKEN",old.get("token").getAsString())).andExpect(status().isForbidden());
+        var fresh = token(after);
+        mvc.perform(post("/api/auth/logout").session(after)
+            .header("X-CSRF-TOKEN",fresh.get("token").getAsString())).andExpect(status().isOk());
+        Assertions.assertTrue(after.isInvalid());
+        verify(service,times(1)).handleLogout(any());
+    }
+    @Test void googleAndRegistrationAcceptCsrfWithoutPriorLogin() throws Exception {
+        for (String path : List.of("google","register")) {
+            var session = new MockHttpSession(); var csrf = token(session);
+            mvc.perform(post("/api/auth/"+path).session(session)
+                .header("X-CSRF-TOKEN",csrf.get("token").getAsString())
+                .contentType("application/json").content("{}"))
+                .andExpect(status().isOk());
+        }
+        var service = context.getBean(com.goevent.service.AuthenticationService.class);
+        verify(service).handleGoogleAuthentication(anyMap(),any());
+        verify(service).handleManualRegistration(anyMap(),any());
+    }
+    @Test void profileJsonAndMultipartRequireActiveUserAndCsrf() throws Exception {
+        var session = new MockHttpSession(); session.setAttribute("userId",7);
+        var access = context.getBean(AdminAccessRepository.class);
+        when(access.isActiveUser(7)).thenReturn(true);
+        var csrf = token(session); String value = csrf.get("token").getAsString();
+        mvc.perform(put("/api/user/data").session(session).contentType("application/json").content("{}"))
+            .andExpect(status().isForbidden());
+        var file = new MockMultipartFile("file","avatar.png","image/png",new byte[]{1});
+        mvc.perform(multipart("/api/user/image").file(file).session(session)).andExpect(status().isForbidden());
+        verifyNoInteractions(context.getBean(com.goevent.service.UserService.class));
+        mvc.perform(put("/api/user/data").session(session).header("X-CSRF-TOKEN",value)
+            .contentType("application/json").content("{}")) .andExpect(status().isOk());
+        mvc.perform(multipart("/api/user/image").file(file).session(session).header("X-CSRF-TOKEN",value))
+            .andExpect(status().isOk());
+        mvc.perform(get("/api/user/data")).andExpect(status().isUnauthorized());
+        when(access.isActiveUser(7)).thenReturn(false);
+        mvc.perform(put("/api/user/data").session(session).header("X-CSRF-TOKEN",value)
+            .contentType("application/json").content("{}")) .andExpect(status().isUnauthorized());
+        Assertions.assertTrue(session.isInvalid());
+        verify(context.getBean(com.goevent.service.UserService.class),times(1)).updateCurrentUserData(anyString(),any());
+        verify(context.getBean(com.goevent.service.UserService.class),times(1)).uploadProfileImage(any(),any());
+    }
+
 }

@@ -15,6 +15,11 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.LinkOption;
+import java.nio.file.StandardOpenOption;
+import java.nio.file.attribute.PosixFilePermissions;
+import java.nio.channels.Channels;
+import java.util.Set;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.regex.Pattern;
@@ -76,15 +81,21 @@ public class ImageUploadService {
         Path directory = directory(scope, owner);
 
         try {
-            Files.createDirectories(directory);
-
-            try (InputStream input = file.getInputStream()) {
-                // No REPLACE_EXISTING: a UUID clash must fail, not overwrite.
-                Files.copy(input, directory.resolve(filename));
+            if (!withoutSymlinks(directory)) throw new IOException("Unsafe upload directory");
+            Files.createDirectories(directory, PosixFilePermissions.asFileAttribute(
+                    PosixFilePermissions.fromString("rwx------")));
+            if (!withoutSymlinks(directory)) throw new IOException("Unsafe upload directory");
+            // CREATE_NEW and NOFOLLOW_LINKS refuse replacement/link targets.
+            try (InputStream input = file.getInputStream();
+                 var channel = Files.newByteChannel(directory.resolve(filename),
+                         Set.of(StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE, LinkOption.NOFOLLOW_LINKS),
+                         PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString("rw-------")));
+                 var output = Channels.newOutputStream(channel)) {
+                input.transferTo(output);
             }
         } catch (IOException e) {
             try {
-                Files.deleteIfExists(directory.resolve(filename));
+                if (withoutSymlinks(directory)) Files.deleteIfExists(directory.resolve(filename));
             } catch (IOException cleanupFailure) {
                 logger.warn("Could not clean up a partially written image: {}", filename);
             }
@@ -117,8 +128,14 @@ public class ImageUploadService {
 
         Path target = path(scope, owner, filename);
 
-        return target.startsWith(settings.root()) && Files.isRegularFile(target)
-                ? Optional.of(new FileSystemResource(target))
+        return target.startsWith(settings.root()) && withoutSymlinks(target)
+                && Files.isRegularFile(target, LinkOption.NOFOLLOW_LINKS)
+                ? Optional.of(new FileSystemResource(target) {
+                    @Override public InputStream getInputStream() throws IOException {
+                        if (!withoutSymlinks(target)) throw new IOException("Unsafe image path");
+                        return Files.newInputStream(target, LinkOption.NOFOLLOW_LINKS);
+                    }
+                })
                 : Optional.empty();
     }
 
@@ -130,7 +147,7 @@ public class ImageUploadService {
 
         Path target = path(scope, owner, filename);
 
-        if (!target.startsWith(settings.root())) {
+        if (!target.startsWith(settings.root()) || !withoutSymlinks(target)) {
             return false;
         }
 
@@ -250,6 +267,13 @@ public class ImageUploadService {
         return settings.isScope(scope)
                 && owner != null && OWNER.matcher(owner).matches()
                 && filename != null && MANAGED_FILENAME.matcher(filename).matches();
+    }
+
+    private boolean withoutSymlinks(Path target) {
+        for (Path part = target; part != null; part = part.getParent()) {
+            if (Files.isSymbolicLink(part)) return false;
+        }
+        return true;
     }
 
     private Path directory(String scope, String owner) {

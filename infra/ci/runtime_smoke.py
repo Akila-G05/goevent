@@ -168,11 +168,23 @@ def main(api_check=None, extra_env=None):
                 # container belongs exclusively to this disposable run.
                 for key in redis_command('--scan', '--pattern', 'gateway:response:*').splitlines():
                     redis_command('DEL', key)
+            auth_client = urllib.request.build_opener(
+                urllib.request.HTTPCookieProcessor(http.cookiejar.CookieJar()))
+            auth_url = f'http://127.0.0.1:{backend_port}/goevent/api/auth'
+            try:
+                auth_client.open(urllib.request.Request(auth_url+'/google', data=b'{}',
+                    headers={'Content-Type':'application/json'}), timeout=5)
+                raise AssertionError('Legacy login accepted missing CSRF')
+            except urllib.error.HTTPError as error:
+                assert error.code == 403
+            with auth_client.open(auth_url+'/csrf', timeout=5) as response:
+                auth_csrf = json.load(response)
             missing_token = urllib.request.Request(
                 f'http://127.0.0.1:{backend_port}/goevent/api/auth/google',
-                data=b'{}', headers={'Content-Type': 'application/json'}, method='POST',
+                data=b'{}', headers={'Content-Type': 'application/json',
+                    auth_csrf['headerName']:auth_csrf['token']}, method='POST',
             )
-            with urllib.request.urlopen(missing_token, timeout=5) as response:
+            with auth_client.open(missing_token, timeout=5) as response:
                 denied = json.loads(response.read())
                 assert denied['status'] is False
                 assert denied['message'] == 'Google ID token is missing'

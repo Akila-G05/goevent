@@ -1575,10 +1575,36 @@
       ]
     },
     {
+      "name": "Member login CSRF",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/auth/csrf"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Member login CSRF\", () => pm.response.to.have.status(200));",
+              "if (pm.response.code === 200) { const c=pm.response.json(); pm.environment.set('csrfHeader',c.headerName); pm.environment.set('csrfToken',c.token); }"
+            ]
+          }
+        }
+      ]
+    },
+    {
       "name": "Member login",
       "request": {
         "method": "POST",
         "header": [
+          { "key": "{{csrfHeader}}", "value": "{{csrfToken}}" },
           {
             "key": "Content-Type",
             "value": "application/json"

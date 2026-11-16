@@ -17,6 +17,11 @@ public class AuthenticationController {
         this.authenticationService = authenticationService;
     }
 
+    @GetMapping("/csrf")
+    public Map<String, String> csrf(org.springframework.security.web.csrf.CsrfToken token) {
+        return Map.of("headerName", token.getHeaderName(), "token", token.getToken());
+    }
+
     //Manual Registeration
     @PostMapping("/register")
     public String manualRegistration(@RequestBody Map<String, String> request, HttpServletRequest httpRequest) {
