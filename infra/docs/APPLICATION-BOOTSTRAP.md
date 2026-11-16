@@ -99,6 +99,10 @@ server key/certificate through its **existing separately reviewed owner mechanis
 
 ## MySQL server TLS and account review (separate owner change)
 
+For the owner-verified empty Azure database, use the staged
+[MySQL TLS and privilege migration plan](MYSQL-TLS-MIGRATION.md), which adds
+backup, certificate mount, client acceptance and rollback gates before activation.
+
 Use the existing authorized administrative connection, never a root password on a
 command line, terminal dump or new application config. First inspect:
 
