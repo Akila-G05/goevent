@@ -446,14 +446,10 @@ public class AuthenticationService {
         return trimmed.isEmpty() ? null : trimmed;
     }
 
-    // Google name claims are optional. Empty means absent, not an invented name;
-    // the existing schema requires non-null values for both name columns.
     static String googleName(String value) {
         return value == null ? "" : value.trim();
     }
 
-    // Called only after token signature/audience/email verification and lookup
-    // by the verified Google subject. Never use a role submitted by the client.
     void createVerifiedGoogleSession(HttpServletRequest request, UserDTO user) {
         if (user.getUserStatusId() != UserStatus.ACTIVE.getId()) {
             throw new IllegalStateException("Active account required");
@@ -479,10 +475,7 @@ public class AuthenticationService {
         session.setAttribute("email", user.getEmail());
     }
 
-    /**
-     * Display name shown in the navbar/profile page. Falls back to the email
-     * when the account has no first/last name.
-     */
+
     private String buildDisplayName(UserDTO user) {
         String firstName = trimToNull(user.getFname());
         String lastName = trimToNull(user.getLname());
@@ -503,10 +496,6 @@ public class AuthenticationService {
         return displayName.length() > 0 ? displayName.toString() : user.getEmail();
     }
 
-    /**
-     * Reports whether the caller already has a valid session.
-     * `getSession(false)` is used so simply checking never creates a session.
-     */
     public String handleSessionCheck(HttpServletRequest httpRequest) {
         JsonObject responseObject = new JsonObject();
 
@@ -543,9 +532,6 @@ public class AuthenticationService {
         return AppUtil.gson.toJson(responseObject);
     }
 
-    /**
-     * Invalidates the current session. Spring Session also expires the cookie.
-     */
     public String handleLogout(HttpServletRequest httpRequest) {
         JsonObject responseObject = new JsonObject();
 
