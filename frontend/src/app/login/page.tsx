@@ -56,7 +56,8 @@ export default function LoginPage() {
       }, 1200);
     } else if (data.action === 'LOGIN') {
       // Let the success card show; the user continues via "Visit Site".
-      setAuthSuccess(true);
+      if (new URLSearchParams(window.location.search).get('returnTo') === '/coordinator') router.replace('/coordinator');
+      else setAuthSuccess(true);
     }
   };
 
@@ -107,7 +108,8 @@ export default function LoginPage() {
         // Pull the display name from the session (login response omits it).
         void useSessionStore.getState().refresh();
         // The backend created the session; the success card offers "Visit Site".
-        setAuthSuccess(true);
+        if (new URLSearchParams(window.location.search).get('returnTo') === '/coordinator') router.replace('/coordinator');
+      else setAuthSuccess(true);
       } else {
         toast.error(response.message || 'Invalid email or password', {
           title: 'Login failed',

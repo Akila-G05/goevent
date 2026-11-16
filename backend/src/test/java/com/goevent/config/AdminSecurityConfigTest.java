@@ -30,8 +30,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class AdminSecurityConfigTest {
     @Configuration @EnableWebMvc @EnableWebSecurity
     @Import({AdminSecurityConfig.class, ApiPrefixConfig.class, AdminAuthenticationController.class,
-        AdminController.class,CoordinatorRequestController.class,ContactController.class})
+        AdminController.class,CoordinatorRequestController.class,ContactController.class,com.goevent.controller.CoordinatorController.class})
     static class Config {
+        @Bean com.goevent.service.CoordinatorService coordinator(){return mock(com.goevent.service.CoordinatorService.class);}
+        @Bean com.goevent.service.ImageUploadService images(){return mock(com.goevent.service.ImageUploadService.class);}
         @Bean AdminAccessRepository access() { return mock(AdminAccessRepository.class); }
         @Bean AdminAuthenticationService service() { return mock(AdminAuthenticationService.class); }
         @Bean AdminManagementService management() { return mock(AdminManagementService.class); }
@@ -85,6 +87,18 @@ class AdminSecurityConfigTest {
         mvc.perform(post("/api/coordinator-requests").session(session).contentType("application/json").content("{}"))
             .andExpect(status().isForbidden());
         verify(context.getBean(AdminManagementService.class),never()).requestCoordinator(anyInt(),any());
+    }
+    @Test void coordinatorRequiresCurrentOrdinarySessionAndCsrf() throws Exception {
+        mvc.perform(get("/api/coordinator/eligibility")).andExpect(status().isUnauthorized());
+        var session=new MockHttpSession();session.setAttribute("userId",7);
+        when(context.getBean(AdminAccessRepository.class).isActiveUser(7)).thenReturn(true,false);
+        when(context.getBean(com.goevent.service.CoordinatorService.class).workspaces(7)).thenReturn(List.of());
+        mvc.perform(get("/api/coordinator/eligibility").session(session)).andExpect(status().isOk());
+        mvc.perform(post("/api/coordinator/applications").session(session).contentType("application/json").content("{}"))
+            .andExpect(status().isForbidden());
+        mvc.perform(get("/api/coordinator/eligibility").session(session)).andExpect(status().isUnauthorized());
+        Assertions.assertTrue(session.isInvalid());
+        verify(context.getBean(com.goevent.service.CoordinatorService.class),never()).apply(anyInt(),any());
     }
     @Test void publicContactCannotBeSubmittedWithoutCsrf() throws Exception {
         mvc.perform(get("/api/contact/csrf")).andExpect(status().isOk());

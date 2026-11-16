@@ -35,7 +35,9 @@ class AdminWorkflowsIntegrationTest {
         @Bean JdbcTemplate jdbc(javax.sql.DataSource source) { return new JdbcTemplate(source); }
         @Bean PlatformTransactionManager manager(javax.sql.DataSource source) { return new DataSourceTransactionManager(source); }
         @Bean AdminRepository repository(JdbcTemplate jdbc) { return new AdminRepository(jdbc); }
-        @Bean AdminManagementService service(AdminRepository db) { return new AdminManagementService(db,new BCryptPasswordEncoder(4)); }
+        @Bean com.goevent.repository.CoordinatorRepository coordinators(AdminRepository db) { return new com.goevent.repository.CoordinatorRepository(db); }
+        @Bean CoordinatorService coordinatorService(AdminRepository db,com.goevent.repository.CoordinatorRepository repo) { return new CoordinatorService(db,repo,true,true); }
+        @Bean AdminManagementService service(AdminRepository db,CoordinatorService coordinator) { return new AdminManagementService(db,new BCryptPasswordEncoder(4),coordinator); }
     }
     @BeforeEach void setup() {
         // The URL comes only from this disposable Testcontainer, never host config.
@@ -74,9 +76,13 @@ class AdminWorkflowsIntegrationTest {
         return (int)db.insert("INSERT INTO `event`(name,category_id,venue_id,event_status_id,audience_id,event_level_id,img_id,link_id,published_by,aproved_by) VALUES('Fixture',1,?,1,1,1,?,?,?,NULL)",venue,image,link,applicant);
     }
     private void status(int expected,Runnable action) { assertEquals(expected,assertThrows(ResponseStatusException.class,action::run).getStatusCode().value()); }
+    private long application(int user,String position) {
+        long proof=db.insert("INSERT INTO private_document(owner_id,purpose,media_type,byte_size,sha256,content,created_at) VALUES(?,'AUTHORIZATION','application/pdf',1,REPEAT('0',64),?,UTC_TIMESTAMP(6))",user,new byte[]{1});
+        return context.getBean(CoordinatorService.class).apply(user,new com.goevent.dto.CoordinatorRequests.Application(organization,null,null,position,"contact@example.invalid","0700000000","Request access",proof));
+    }
     @Test void coordinatorApprovalIsAtomicAndRejectsDuplicateOrRepeatedDecisions() {
-        long request=service.requestCoordinator(applicant,new Coordinator(organization,"Coordinator","Request access"));
-        status(409,()->service.requestCoordinator(applicant,new Coordinator(organization,"Coordinator","Request access")));
+        long request=application(applicant,"Coordinator");
+        status(409,()->application(applicant,"Coordinator"));
         assertEquals(1,((Number)db.account(applicant).get("role_id")).intValue());
         service.decideRequest(admin,request,new Decision(true,"Verified organization"));
         assertEquals(2,((Number)db.account(applicant).get("role_id")).intValue());
@@ -86,14 +92,14 @@ class AdminWorkflowsIntegrationTest {
         service.revoke(admin,applicant,"Access no longer required");
         assertEquals(1,((Number)db.account(applicant).get("role_id")).intValue());
         assertEquals(1,((Number)db.account(applicant).get("user_status_id")).intValue());
-        long again=service.requestCoordinator(applicant,new Coordinator(organization,"New position","Request again"));
+        long again=application(applicant,"New position");
         service.decideRequest(admin,again,new Decision(true,"Verified again"));
         assertEquals(2,db.count("SELECT COUNT(*) FROM user_has_organize WHERE user_id=?",applicant));
         var profiles=new UserRepo(context.getBean(JdbcTemplate.class));
         assertEquals("New position",profiles.getOrganizerDetail(applicant).get("position"));
     }
     @Test void rejectedRequestPreservesUserAndLinkedRecordsBlockDeletion() {
-        long request=service.requestCoordinator(applicant,new Coordinator(organization,"Coordinator","Request access"));
+        long request=application(applicant,"Coordinator");
         service.decideRequest(admin,request,new Decision(false,"Not verified"));
         assertTrue(db.active(applicant)); assertEquals(1,((Number)db.account(applicant).get("role_id")).intValue());
         status(409,()->service.delete(admin,applicant,"Requested deletion"));
@@ -101,7 +107,7 @@ class AdminWorkflowsIntegrationTest {
     }
     @Test void studentRoleIsRestoredAfterCoordinatorRevocation() {
         int student=user("student-fixture@example.invalid",4);
-        long request=service.requestCoordinator(student,new Coordinator(organization,"Coordinator","Student request"));
+        long request=application(student,"Coordinator");
         service.decideRequest(admin,request,new Decision(true,"Verified student coordinator"));
         service.revoke(admin,student,"Role no longer needed");
         assertEquals(4,((Number)db.account(student).get("role_id")).intValue());
@@ -149,14 +155,9 @@ class AdminWorkflowsIntegrationTest {
         assertEquals("Asia/Colombo",result.get("eventTimeZone"));
         assertTrue(result.get("financialNotice").toString().contains("not reconciled revenue"));
     }
-    @Test void eventReviewEditAndDisablePreserveLinkedHistoryAndRejectStaleRevisions() {
+    @Test void legacyEventsCannotPublishWithoutOrganizationAndSubmittedRevision() {
         int id=eventFixture();
-        service.decideEvent(admin,id,new EventDecision(true,0,"Verified event"));
-        status(409,()->service.decideEvent(admin,id,new EventDecision(false,0,"Repeated decision")));
-        var start=Instant.now().plusSeconds(3600); var end=start.plusSeconds(3600);
-        service.editEvent(admin,id,new EventEdit("Updated","Description",start,end,1,"Corrected schedule"));
-        assertEquals(1,service.events(2,"UPCOMING",25,0).size());
-        status(409,()->service.editEvent(admin,id,new EventEdit("Stale","Description",start,end,1,"Stale update")));
+        status(409,()->service.decideEvent(admin,id,new EventDecision(true,0,"Verified event")));
         db.update("INSERT INTO event_dates(`date`,`time`,event_id) VALUES('2027-01-01','09:00',?)",id);
         status(409,()->service.deleteEvent(admin,id,"Cannot erase linked dates"));
         service.disableEvent(admin,id,"Moderation hold"); assertNotNull(service.event(id).get("disabled_at"));

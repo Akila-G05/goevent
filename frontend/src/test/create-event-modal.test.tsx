@@ -1,71 +1,126 @@
-import React from 'react';
-import { fireEvent, render, screen } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { CreateEventModal } from '@/components/events/create-event-modal';
-
-beforeEach(() => {
-  // jsdom does not implement object URLs.
-  global.URL.createObjectURL = vi.fn(() => 'blob:cover');
-  global.URL.revokeObjectURL = vi.fn();
-});
-
-const renderModal = (onClose = vi.fn()) =>
-  render(<CreateEventModal open onClose={onClose} />);
-
-describe('CreateEventModal', () => {
-  it('renders the event details and image upload controls', () => {
-    renderModal();
-
-    expect(screen.getByLabelText(/^Event name/)).toBeInTheDocument();
-    expect(screen.getByLabelText(/^Category/)).toBeInTheDocument();
-    expect(screen.getByLabelText(/^Audience/)).toBeInTheDocument();
-    expect(screen.getByLabelText(/^Venue name/)).toBeInTheDocument();
-    expect(screen.getByText('Upload cover image')).toBeInTheDocument();
-    expect(screen.getByText('Design preview — this form is not saved to the backend yet.')).toBeInTheDocument();
+import React from "react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
+import { CreateEventModal } from "@/components/events/create-event-modal";
+import { EventContent, Catalog, zonedInstant } from "@/api/coordinator";
+const catalog: Catalog = {
+  categories: [{ id: 1, name: "Education" }],
+  organizations: [],
+  organizationTypes: [],
+  universities: [{ id: 1, name: "University" }],
+};
+const content: EventContent = {
+  name: "Research day",
+  description: "A day of research",
+  categoryId: 1,
+  audienceId: 2,
+  eventLevelId: 1,
+  venueName: "Hall",
+  venueAddress: "Campus",
+  venueCity: "Colombo",
+  timezone: "Asia/Colombo",
+  startsAt: "2027-06-01T03:30:00Z",
+  endsAt: "2027-06-01T04:30:00Z",
+  imagePath: "",
+  bannerPath: "",
+  videoUrl: "",
+  confirmationMessage: "Thank you",
+  currency: "LKR",
+  packages: [],
+  universityIds: [],
+  minimumAge: 0,
+  bookingLimit: 5,
+  qrIntended: false,
+};
+describe("CreateEventModal", () => {
+  it("saves the existing form as a draft with UTC instants and explicit options", async () => {
+    const save = vi.fn().mockResolvedValue(undefined);
+    render(
+      <CreateEventModal
+        open
+        onClose={vi.fn()}
+        catalog={catalog}
+        initial={content}
+        onSave={save}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Save draft" }));
+    await waitFor(() => expect(save).toHaveBeenCalledOnce());
+    expect(save.mock.calls[0][0]).toMatchObject({
+      name: "Research day",
+      startsAt: "2027-06-01T03:30:00.000Z",
+      endsAt: "2027-06-01T04:30:00.000Z",
+      bookingLimit: 5,
+      currency: "LKR",
+      packages: [],
+    });
   });
-
-  it('adds and removes schedule rows', () => {
-    renderModal();
-
-    expect(screen.getAllByLabelText(/^Date/)).toHaveLength(1);
-
-    fireEvent.click(screen.getByRole('button', { name: 'Add another date' }));
-    expect(screen.getAllByLabelText(/^Date/)).toHaveLength(2);
-
-    fireEvent.click(screen.getByRole('button', { name: 'Remove date 2' }));
-    expect(screen.getAllByLabelText(/^Date/)).toHaveLength(1);
+  it("supports free packages and caps packages at three", () => {
+    render(
+      <CreateEventModal
+        open
+        onClose={vi.fn()}
+        catalog={catalog}
+        onSave={vi.fn()}
+      />,
+    );
+    fireEvent.change(screen.getByLabelText("Event type"), {
+      target: { value: "2" },
+    });
+    for (let i = 0; i < 3; i++)
+      fireEvent.click(screen.getByRole("button", { name: "Add package" }));
+    expect(screen.getByRole("button", { name: "Add package" })).toBeDisabled();
+    expect(screen.getAllByLabelText("Price")).toHaveLength(3);
+    expect(screen.getAllByLabelText("Price")[0]).toBeDisabled();
   });
-
-  it('shows ticket tiers only when the event is paid', () => {
-    renderModal();
-
-    expect(screen.queryByText('Ticket tiers')).not.toBeInTheDocument();
-
-    fireEvent.click(screen.getByRole('button', { name: /^Paid/ }));
-    expect(screen.getByText('Ticket tiers')).toBeInTheDocument();
-    expect(screen.getByLabelText(/^Quantity/)).toBeInTheDocument();
-
-    fireEvent.click(screen.getByRole('button', { name: /^Free/ }));
-    expect(screen.queryByText('Ticket tiers')).not.toBeInTheDocument();
+  it("requires valid fields and preserves server errors", async () => {
+    const save = vi.fn().mockRejectedValue({
+      message: "Event changed; refresh before editing",
+      status: 409,
+    });
+    render(
+      <CreateEventModal
+        open
+        onClose={vi.fn()}
+        catalog={catalog}
+        initial={content}
+        onSave={save}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Save draft" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("Event changed");
   });
-
-  it('rejects a file that is not an accepted image type', () => {
-    renderModal();
-
-    const coverInput = document.querySelectorAll<HTMLInputElement>('input[type="file"]')[0];
-    const file = new File(['notes'], 'notes.txt', { type: 'text/plain' });
-
-    fireEvent.change(coverInput, { target: { files: [file] } });
-
-    expect(screen.getByRole('alert')).toHaveTextContent('Choose a JPEG, PNG or WebP image.');
+  it("rejects invalid cover content types before preview or upload", () => {
+    render(
+      <CreateEventModal
+        open
+        onClose={vi.fn()}
+        catalog={catalog}
+        onSave={vi.fn()}
+      />,
+    );
+    fireEvent.change(screen.getByLabelText(/Cover image \(/), {
+      target: {
+        files: [new File(["text"], "notes.txt", { type: "text/plain" })],
+      },
+    });
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "Choose a JPEG, PNG or WebP image.",
+    );
   });
-
-  it('closes from the Cancel button', () => {
-    const onClose = vi.fn();
-    renderModal(onClose);
-
-    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
-
-    expect(onClose).toHaveBeenCalledTimes(1);
+  it("does not offer saving outside a workspace", () => {
+    render(<CreateEventModal open onClose={vi.fn()} />);
+    expect(screen.getByRole("button", { name: "Save draft" })).toBeDisabled();
+  });
+  it("resolves event timezone and rejects daylight saving gaps or ambiguous times", () => {
+    expect(zonedInstant("2027-06-01T09:00", "Asia/Colombo")).toBe(
+      "2027-06-01T03:30:00.000Z",
+    );
+    expect(() =>
+      zonedInstant("2027-03-14T02:30", "America/New_York"),
+    ).toThrow();
+    expect(() =>
+      zonedInstant("2027-11-07T01:30", "America/New_York"),
+    ).toThrow();
   });
 });

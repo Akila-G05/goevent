@@ -15,7 +15,8 @@ import java.util.*;
 public class AdminManagementService {
     private final AdminRepository db;
     private final PasswordEncoder passwords;
-    public AdminManagementService(AdminRepository db,PasswordEncoder passwords) { this.db=db; this.passwords=passwords; }
+    private final CoordinatorService coordinator;
+    public AdminManagementService(AdminRepository db,PasswordEncoder passwords,CoordinatorService coordinator) { this.db=db; this.passwords=passwords; this.coordinator=coordinator; }
     static void require(boolean condition,int status,String message) {
         if(!condition) throw new ResponseStatusException(HttpStatus.valueOf(status),message);
     }
@@ -85,26 +86,14 @@ public class AdminManagementService {
         db.audit(actor,"DELETE_ACCOUNT","ACCOUNT",id,reason); db.email(old.get("email").toString(),"GoEvent account deleted",reason);
     }
     @Transactional public long requestCoordinator(int user,Coordinator input) {
-        db.lock(); require(db.active(user),403,"Active user required"); var current=account(user);
-        require(Set.of(1,4).contains(number(current,"role_id")),409,"Only ordinary users/students may request coordinator access");
-        require(db.organization(input.organizationId()),400,"Unknown organization");
-        String position=text(input.position(),45,"position"), message=text(input.message(),200,"message");
-        try { return db.requestCoordinator(user,input.organizationId(),position,message); }
-        catch(DataIntegrityViolationException error) { throw new ResponseStatusException(HttpStatus.CONFLICT,"A pending request already exists"); }
+        return coordinator.apply(user,new com.goevent.dto.CoordinatorRequests.Application(input.organizationId(),input.proposedName(),input.proposedTypeId(),input.position(),input.contactEmail(),input.contactPhone(),input.message(),input.proofId()));
     }
     public List<Map<String,Object>> ownRequests(int user) { require(db.active(user),403,"Active user required"); return db.ownRequests(user); }
     public List<Map<String,Object>> requests(Integer status,int limit,int offset) {
         require(status==null||Set.of(1,2,3).contains(status),400,"Invalid request status"); return db.coordinators(status,limit,offset);
     }
     @Transactional public void decideRequest(int actor,long id,Decision input) {
-        lockAdmin(actor); var row=db.coordinator(id); require(row!=null,404,"Request not found");
-        require(number(row,"status_id")==1,409,"Request already reviewed"); String reason=text(input.reason(),1000,"reason");
-        int target=number(row,"user_id"); require(target!=actor,409,"Cannot approve your own request");
-        var user=account(target); require(number(user,"user_status_id")==1,409,"Applicant is not active");
-        require(Set.of(1,4).contains(number(user,"role_id")),409,"Applicant role changed");
-        if(input.approve()) { require(row.get("organization_id")!=null,409,"Request needs organization details"); db.grantCoordinator(target,number(row,"organization_id"),text((String)row.get("position"),45,"position")); }
-        db.decideCoordinator(id,actor,input.approve(),reason); db.audit(actor,input.approve()?"APPROVE_COORDINATOR":"REJECT_COORDINATOR","REQUEST",id,reason);
-        db.email(row.get("email").toString(),"GoEvent coordinator request "+(input.approve()?"approved":"rejected"),reason);
+        coordinator.reviewApplication(actor,id,new com.goevent.dto.CoordinatorRequests.Review(input.approve(),input.reason(),null,false));
     }
     @Transactional public void revoke(int actor,int id,String reason) {
         lockAdmin(actor); var old=account(id); require(number(old,"role_id")==2,409,"Account is not a coordinator");
@@ -122,26 +111,22 @@ public class AdminManagementService {
         require(row.get("disabled_at")==null,409,"Event is disabled"); return row;
     }
     @Transactional public void decideEvent(int actor,int id,EventDecision input) {
-        var row=eventForUpdate(actor,id,input.revision()); require(number(row,"event_status_id")==1,409,"Only pending events can be reviewed");
-        if(input.approve()) {
-            var publisher=account(number(row,"published_by"));
-            require(number(publisher,"user_status_id")==1&&Set.of(2,3).contains(number(publisher,"role_id")),409,"Event publisher must have active coordinator access");
-        }
-        String reason=text(input.reason(),1000,"reason"); db.decideEvent(id,actor,input.approve(),reason);
-        db.audit(actor,input.approve()?"APPROVE_EVENT":"REJECT_EVENT","EVENT",id,reason); db.email(row.get("coordinator_email").toString(),"GoEvent event review",reason);
+        coordinator.reviewEvent(actor,id,input.approve(),input.revision(),input.reason());
     }
     @Transactional public void editEvent(int actor,int id,EventEdit input) {
-        var row=eventForUpdate(actor,id,input.revision()); require(input.startsAt()!=null&&input.endsAt()!=null&&input.endsAt().isAfter(input.startsAt()),400,"Valid start/end instants required");
+        var row=eventForUpdate(actor,id,input.revision());
+        require(row.get("working_revision_id")==null&&row.get("published_revision_id")==null&&number(row,"event_status_id")!=2,409,"Published or revision-managed events require a proposed revision and review");
+        require(input.startsAt()!=null&&input.endsAt()!=null&&input.endsAt().isAfter(input.startsAt()),400,"Valid start/end instants required");
         String reason=text(input.reason(),1000,"reason"); require(input.description()==null||input.description().length()<=20000,400,"Description too long");
         db.editEvent(id,text(input.name(),100,"name"),input.description(),input.startsAt(),input.endsAt(),reason);
         db.audit(actor,"EDIT_EVENT","EVENT",id,reason); db.email(row.get("coordinator_email").toString(),"GoEvent event updated",reason);
     }
     @Transactional public void disableEvent(int actor,int id,String reason) {
-        lockAdmin(actor); var row=event(id); require(row.get("disabled_at")==null,409,"Event already disabled");
-        reason=text(reason,1000,"reason"); db.disableEvent(id,reason); db.audit(actor,"DISABLE_EVENT","EVENT",id,reason); db.email(row.get("coordinator_email").toString(),"GoEvent event disabled",reason);
+        coordinator.adminCancel(actor,id,reason);
     }
     @Transactional public void deleteEvent(int actor,int id,String reason) {
         lockAdmin(actor); var row=event(id); reason=text(reason,1000,"reason");
+        require(number(row,"event_status_id")==4&&row.get("published_revision_id")==null,409,"Only unpublished drafts may be deleted; cancel instead");
         require(!db.referencedEvent(id),409,"Event has linked records; disable it instead");
         try { db.deleteEvent(id); } catch(DataIntegrityViolationException error) { throw new ResponseStatusException(HttpStatus.CONFLICT,"Event has linked records; disable instead"); }
         db.audit(actor,"DELETE_EVENT","EVENT",id,reason); db.email(row.get("coordinator_email").toString(),"GoEvent event deleted",reason);

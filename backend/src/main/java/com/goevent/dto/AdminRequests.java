@@ -10,7 +10,10 @@ public final class AdminRequests {
                           Integer organizationId, String position) {}
     public record Reason(String reason) {}
     public record Decision(boolean approve, String reason) {}
-    public record Coordinator(int organizationId, String position, String message) {}
+    public record Coordinator(Integer organizationId, String position, String message, String proposedName,
+        Integer proposedTypeId, String contactEmail, String contactPhone, Long proofId) {
+        public Coordinator(int organizationId,String position,String message) { this(organizationId,position,message,null,null,null,null,null); }
+    }
     public record EventEdit(String name, String description, Instant startsAt, Instant endsAt,
                             int revision, String reason) {}
     public record EventDecision(boolean approve, int revision, String reason) {}

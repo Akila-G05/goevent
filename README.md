@@ -1,5 +1,10 @@
 # GoEvent
 
+The [coordinator workflow guide](docs/architecture/coordinator-workflows.md) covers
+organization applications, reviewed event revisions, reports, private proof and
+participant campaigns. Open `/coordinator` to check eligibility. Campaigns default
+disabled; V5 requires a reviewed additive schema rollout.
+
 Admin authentication backend endpoints and their CSRF/session contract are
 documented in [admin authentication](docs/architecture/admin-authentication.md).
 The [admin backend API](docs/architecture/admin-backend.md) documents management,

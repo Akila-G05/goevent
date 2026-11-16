@@ -1050,7 +1050,7 @@
           "script": {
             "type": "text/javascript",
             "exec": [
-              "pm.test(\"Edit event\", () => pm.response.to.have.status(200));"
+              "pm.test(\"Direct admin edit cannot bypass review\", () => pm.response.to.have.status(409));"
             ]
           }
         }
@@ -1669,7 +1669,7 @@
         "url": "{{baseUrl}}/coordinator-requests",
         "body": {
           "mode": "raw",
-          "raw": "{\"organizationId\":\"{{organizationId}}\",\"position\":\"Coordinator\",\"message\":\"Please review\"}"
+          "raw": "{\"organizationId\":\"{{organizationId}}\",\"position\":\"Coordinator\",\"message\":\"Please review\",\"contactEmail\":\"member@example.invalid\",\"contactPhone\":\"0700000000\",\"proofId\":\"{{proofId}}\"}"
         }
       },
       "event": [
@@ -1702,7 +1702,7 @@
         "url": "{{baseUrl}}/coordinator-requests",
         "body": {
           "mode": "raw",
-          "raw": "{\"organizationId\":\"{{organizationId}}\",\"position\":\"Coordinator\",\"message\":\"Again\"}"
+          "raw": "{\"organizationId\":\"{{organizationId}}\",\"position\":\"Coordinator\",\"message\":\"Again\",\"contactEmail\":\"member@example.invalid\",\"contactPhone\":\"0700000000\",\"proofId\":\"{{proofId}}\"}"
         }
       },
       "event": [
