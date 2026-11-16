@@ -118,6 +118,8 @@ export interface EventVenue {
   shuttle: string;
   perks: VenuePerk[];
   mapQuery: string;
+  /** Google Maps link saved with the venue; when present the map is embedded. */
+  googleLink?: string;
 }
 
 export interface EventTagGroups {
@@ -132,7 +134,7 @@ export interface EventDetail {
   subtitle: string;
   category: string;
   kind: EventKind;
-  status: 'Selling Fast' | 'On Sale' | 'Few Left';
+  status: string;
   verified: boolean;
   format: string;
   dateLine: string;
@@ -154,6 +156,9 @@ export interface EventDetail {
   requirements: string;
   studentDiscount?: string;
   related: string[];
+  /** Stored events: no ticket tiers, speakers or prices, so those sections are hidden. */
+  listingOnly?: boolean;
+  links?: { name: string; url: string }[];
 }
 
 const PORTRAITS = [

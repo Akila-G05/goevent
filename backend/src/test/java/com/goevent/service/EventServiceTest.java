@@ -1,6 +1,8 @@
 package com.goevent.service;
 
 import com.goevent.dto.EventDTO;
+import com.goevent.dto.EventDetails;
+import com.goevent.dto.EventSummary;
 import com.goevent.enums.Status;
 import com.goevent.exception.EventException;
 import com.goevent.repository.EventRepo;
@@ -20,6 +22,7 @@ import java.util.Map;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
@@ -192,6 +195,79 @@ class EventServiceTest {
 
         assertEquals(HttpStatus.FORBIDDEN, error.status());
         verify(images, never()).uploadEventImage(anyInt(), any());
+    }
+
+    @Test
+    void listsApprovedEventsAsSummariesAndCapsTheLimit() {
+        Map<String, Object> row = new HashMap<>();
+        row.put("id", 9);
+        row.put("name", "Tech Fest");
+        row.put("description", "Talks");
+        row.put("category", "TECHNOLOGY");
+        row.put("audience", "BOTH");
+        row.put("event_level", "FREE");
+        row.put("venue_name", "Hall A");
+        row.put("venue_city", "Colombo");
+        row.put("image_path", null);
+        row.put("starts_on", java.sql.Date.valueOf("2027-05-01"));
+        row.put("time_range", "10:00 - 12:00");
+
+        when(repo.approvedEvents(Status.APPROVED.getId(), 50)).thenReturn(List.of(row));
+
+        List<EventSummary> events = service.listApproved(500);
+
+        assertEquals(1, events.size());
+        EventSummary summary = events.get(0);
+        assertEquals(9, summary.id());
+        assertEquals("FREE", summary.eventLevel());
+        assertEquals("BOTH", summary.audience());
+        assertEquals("2027-05-01", summary.startsOn());
+        assertEquals("10:00 - 12:00", summary.timeRange());
+        assertNull(summary.imagePath());
+    }
+
+    @Test
+    void returnsTheApprovedEventWithItsDatesLinksAndTags() {
+        Map<String, Object> row = new HashMap<>();
+        row.put("id", 9);
+        row.put("name", "Tech Fest");
+        row.put("description", "Talks");
+        row.put("category", "TECHNOLOGY");
+        row.put("audience", "PUBLIC");
+        row.put("event_level", "LISTING_ONLY");
+        row.put("venue_name", "Hall A");
+        row.put("venue_address", "1 Road");
+        row.put("venue_city", "Colombo");
+        row.put("venue_link", null);
+        row.put("image_path", null);
+        row.put("banner_path", null);
+        row.put("organizer_name", "Akila Gimhana");
+        row.put("organizer_since", 2026);
+
+        when(repo.approvedEventRow(9L, Status.APPROVED.getId())).thenReturn(row);
+        when(repo.eventDateRows(9L)).thenReturn(List.of(
+                Map.of("date", java.sql.Date.valueOf("2027-05-01"), "time", "10:00 - 12:00")));
+        when(repo.eventLinkRows(9L)).thenReturn(List.of(
+                Map.of("link_name", "Website", "link", "https://example.com")));
+        when(repo.eventTagNames(9L)).thenReturn(List.of("AI"));
+
+        EventDetails event = service.detail(9L);
+
+        assertEquals("Hall A", event.venue().name());
+        assertEquals("Akila Gimhana", event.organizer().name());
+        assertEquals("2026", event.organizer().memberSince());
+        assertEquals("2027-05-01", event.dates().get(0).date());
+        assertEquals("Website", event.links().get(0).name());
+        assertEquals(List.of("AI"), event.tags());
+    }
+
+    @Test
+    void reportsAMissingOrUnapprovedEventAsNotFound() {
+        when(repo.approvedEventRow(anyLong(), anyInt())).thenReturn(null);
+
+        EventException error = assertThrows(EventException.class, () -> service.detail(404L));
+
+        assertEquals(HttpStatus.NOT_FOUND, error.status());
     }
 
     // --- fixtures --------------------------------------------------------

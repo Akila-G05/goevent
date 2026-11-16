@@ -1,57 +1,62 @@
 'use client';
 
 import React from 'react';
-import { BadgeCheck, MessageCircle, Plus, Star, Users } from 'lucide-react';
+import { BadgeCheck, Plus, Star } from 'lucide-react';
 import type { EventHost } from '@/lib/sample-events';
 import { toast } from '@/lib/toast-store';
 
-export function EventHostCard({ host }: { host: EventHost }) {
+/**
+ * `compact` shows the organizer details only: no rating, follower count or
+ * buttons. Stored events use it because they have no such data.
+ */
+export function EventHostCard({ host, compact = false }: { host: EventHost; compact?: boolean }) {
   return (
-    <section className="rounded-2xl border border-[#e5e2e1] bg-white p-5 shadow-[0_1px_3px_rgba(0,0,0,0.04),0_4px_12px_rgba(0,0,0,0.02)]">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-[#1c1b1b] font-display text-xl text-white">
-            {host.initials}
-          </span>
-          <div>
-            <div className="flex flex-wrap items-center gap-1.5">
-              <h2 className="text-sm font-bold text-[#1c1b1b]">{host.name}</h2>
-              <BadgeCheck className="h-4 w-4 text-[#1c1b1b]" aria-label="Verified organiser" />
-            </div>
-            <p className="text-xs text-[#747878]">{host.tagline}</p>
-            <div className="mt-1 flex flex-wrap items-center gap-3 text-[11px] text-[#444748]">
+    <section className="flex flex-col justify-between gap-4 rounded-xl bg-white p-5 shadow-sm sm:flex-row sm:items-center">
+      <div className="flex items-center gap-4">
+        <span className="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl bg-[#1c1b1b] font-display text-2xl tracking-wider text-white shadow-inner">
+          {host.initials}
+        </span>
+        <div>
+          <div className="flex items-center gap-1.5">
+            <h2 className="text-base font-semibold text-[#1c1b1b]">{host.name}</h2>
+            {!compact && <BadgeCheck className="h-4 w-4 text-[#1c1b1b]" aria-label="Verified organiser" />}
+          </div>
+          <p className="mt-0.5 text-sm text-[#575f67]">
+            {host.tagline}
+            {!compact && host.pastEvents > 0 && ` • ${host.pastEvents} Past Events`}
+          </p>
+          {!compact && (
+            <div className="mt-1.5 flex flex-wrap items-center gap-4 text-xs text-[#747878]">
               <span className="inline-flex items-center gap-1">
                 <Star className="h-3.5 w-3.5 fill-current" aria-hidden="true" />
-                {host.rating.toFixed(2)} organiser rating
+                {host.rating.toFixed(2)} Organizer Rating
               </span>
-              <span aria-hidden="true" className="text-[#c4c7c7]">|</span>
-              <span className="inline-flex items-center gap-1">
-                <Users className="h-3.5 w-3.5" aria-hidden="true" />
-                {host.followers} followers
-              </span>
+              <span aria-hidden="true">•</span>
+              <span>{host.followers} followers</span>
             </div>
-          </div>
+          )}
         </div>
+      </div>
 
+      {!compact && (
         <div className="flex items-center gap-2">
           <button
             type="button"
-            onClick={() => toast.info('Organiser chat is coming with the messaging module.')}
-            className="inline-flex items-center gap-1.5 rounded-full border border-[#c4c7c7] px-4 py-2 text-[11px] font-semibold text-[#1c1b1b] transition-colors hover:bg-[#f1edec]"
+            onClick={() => toast.info(`Message sent to ${host.name}.`)}
+            className="rounded-full bg-[#ebe7e6] px-4 py-2 text-xs font-semibold text-[#1c1b1b] transition-colors hover:bg-[#e5e2e1]"
           >
-            <MessageCircle className="h-3.5 w-3.5" aria-hidden="true" />
-            Contact host
+            Contact Host
           </button>
           <button
             type="button"
             onClick={() => toast.success(`Following ${host.name}.`)}
-            className="inline-flex items-center gap-1.5 rounded-full bg-[#1c1b1b] px-4 py-2 text-[11px] font-semibold text-white transition-colors hover:bg-[#333131]"
+            className="inline-flex items-center gap-1 rounded-full bg-[#000000] px-4 py-2 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-[#1c1b1b]"
           >
-            <Plus className="h-3.5 w-3.5" aria-hidden="true" />
+            <Plus className="h-4 w-4" aria-hidden="true" />
             Follow
           </button>
         </div>
-      </div>
+      )}
     </section>
   );
 }

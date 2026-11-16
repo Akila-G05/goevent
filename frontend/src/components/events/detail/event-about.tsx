@@ -5,42 +5,39 @@ import { SectionHeading } from './section-heading';
 
 export function EventAbout({ event }: { event: EventDetail }) {
   return (
-    <section className="rounded-2xl border border-[#e5e2e1] bg-white p-5 shadow-[0_1px_3px_rgba(0,0,0,0.04),0_4px_12px_rgba(0,0,0,0.02)] sm:p-6">
+    <section className="flex flex-col gap-4">
       <SectionHeading title="About the event" />
 
-      <div className="mt-4 space-y-3 text-sm leading-relaxed text-[#444748]">
-        {event.about.map((paragraph, index) => (
-          <p key={index}>{paragraph}</p>
-        ))}
-      </div>
+      <div className="rounded-xl bg-white p-6 shadow-sm">
+        <div className="space-y-4 text-base leading-relaxed text-[#444748]">
+          {event.about.map((paragraph, index) => (
+            <p key={index}>{paragraph}</p>
+          ))}
+        </div>
 
-      <h3 className="mt-6 flex items-center gap-2 text-xs font-bold uppercase tracking-[0.14em] text-[#1c1b1b]">
-        <span aria-hidden="true" className="text-[#c4c7c7]">
-          {'///'}
-        </span>
-        Conference highlights
-      </h3>
-
-      <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
-        {event.highlights.map((highlight, index) => (
-          <article
-            key={highlight.title}
-            className="rounded-xl border border-[#eae6e5] bg-[#faf8f7] p-4 transition-colors hover:border-[#c4c7c7]"
-          >
-            <div className="flex items-start gap-3">
-              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#ebe7e6] text-[#1c1b1b]">
-                <HighlightIcon icon={highlight.icon} className="h-4 w-4" />
-              </span>
-              <div>
-                <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#747878]">
-                  0{index + 1}
-                </p>
-                <h4 className="text-sm font-bold text-[#1c1b1b]">{highlight.title}</h4>
-                <p className="mt-1 text-xs leading-relaxed text-[#747878]">{highlight.body}</p>
-              </div>
-            </div>
-          </article>
-        ))}
+        {event.highlights.length > 0 && (
+        <div className="mt-6">
+          <h3 className="mb-3 text-sm font-bold uppercase tracking-wider text-[#1c1b1b]">
+            Conference highlights
+          </h3>
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+            {event.highlights.map((highlight) => (
+              <article
+                key={highlight.title}
+                className="flex items-start gap-3 rounded-lg bg-[#f7f3f2] p-4 transition-colors hover:bg-[#f1edec]"
+              >
+                <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#000000] text-white">
+                  <HighlightIcon icon={highlight.icon} className="h-4 w-4" />
+                </span>
+                <div>
+                  <h4 className="text-sm font-semibold text-[#1c1b1b]">{highlight.title}</h4>
+                  <p className="mt-0.5 text-sm leading-relaxed text-[#575f67]">{highlight.body}</p>
+                </div>
+              </article>
+            ))}
+          </div>
+        </div>
+        )}
       </div>
     </section>
   );

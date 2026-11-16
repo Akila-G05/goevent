@@ -114,6 +114,84 @@ public class EventRepo {
                 eventId, tagId);
     }
 
+    // --- public listing --------------------------------------------------
+
+    /**
+     * Approved events that still have an upcoming date, ordered by their first
+     * upcoming date. Each row carries the earliest upcoming date and time only.
+     */
+    public List<Map<String, Object>> approvedEvents(int statusId, int limit) {
+        return jdbc.queryForList(
+                """
+                SELECT e.id, e.name, e.description, c.name AS category,
+                       a.type AS audience, l.name AS event_level,
+                       v.name AS venue_name, v.city AS venue_city,
+                       i.path AS image_path,
+                       next_date.date AS starts_on, next_date.time AS time_range
+                FROM `event` e
+                JOIN category c ON c.id = e.category_id
+                JOIN audience a ON a.id = e.audience_id
+                JOIN event_level l ON l.id = e.event_level_id
+                JOIN venue v ON v.id = e.venue_id
+                LEFT JOIN img i ON i.id = e.img_id
+                JOIN event_dates next_date ON next_date.id = (
+                    SELECT ed.id FROM event_dates ed
+                    WHERE ed.event_id = e.id AND ed.date >= CURDATE()
+                    ORDER BY ed.date, ed.id LIMIT 1)
+                WHERE e.event_status_id = ?
+                ORDER BY next_date.date, e.id
+                LIMIT ?
+                """,
+                statusId, limit);
+    }
+
+    // --- public detail --------------------------------------------------
+
+    /** One event with its category, audience, level, venue and cover image; null when not found. */
+    public Map<String, Object> approvedEventRow(long eventId, int statusId) {
+        List<Map<String, Object>> rows = jdbc.queryForList(
+                """
+                SELECT e.id, e.name, e.description, c.name AS category,
+                       a.type AS audience, l.name AS event_level,
+                       v.name AS venue_name, v.address AS venue_address,
+                       v.city AS venue_city, v.link AS venue_link,
+                       i.path AS image_path, i.bannerpath AS banner_path,
+                       CONCAT(u.fname, ' ', u.lname) AS organizer_name,
+                       YEAR(u.registered_date) AS organizer_since
+                FROM `event` e
+                JOIN category c ON c.id = e.category_id
+                JOIN audience a ON a.id = e.audience_id
+                JOIN event_level l ON l.id = e.event_level_id
+                JOIN venue v ON v.id = e.venue_id
+                JOIN `user` u ON u.id = e.published_by
+                LEFT JOIN img i ON i.id = e.img_id
+                WHERE e.id = ? AND e.event_status_id = ?
+                """,
+                eventId, statusId);
+
+        return rows.isEmpty() ? null : rows.get(0);
+    }
+
+    public List<Map<String, Object>> eventDateRows(long eventId) {
+        return jdbc.queryForList(
+                "SELECT `date`, `time` FROM event_dates WHERE event_id=? ORDER BY `date`, id",
+                eventId);
+    }
+
+    public List<Map<String, Object>> eventLinkRows(long eventId) {
+        return jdbc.queryForList(
+                "SELECT k.link_name, k.link FROM event_has_links ehl "
+                        + "JOIN link k ON k.id = ehl.link_id WHERE ehl.event_id=? ORDER BY ehl.link_id",
+                eventId);
+    }
+
+    public List<String> eventTagNames(long eventId) {
+        return jdbc.queryForList(
+                "SELECT t.name FROM event_has_tags eht JOIN tags t ON t.id = eht.tags_id "
+                        + "WHERE eht.event_id=? ORDER BY t.name",
+                String.class, eventId);
+    }
+
     // --- images ----------------------------------------------------------
 
     /**

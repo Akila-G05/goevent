@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useRef, useState } from 'react';
-import { Clock, Plus } from 'lucide-react';
+import { Clock } from 'lucide-react';
 import type { EventDay } from '@/lib/sample-events';
 import { toast } from '@/lib/toast-store';
 import { SectionHeading } from './section-heading';
@@ -19,108 +19,120 @@ export function EventSchedule({ days, timezone }: { days: EventDay[]; timezone: 
   };
 
   return (
-    <section className="rounded-2xl border border-[#e5e2e1] bg-white p-5 shadow-[0_1px_3px_rgba(0,0,0,0.04),0_4px_12px_rgba(0,0,0,0.02)] sm:p-6">
-      <SectionHeading title="Multi-day sessions & lineup" hint={timezone} />
+    <section className="flex flex-col gap-4">
+      <SectionHeading
+        title="Multi-day sessions & lineup"
+        action={
+          <span className="rounded-full bg-[#ebe7e6] px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-[#1c1b1b]">
+            {timezone}
+          </span>
+        }
+      />
 
-      {/* Day tabs */}
-      <div
-        role="tablist"
-        aria-label="Event schedule by day"
-        className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-3"
-      >
-        {days.map((day, index) => {
-          const selected = day.id === activeDay?.id;
-          return (
-            <button
-              key={day.id}
-              ref={(node) => {
-                tabRefs.current[index] = node;
-              }}
-              type="button"
-              role="tab"
-              id={`day-tab-${day.id}`}
-              aria-selected={selected}
-              aria-controls={`day-panel-${day.id}`}
-              tabIndex={selected ? 0 : -1}
-              onClick={() => setActiveDayId(day.id)}
-              onKeyDown={(event) => {
-                if (event.key === 'ArrowRight') {
-                  event.preventDefault();
-                  focusTab(index + 1);
-                }
-                if (event.key === 'ArrowLeft') {
-                  event.preventDefault();
-                  focusTab(index - 1);
-                }
-              }}
-              className={`rounded-xl border px-4 py-3 text-left transition-colors ${
-                selected
-                  ? 'border-[#1c1b1b] bg-[#1c1b1b] text-white shadow-md'
-                  : 'border-[#e0dbd9] bg-[#f7f3f2] text-[#1c1b1b] hover:bg-[#ebe7e6]'
-              }`}
-            >
-              <span className="block text-[10px] font-bold uppercase tracking-[0.14em] opacity-70">
-                {day.label}
-              </span>
-              <span className="mt-0.5 block text-sm font-semibold">{day.title}</span>
-              <span
-                className={`mt-0.5 block text-[11px] ${
-                  selected ? 'text-white/70' : 'text-[#747878]'
+      <div className="rounded-xl bg-white p-6 shadow-sm">
+        {/* Day tabs */}
+        <div
+          role="tablist"
+          aria-label="Event schedule by day"
+          className="mb-5 grid grid-cols-1 gap-2 md:grid-cols-3"
+        >
+          {days.map((day, index) => {
+            const selected = day.id === activeDay?.id;
+            return (
+              <button
+                key={day.id}
+                ref={(node) => {
+                  tabRefs.current[index] = node;
+                }}
+                type="button"
+                role="tab"
+                id={`day-tab-${day.id}`}
+                aria-selected={selected}
+                aria-controls={`day-panel-${day.id}`}
+                tabIndex={selected ? 0 : -1}
+                onClick={() => setActiveDayId(day.id)}
+                onKeyDown={(event) => {
+                  if (event.key === 'ArrowRight') {
+                    event.preventDefault();
+                    focusTab(index + 1);
+                  }
+                  if (event.key === 'ArrowLeft') {
+                    event.preventDefault();
+                    focusTab(index - 1);
+                  }
+                }}
+                className={`rounded-xl p-4 text-left transition-all ${
+                  selected
+                    ? 'bg-[#000000] text-white shadow-md'
+                    : 'bg-[#f7f3f2] text-[#1c1b1b] hover:bg-[#ebe7e6]'
                 }`}
               >
-                {day.hours}
-              </span>
-            </button>
-          );
-        })}
-      </div>
-
-      {/* Sessions */}
-      {activeDay && (
-        <div
-          role="tabpanel"
-          id={`day-panel-${activeDay.id}`}
-          aria-labelledby={`day-tab-${activeDay.id}`}
-          className="mt-4 divide-y divide-[#eae6e5]"
-        >
-          {activeDay.sessions.map((session) => (
-            <article
-              key={session.id}
-              className="flex flex-col gap-3 py-4 first:pt-1 sm:flex-row sm:items-start sm:gap-5"
-            >
-              <div className="flex w-full shrink-0 items-center gap-2 sm:w-28 sm:flex-col sm:items-start sm:gap-0.5">
-                <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#747878]">
-                  Time
-                </p>
-                <p className="text-lg font-bold text-[#1c1b1b]">{session.time}</p>
-              </div>
-
-              <div className="min-w-0 flex-1">
-                <div className="flex flex-wrap items-center gap-1.5">
-                  <span className="rounded-full bg-[#ebe7e6] px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[#1c1b1b]">
-                    {session.stage}
-                  </span>
-                  <span className="inline-flex items-center gap-1 rounded-full border border-[#e0dbd9] px-2.5 py-0.5 text-[10px] font-semibold text-[#747878]">
-                    <Clock className="h-3 w-3" aria-hidden="true" />
-                    {session.duration}
-                  </span>
-                </div>
-                <h4 className="mt-1.5 text-sm font-bold text-[#1c1b1b]">{session.title}</h4>
-                <p className="mt-0.5 text-xs text-[#747878]">{session.speaker}</p>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => toast.success(`Added “${session.title}” to your agenda.`)}
-                className="inline-flex shrink-0 items-center gap-1.5 self-start rounded-full border border-[#e0dbd9] px-3 py-1.5 text-[11px] font-semibold text-[#1c1b1b] transition-colors hover:border-[#1c1b1b] hover:bg-[#f7f3f2]"
-              >
-                <Plus className="h-3.5 w-3.5" aria-hidden="true" />
-                Add to agenda
+                <span
+                  className={`block text-[11px] font-bold uppercase tracking-wider ${
+                    selected ? 'text-[#c4c7c7]' : 'text-[#575f67]'
+                  }`}
+                >
+                  {day.label}
+                </span>
+                <span className="mt-1 block text-sm font-semibold">{day.title}</span>
+                <span className={`mt-1 block text-xs ${selected ? 'text-[#e5e2e1]' : 'text-[#575f67]'}`}>
+                  {day.hours}
+                </span>
               </button>
-            </article>
-          ))}
+            );
+          })}
         </div>
-      )}
+
+        {/* Sessions */}
+        {activeDay && (
+          <div
+            role="tabpanel"
+            id={`day-panel-${activeDay.id}`}
+            aria-labelledby={`day-tab-${activeDay.id}`}
+            className="space-y-3"
+          >
+            {activeDay.sessions.map((session, index) => (
+              <article
+                key={session.id}
+                className="flex flex-col gap-4 rounded-xl bg-[#f7f3f2] p-4 transition-colors hover:bg-[#f1edec] sm:flex-row sm:items-center sm:justify-between"
+              >
+                <div className="flex items-start gap-4">
+                  <div className="flex h-16 w-16 shrink-0 flex-col items-center justify-center rounded-lg bg-[#e5e2e1]">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-[#575f67]">Time</span>
+                    <span className="text-base font-semibold text-[#111111]">{session.time}</span>
+                  </div>
+
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span
+                        className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide ${
+                          index === 0 ? 'bg-[#000000] text-white' : 'bg-[#e5e2e1] text-[#1c1b1b]'
+                        }`}
+                      >
+                        {session.stage}
+                      </span>
+                      <span className="inline-flex items-center gap-1 text-xs text-[#575f67]">
+                        <Clock className="h-3 w-3" aria-hidden="true" />
+                        {session.duration}
+                      </span>
+                    </div>
+                    <h4 className="mt-1 text-sm font-semibold text-[#1c1b1b]">{session.title}</h4>
+                    <p className="mt-0.5 text-xs text-[#575f67]">{session.speaker}</p>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => toast.success(`Added "${session.title}" to your agenda.`)}
+                  className="shrink-0 self-start rounded-full bg-[#fdf8f8] px-4 py-2 text-xs font-semibold text-[#111111] shadow-sm transition-colors hover:bg-[#ebe7e6] sm:self-center"
+                >
+                  Add to agenda
+                </button>
+              </article>
+            ))}
+          </div>
+        )}
+      </div>
     </section>
   );
 }

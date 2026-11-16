@@ -10,14 +10,16 @@ export function SectionHeading({
   action?: React.ReactNode;
 }) {
   return (
-    <div className="flex flex-wrap items-end justify-between gap-x-3 gap-y-2">
-      <h2 className="flex items-center gap-2 font-display text-2xl uppercase tracking-wide text-[#1c1b1b] sm:text-[28px]">
-        <span aria-hidden="true" className="text-[#c4c7c7]">
+    <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="flex items-center gap-2">
+        <span aria-hidden="true" className="font-display text-xl tracking-tighter text-[#747878]">
           {'///'}
         </span>
-        {title}
-      </h2>
-      {hint && <p className="text-[11px] text-[#747878]">{hint}</p>}
+        <h2 className="font-display text-2xl uppercase tracking-wider text-[#1c1b1b] sm:text-3xl">
+          {title}
+        </h2>
+      </div>
+      {hint && <p className="text-xs text-[#747878]">{hint}</p>}
       {action}
     </div>
   );

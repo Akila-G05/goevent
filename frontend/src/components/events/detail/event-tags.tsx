@@ -1,6 +1,8 @@
-import React from 'react';
+'use client';
+
+import React, { useState } from 'react';
+import { Tag } from 'lucide-react';
 import type { EventTagGroups } from '@/lib/sample-events';
-import { SectionHeading } from './section-heading';
 
 const GROUP_LABELS: Array<{ key: keyof EventTagGroups; label: string }> = [
   { key: 'topic', label: 'Topic' },
@@ -9,26 +11,54 @@ const GROUP_LABELS: Array<{ key: keyof EventTagGroups; label: string }> = [
 ];
 
 export function EventTags({ tags }: { tags: EventTagGroups }) {
-  return (
-    <section className="rounded-2xl border border-[#e5e2e1] bg-white p-5 shadow-[0_1px_3px_rgba(0,0,0,0.04),0_4px_12px_rgba(0,0,0,0.02)] sm:p-6">
-      <SectionHeading title="Tags" hint="Helps attendees find the event & filter the agenda" />
+  const [selected, setSelected] = useState<Record<string, string[]>>(() => ({
+    topic: tags.topic.slice(0, 2),
+    format: tags.format.slice(0, 1),
+    audience: tags.audience.slice(0, 1),
+  }));
 
-      <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
+  const toggle = (key: keyof EventTagGroups, tag: string) => {
+    setSelected((current) => {
+      const active = current[key] ?? [];
+      const next = active.includes(tag) ? active.filter((item) => item !== tag) : [...active, tag];
+      return { ...current, [key]: next };
+    });
+  };
+
+  return (
+    <section className="flex flex-col gap-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <Tag className="h-5 w-5 text-[#111111]" aria-hidden="true" />
+          <h2 className="font-display text-2xl uppercase tracking-wider text-[#1c1b1b] sm:text-3xl">Tags</h2>
+        </div>
+        <p className="text-xs text-[#747878]">Helps attendees find the event &amp; filter the agenda</p>
+      </div>
+
+      <div className="space-y-5 rounded-xl bg-white p-6 shadow-sm">
         {GROUP_LABELS.map(({ key, label }) => (
           <div key={key}>
-            <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.14em] text-[#747878]">
-              {label}
-            </p>
-            <ul className="flex flex-wrap gap-1.5">
-              {tags[key].map((tag) => (
-                <li
-                  key={tag}
-                  className="rounded-full border border-[#e0dbd9] bg-[#faf8f7] px-3 py-1 text-[11px] font-semibold text-[#1c1b1b]"
-                >
-                  {tag}
-                </li>
-              ))}
-            </ul>
+            <p className="mb-2 text-[11px] font-bold uppercase tracking-wider text-[#575f67]">{label}</p>
+            <div className="flex flex-wrap gap-2">
+              {tags[key].map((tag) => {
+                const active = selected[key]?.includes(tag) ?? false;
+                return (
+                  <button
+                    key={tag}
+                    type="button"
+                    aria-pressed={active}
+                    onClick={() => toggle(key, tag)}
+                    className={`rounded-full px-4 py-1.5 text-sm font-medium transition-all ${
+                      active
+                        ? 'bg-[#000000] text-white shadow-sm'
+                        : 'bg-[#f7f3f2] text-[#1c1b1b] hover:bg-[#ebe7e6]'
+                    }`}
+                  >
+                    {tag}
+                  </button>
+                );
+              })}
+            </div>
           </div>
         ))}
       </div>

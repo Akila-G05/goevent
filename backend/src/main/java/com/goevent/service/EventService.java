@@ -2,6 +2,8 @@ package com.goevent.service;
 
 import com.goevent.config.FileStorageConfig;
 import com.goevent.dto.EventDTO;
+import com.goevent.dto.EventDetails;
+import com.goevent.dto.EventSummary;
 import com.goevent.enums.Role;
 import com.goevent.enums.Status;
 import com.goevent.enums.UserStatus;
@@ -37,6 +39,8 @@ public class EventService {
     private static final int MAX_DATES = 30;
     private static final int MAX_TAGS = 20;
     private static final ZoneId UTC = ZoneId.of("UTC");
+
+    private static final int MAX_LIST_SIZE = 50;
 
     private final EventRepo eventRepo;
     private final ImageUploadService imageUploadService;
@@ -178,6 +182,73 @@ public class EventService {
         logger.info("Stored the image for event {} (uploaded by user {}).", eventId, actor);
 
         return result;
+    }
+
+    /** Public listing: approved events only, capped so one request stays bounded. */
+    @Transactional(readOnly = true)
+    public List<EventSummary> listApproved(int limit) {
+
+        int size = Math.max(1, Math.min(limit, MAX_LIST_SIZE));
+
+        return eventRepo.approvedEvents(Status.APPROVED.getId(), size).stream()
+                .map(EventService::summary)
+                .toList();
+    }
+
+    /** Public detail: approved events only; anything else is reported as not found. */
+    @Transactional(readOnly = true)
+    public EventDetails detail(long eventId) {
+
+        Map<String, Object> row = eventRepo.approvedEventRow(eventId, Status.APPROVED.getId());
+
+        if (row == null) {
+            throw EventException.notFound("Event not found.");
+        }
+
+        List<EventDetails.DateSlot> dates = eventRepo.eventDateRows(eventId).stream()
+                .map(date -> new EventDetails.DateSlot(text(date, "date"), text(date, "time")))
+                .toList();
+
+        List<EventDetails.Link> links = eventRepo.eventLinkRows(eventId).stream()
+                .map(link -> new EventDetails.Link(text(link, "link_name"), text(link, "link")))
+                .toList();
+
+        EventDetails.Venue venue = new EventDetails.Venue(
+                text(row, "venue_name"),
+                text(row, "venue_address"),
+                text(row, "venue_city"),
+                text(row, "venue_link")
+        );
+
+        return new EventDetails(
+                number(row, "id"),
+                text(row, "name"),
+                text(row, "description"),
+                text(row, "category"),
+                text(row, "audience"),
+                text(row, "event_level"),
+                venue,
+                new EventDetails.Organizer(text(row, "organizer_name"), text(row, "organizer_since")),
+                text(row, "image_path"),
+                text(row, "banner_path"),
+                dates,
+                links,
+                eventRepo.eventTagNames(eventId));
+    }
+
+    private static EventSummary summary(Map<String, Object> row) {
+        return new EventSummary(
+                number(row, "id"),
+                text(row, "name"),
+                text(row, "description"),
+                text(row, "category"),
+                text(row, "audience"),
+                text(row, "event_level"),
+                text(row, "venue_name"),
+                text(row, "venue_city"),
+                text(row, "image_path"),
+                text(row, "starts_on"),
+                text(row, "time_range"));
     }
 
     private boolean isAdmin(int userId) {
@@ -434,6 +505,11 @@ public class EventService {
         } catch (IllegalArgumentException error) {
             throw EventException.badRequest(field + " must be a full http(s) link.");
         }
+    }
+
+        private static String text(Map<String, Object> row, String field) {
+        Object value = row.get(field);
+        return value == null ? null : value.toString();
     }
 
     private static int number(Map<String, Object> row, String field) {

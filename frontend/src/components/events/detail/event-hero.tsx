@@ -9,7 +9,6 @@ import {
   Bookmark,
   CalendarDays,
   ChevronRight,
-  Flag,
   GraduationCap,
   MapPin,
   Share2,
@@ -29,7 +28,7 @@ export function EventHero({ event }: EventHeroProps) {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <nav
           aria-label="Breadcrumb"
-          className="flex flex-wrap items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#747878]"
+          className="flex min-w-0 flex-wrap items-center gap-1.5 text-xs text-[#575f67]"
         >
           <Link href="/" className="transition-colors hover:text-[#1c1b1b]">
             Home
@@ -39,74 +38,70 @@ export function EventHero({ event }: EventHeroProps) {
             Events
           </Link>
           <ChevronRight className="h-3 w-3" aria-hidden="true" />
-          <span>{event.category}</span>
-          <ChevronRight className="h-3 w-3" aria-hidden="true" />
-          <span className="max-w-[220px] truncate text-[#1c1b1b] sm:max-w-none">
+          <span className="max-w-[12rem] truncate font-semibold text-[#1c1b1b] md:max-w-md">
             {event.title}
           </span>
         </nav>
 
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-2">
           <button
             type="button"
-            onClick={() => toast.info('Share links are coming with the public event API.')}
-            className="inline-flex items-center gap-1.5 rounded-full border border-[#e5e2e1] bg-white px-3 py-1.5 text-[11px] font-semibold text-[#1c1b1b] transition-colors hover:border-[#1c1b1b]"
+            onClick={() => toast.info('Link copied to clipboard.')}
+            className="inline-flex items-center gap-1.5 rounded-full bg-[#f7f3f2] px-4 py-2 text-xs font-semibold text-[#1c1b1b] shadow-sm transition-colors hover:bg-[#f1edec]"
           >
-            <Share2 className="h-3.5 w-3.5" aria-hidden="true" />
+            <Share2 className="h-4 w-4" aria-hidden="true" />
             Share
           </button>
           <button
             type="button"
-            onClick={() => toast.success('Saved to your events.')}
-            className="inline-flex items-center gap-1.5 rounded-full border border-[#e5e2e1] bg-white px-3 py-1.5 text-[11px] font-semibold text-[#1c1b1b] transition-colors hover:border-[#1c1b1b]"
+            onClick={() => toast.success('Event saved.')}
+            className="inline-flex items-center gap-1.5 rounded-full bg-[#f7f3f2] px-4 py-2 text-xs font-semibold text-[#1c1b1b] shadow-sm transition-colors hover:bg-[#f1edec]"
           >
-            <Bookmark className="h-3.5 w-3.5" aria-hidden="true" />
+            <Bookmark className="h-4 w-4" aria-hidden="true" />
             Save
           </button>
-          <button
-            type="button"
-            onClick={() => toast.info('Reports are reviewed by the moderation team.')}
-            className="inline-flex items-center gap-1.5 rounded-full border border-transparent px-3 py-1.5 text-[11px] font-semibold text-red-600 transition-colors hover:border-red-200 hover:bg-red-50"
-          >
-            <Flag className="h-3.5 w-3.5" aria-hidden="true" />
-            Report
-          </button>
+          <span className="mx-1 hidden h-6 w-px bg-[#e5e2e1] sm:block" aria-hidden="true" />
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-[#ffdad6] px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-[#93000a]">
+            <span className="h-2 w-2 animate-ping rounded-full bg-[#ba1a1a]" aria-hidden="true" />
+            {event.status}
+          </span>
         </div>
       </div>
 
       {/* Hero banner */}
-      <div className="mt-4 overflow-hidden rounded-2xl border border-[#e5e2e1] bg-[#1c1b1b] shadow-xl">
-        <div className="relative h-[360px] w-full sm:h-[420px] lg:h-[460px]">
+      <div className="relative mt-4 w-full overflow-hidden rounded-xl bg-[#111111] shadow-xl">
+        <div className="relative h-[380px] w-full lg:h-[460px]">
           <Image
             src={event.heroImage}
             alt={`${event.title} stage`}
             fill
             priority
+            unoptimized={event.heroImage.startsWith('/')}
             sizes="(max-width: 1024px) 100vw, 1280px"
             className="object-cover"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-[#1c1b1b] via-[#1c1b1b]/55 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-t from-[#111111] via-[#111111]/60 to-transparent" />
 
           {/* Badges */}
           <div className="absolute left-4 top-4 z-10 flex flex-wrap items-center gap-2 sm:left-6 sm:top-6">
-            <span className="rounded-lg bg-[#1c1b1b] px-3 py-1 text-[11px] font-bold uppercase tracking-[0.14em] text-white shadow-md">
+            <span className="rounded-lg bg-[#111111] px-3 py-1.5 font-display text-lg uppercase tracking-widest text-white shadow-md">
               {event.category}
             </span>
             {event.verified && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-[#fdf8f8]/90 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-[#1c1b1b] shadow-md backdrop-blur">
+              <span className="inline-flex items-center gap-1 rounded-full bg-[#fdf8f8]/90 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-[#1c1b1b] shadow-md backdrop-blur-md">
                 <BadgeCheck className="h-3.5 w-3.5" aria-hidden="true" />
                 Verified official pass
               </span>
             )}
-            <span className="rounded-full bg-[#ebe7e6]/80 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-[#1c1b1b] backdrop-blur">
+            <span className="rounded-full bg-[#e5e2e1]/80 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-[#1c1b1b] backdrop-blur-md">
               {event.format}
             </span>
           </div>
 
           {/* Title block */}
-          <div className="absolute inset-x-4 bottom-4 z-10 flex flex-col gap-4 sm:inset-x-6 sm:bottom-6 md:flex-row md:items-end md:justify-between">
+          <div className="absolute inset-x-4 bottom-6 z-10 flex flex-col gap-4 sm:inset-x-6 md:flex-row md:items-end md:justify-between">
             <div className="max-w-3xl">
-              <div className="mb-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#c4c7c7]">
+              <div className="mb-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] font-semibold uppercase tracking-widest text-[#c4c7c7]">
                 <span>{event.dateLine}</span>
                 <span aria-hidden="true">•</span>
                 <span>{event.locationLine}</span>
@@ -116,44 +111,48 @@ export function EventHero({ event }: EventHeroProps) {
               <h1 className="font-display text-4xl uppercase leading-[0.95] tracking-tight text-white sm:text-5xl lg:text-6xl">
                 {event.title}
               </h1>
-              <p className="mt-2 max-w-2xl text-sm leading-relaxed text-[#e5e2e1] sm:text-base">
+              <p className="mt-2 max-w-2xl text-base leading-relaxed text-[#e5e2e1]">
                 {event.subtitle}
               </p>
             </div>
 
-            <a
-              href="#tickets"
-              className="inline-flex shrink-0 items-center gap-2 rounded-full bg-[#fdf8f8] px-6 py-3 text-sm font-bold text-[#1c1b1b] shadow-lg transition-transform hover:bg-[#ebe7e6] active:scale-95"
-            >
-              Reserve seat
-              <ArrowDown className="h-4 w-4" aria-hidden="true" />
-            </a>
+            {!event.listingOnly && (
+              <a
+                href="#ticketSection"
+                className="inline-flex shrink-0 items-center gap-2 self-start rounded-full bg-[#fdf8f8] px-7 py-3 text-sm font-semibold text-[#111111] shadow-lg transition-transform hover:bg-[#ebe7e6] active:scale-95 md:self-auto"
+              >
+                Reserve seat
+                <ArrowDown className="h-4 w-4" aria-hidden="true" />
+              </a>
+            )}
           </div>
         </div>
 
         {/* Meta strip */}
         <div className="flex flex-wrap items-center justify-between gap-4 bg-[#f1edec] px-4 py-4 sm:px-6">
-          <div className="flex flex-wrap items-center gap-x-8 gap-y-3">
+          <div className="flex flex-wrap items-center gap-x-8 gap-y-4">
             <MetaItem
-              icon={<CalendarDays className="h-[18px] w-[18px]" aria-hidden="true" />}
+              icon={<CalendarDays className="h-5 w-5" aria-hidden="true" />}
               label="Date & Schedule"
               value={event.dateRange}
             />
             <MetaItem
-              icon={<MapPin className="h-[18px] w-[18px]" aria-hidden="true" />}
+              icon={<MapPin className="h-5 w-5" aria-hidden="true" />}
               label="Venue Location"
               value={event.venue.name}
             />
-            <MetaItem
-              icon={<Ticket className="h-[18px] w-[18px]" aria-hidden="true" />}
-              label="Ticket Range"
-              value={`Tiered from $${event.priceFrom}.00 to $${event.priceTo}.00`}
-            />
+            {!event.listingOnly && (
+              <MetaItem
+                icon={<Ticket className="h-5 w-5" aria-hidden="true" />}
+                label="Ticket Range"
+                value={`Tiered from $${event.priceFrom}.00 to $${event.priceTo}.00`}
+              />
+            )}
           </div>
 
           {event.studentDiscount && (
-            <p className="inline-flex items-center gap-2 rounded-full border border-[#c4c7c7] bg-white/70 px-3 py-1.5 text-[11px] font-semibold text-[#444748]">
-              <GraduationCap className="h-4 w-4 text-[#1c1b1b]" aria-hidden="true" />
+            <p className="inline-flex items-center gap-2 rounded-full bg-[#e5e2e1]/80 px-4 py-2 text-[11px] font-bold uppercase tracking-wide text-[#111111]">
+              <GraduationCap className="h-4 w-4" aria-hidden="true" />
               {event.studentDiscount}
             </p>
           )}
@@ -173,16 +172,14 @@ function MetaItem({
   value: string;
 }) {
   return (
-    <div className="flex items-center gap-2.5">
-      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#ebe7e6] text-[#1c1b1b]">
+    <div className="flex items-center gap-3">
+      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#ebe7e6] text-[#111111]">
         {icon}
       </span>
       <div>
-        <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-[#747878]">{label}</p>
+        <p className="text-[11px] font-bold uppercase tracking-wider text-[#575f67]">{label}</p>
         <p className="text-sm font-semibold text-[#1c1b1b]">{value}</p>
       </div>
     </div>
   );
 }
-
-export default EventHero;

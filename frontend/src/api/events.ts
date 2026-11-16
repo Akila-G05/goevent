@@ -1,6 +1,62 @@
 import { apiClient } from '@/lib/api-client';
 import { API_ROUTES } from './routes';
 
+/** Public card data for an approved event, as returned by `GET /events`. */
+export interface EventSummary {
+  id: number;
+  name: string;
+  description: string | null;
+  category: string;
+  /** `UNIVERSITY`, `PUBLIC` or `BOTH` - who may join. */
+  audience: string;
+  /** `LISTING_ONLY`, `FREE` or `PAYED`. */
+  eventLevel: string;
+  venueName: string;
+  venueCity: string;
+  /** Path under the API prefix, or null when no cover image was uploaded. */
+  imagePath: string | null;
+  /** Next upcoming date, `yyyy-MM-dd`. */
+  startsOn: string;
+  /** `HH:mm - HH:mm`. */
+  timeRange: string;
+}
+
+interface EventListResponse {
+  status: boolean;
+  events: EventSummary[];
+}
+
+/** Public detail of one approved event, as returned by `GET /events/{id}`. */
+export interface EventDetails {
+  id: number;
+  name: string;
+  description: string | null;
+  category: string;
+  audience: string;
+  eventLevel: string;
+  venue: {
+    name: string;
+    address: string | null;
+    city: string;
+    link: string | null;
+  };
+  organizer: {
+    name: string;
+    memberSince: string;
+  };
+  imagePath: string | null;
+  bannerPath: string | null;
+  /** Every scheduled occurrence, earliest first. */
+  dates: { date: string; time: string }[];
+  links: { name: string; url: string }[];
+  tags: string[];
+}
+
+interface EventDetailResponse {
+  status: boolean;
+  event: EventDetails;
+}
+
 /** One external link published with the event (link + event_has_links). */
 export interface CreateEventLink {
   name: string;
@@ -59,6 +115,22 @@ export interface UploadEventImageResponse {
 }
 
 export const eventsApi = {
+  /** One approved event for the detail page. Rejects with a 404 for unknown or unapproved events. */
+  detail: async (id: number): Promise<EventDetails> => {
+    const response = await apiClient.get<EventDetailResponse>(API_ROUTES.EVENTS.DETAIL(id));
+
+    return response.data.event;
+  },
+
+  /** Approved events with an upcoming date, for the home page. */
+  list: async (limit = 24): Promise<EventSummary[]> => {
+    const response = await apiClient.get<EventListResponse>(API_ROUTES.EVENTS.LIST, {
+      params: { limit },
+    });
+
+    return response.data.events;
+  },
+
   /**
    * Register a listing-only event. The owner comes from the session cookie, so
    * no user id is sent from the browser.

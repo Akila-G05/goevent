@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import Image from 'next/image';
 import Link from 'next/link';
 import {
@@ -18,23 +19,10 @@ import {
   ShieldCheck,
   X,
 } from 'lucide-react';
+import { eventsApi } from '@/api/events';
+import { EventCard } from '@/components/events/event-card';
 
 // Data types
-interface ConcertCard {
-  id: string;
-  slug: string;
-  title: string;
-  artistSubtitle: string;
-  dayOfWeek: string;
-  dayNumber: string;
-  monthYear: string;
-  city: string;
-  venue: string;
-  imageUrl: string;
-  category: 'All' | 'Today' | 'This Weekend' | 'This Month' | 'Festival';
-  price: number;
-}
-
 interface TourEvent {
   id: string;
   slug: string;
@@ -76,10 +64,11 @@ export default function HomePage() {
   const [selectedCity, setSelectedCity] = useState('Surabaya');
   const [selectedDateFilter, setSelectedDateFilter] = useState('Any Date');
 
-  // State for Browsing Concerts section
-  const [browseCity, setBrowseCity] = useState('Surabaya');
-  const [activeTab, setActiveTab] = useState<'All' | 'Today' | 'This Weekend' | 'This Month' | 'Festival'>('All');
-  const [browseCarouselIndex, setBrowseCarouselIndex] = useState(0);
+  // Live events for the browsing section (approved events from the backend)
+  const eventsQuery = useQuery({
+    queryKey: ['events', 'approved'],
+    queryFn: () => eventsApi.list(),
+  });
 
   // State for Events split section
   const [eventRegion, setEventRegion] = useState<'Asia' | 'International'>('Asia');
@@ -94,80 +83,6 @@ export default function HomePage() {
     date: string;
     price: number;
   } | null>(null);
-
-  // Sample data strictly derived from the Mello design screenshots
-  const browsingConcerts: ConcertCard[] = [
-    {
-      id: 'c1',
-      slug: 'yoabiso',
-      title: 'YOABISO',
-      artistSubtitle: 'Sir Paul Shaddy - delivered by Tokopedia',
-      dayOfWeek: 'SUN',
-      dayNumber: '18',
-      monthYear: 'APR 24',
-      city: 'Surabaya',
-      venue: 'Lapangan Merr',
-      imageUrl: 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?auto=format&fit=crop&w=800&q=80',
-      category: 'All',
-      price: 65,
-    },
-    {
-      id: 'c2',
-      slug: 'andi-odang',
-      title: 'ANDI ODANG',
-      artistSubtitle: 'Pestapora Festival',
-      dayOfWeek: 'SUN',
-      dayNumber: '2',
-      monthYear: 'APR 24',
-      city: 'Surabaya',
-      venue: 'Tunjungan Plaza',
-      imageUrl: 'https://images.unsplash.com/photo-1429962714451-bb934ecdc4ec?auto=format&fit=crop&w=800&q=80',
-      category: 'Festival',
-      price: 85,
-    },
-    {
-      id: 'c3',
-      slug: 'sound-of-heracles',
-      title: 'SOUND OF HERACLES',
-      artistSubtitle: 'Metal Death Festival',
-      dayOfWeek: 'SUN',
-      dayNumber: '11',
-      monthYear: 'APR 24',
-      city: 'Surabaya',
-      venue: 'Gedung Gedangan',
-      imageUrl: 'https://images.unsplash.com/photo-1465847899084-d164df4dedc6?auto=format&fit=crop&w=800&q=80',
-      category: 'This Weekend',
-      price: 50,
-    },
-    {
-      id: 'c4',
-      slug: 'the-yellow-wall',
-      title: 'THE YELLOW WALL',
-      artistSubtitle: 'Sir Paul Shaddy - delivered by Tokopedia',
-      dayOfWeek: 'SUN',
-      dayNumber: '18',
-      monthYear: 'APR 24',
-      city: 'Surabaya',
-      venue: 'Lapangan Merr',
-      imageUrl: 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?auto=format&fit=crop&w=800&q=80',
-      category: 'This Month',
-      price: 70,
-    },
-    {
-      id: 'c5',
-      slug: 'sir-paul-shaddy',
-      title: 'SIR PAUL SHADDY',
-      artistSubtitle: 'Sir Paul Shaddy - delivered by Tokopedia',
-      dayOfWeek: 'SUN',
-      dayNumber: '31',
-      monthYear: 'MAY 24',
-      city: 'Surabaya',
-      venue: 'Lapangan Merr',
-      imageUrl: 'https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?auto=format&fit=crop&w=800&q=80',
-      category: 'All',
-      price: 95,
-    },
-  ];
 
   const tourEvents: TourEvent[] = [
     {
@@ -342,12 +257,6 @@ export default function HomePage() {
     },
   ];
 
-  // Filtered concert cards
-  const filteredConcerts = browsingConcerts.filter((c) => {
-    if (activeTab === 'All') return true;
-    return c.category === activeTab;
-  });
-
   const filteredEvents = tourEvents.filter((e) => e.region === eventRegion);
 
   return (
@@ -480,165 +389,44 @@ export default function HomePage() {
       </section>
 
       {/* =========================================================================
-          SECTION 2: BROWSING CONCERTS IN (From Screenshot 2)
+          SECTION 2: BROWSING EVENTS (approved events loaded from the backend)
           ========================================================================= */}
       <section id="browse" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-24">
-        {/* Title Header with City Selector */}
-        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6 pb-6 border-b border-zinc-200">
-          <div>
-            <h2 className="font-display text-5xl sm:text-6xl lg:text-7xl font-black tracking-tight text-black leading-[0.9] uppercase">
-              BROWSING<br />CONCERTS IN
-            </h2>
-          </div>
-
-          <div className="relative self-start sm:self-end">
-            <select
-              value={browseCity}
-              onChange={(e) => setBrowseCity(e.target.value)}
-              className="appearance-none bg-white border border-zinc-300 rounded-full px-6 py-2.5 text-sm font-semibold text-black focus:outline-none cursor-pointer pr-10 shadow-sm hover:border-black transition-colors"
-            >
-              <option value="Surabaya">Surabaya</option>
-              <option value="Jakarta">Jakarta</option>
-              <option value="Bangkok">Bangkok</option>
-              <option value="Bali">Bali</option>
-              <option value="Singapore">Singapore</option>
-            </select>
-            <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-600 pointer-events-none" />
-          </div>
+        <div className="pb-6 border-b border-zinc-200">
+          <h2 className="font-display text-5xl sm:text-6xl lg:text-7xl font-black tracking-tight text-black leading-[0.9] uppercase">
+            BROWSING<br />EVENTS
+          </h2>
         </div>
 
-        {/* Filter Tabs */}
-        <div className="flex items-center space-x-6 sm:space-x-8 mt-6 overflow-x-auto pb-2 scrollbar-none text-sm font-medium">
-          {(['All', 'Today', 'This Weekend', 'This Month', 'Festival'] as const).map((tab) => (
+        {eventsQuery.isPending && (
+          <p role="status" className="mt-8 text-sm text-zinc-500">Loading events...</p>
+        )}
+
+        {eventsQuery.isError && (
+          <div role="alert" className="mt-8 flex flex-wrap items-center gap-4 text-sm text-red-600">
+            <span>Events could not be loaded.</span>
             <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              className={`pb-2 whitespace-nowrap transition-colors relative ${activeTab === tab
-                ? 'text-black font-bold'
-                : 'text-zinc-500 hover:text-black'
-                }`}
+              type="button"
+              onClick={() => eventsQuery.refetch()}
+              className="font-semibold text-black underline underline-offset-4"
             >
-              {tab}
-              {activeTab === tab && (
-                <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-black rounded-full" />
-              )}
-            </button>
-          ))}
-        </div>
-
-        {/* Concert Cards Carousel / Horizontal Grid */}
-        <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-5">
-          {filteredConcerts.map((concert) => (
-            <div
-              key={concert.id}
-              className="bg-white rounded-2xl border border-zinc-200/80 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col overflow-hidden group"
-            >
-              {/* Card Image */}
-              <div className="relative h-44 w-full overflow-hidden bg-zinc-100">
-                <Image
-                  src={concert.imageUrl}
-                  alt={concert.title}
-                  fill
-                  className="object-cover group-hover:scale-105 transition-transform duration-500"
-                />
-              </div>
-
-              {/* Card Body */}
-              <div className="p-4 flex-1 flex flex-col justify-between space-y-4">
-                {/* Date Block & Details */}
-                <div className="flex items-start space-x-3">
-                  {/* Left Date Badge */}
-                  <div className="border border-zinc-200 rounded-lg px-2 py-1.5 text-center min-w-[50px] bg-zinc-50 shadow-2xs">
-                    <span className="text-[10px] font-bold text-zinc-500 uppercase block tracking-wider">
-                      {concert.dayOfWeek}
-                    </span>
-                    <span className="text-xl font-display font-black text-black leading-none block">
-                      {concert.dayNumber}
-                    </span>
-                    <span className="text-[9px] font-bold text-zinc-600 uppercase block">
-                      {concert.monthYear}
-                    </span>
-                  </div>
-
-                  {/* Title & Subtitle */}
-                  <div className="flex-1 min-w-0">
-                    <h3 className="font-display text-xl font-black text-black leading-tight uppercase truncate">
-                      {concert.title}
-                    </h3>
-                    <p className="text-[11px] text-zinc-500 truncate mt-0.5">
-                      {concert.artistSubtitle}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Location Tags / Chips */}
-                <div className="flex flex-wrap gap-1.5">
-                  <span className="text-[10px] font-medium bg-zinc-100 text-zinc-700 px-2.5 py-0.5 rounded-full">
-                    {concert.city}
-                  </span>
-                  <span className="text-[10px] font-medium bg-zinc-100 text-zinc-700 px-2.5 py-0.5 rounded-full">
-                    {concert.venue}
-                  </span>
-                </div>
-
-                {/* Find Tickets Action */}
-                <div className="pt-2 border-t border-zinc-100 flex items-center justify-between">
-                  <span className="text-xs font-bold text-zinc-900">
-                    ${concert.price}
-                  </span>
-                  <button
-                    onClick={() =>
-                      setSelectedConcertForBooking({
-                        slug: concert.slug,
-                        title: concert.title,
-                        city: concert.city,
-                        date: `${concert.dayOfWeek} ${concert.dayNumber} ${concert.monthYear}`,
-                        price: concert.price,
-                      })
-                    }
-                    className="border border-zinc-300 hover:border-black text-black text-xs font-semibold px-3 py-1.5 rounded-full flex items-center space-x-1 hover:bg-black hover:text-white transition-colors"
-                  >
-                    <span>Find Tickets</span>
-                    <ArrowUpRight className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* Carousel Bottom Indicators */}
-        <div className="flex items-center justify-between mt-8 pt-4">
-          <div className="flex items-center space-x-1.5">
-            <span
-              className={`w-2 h-2 rounded-full transition-colors ${browseCarouselIndex % 2 === 0 ? 'bg-black' : 'bg-zinc-300'
-                }`}
-            />
-            <span
-              className={`w-2 h-2 rounded-full transition-colors ${browseCarouselIndex % 2 === 1 ? 'bg-black' : 'bg-zinc-300'
-                }`}
-            />
-          </div>
-
-          <div className="flex items-center space-x-2">
-            <button
-              onClick={() => setBrowseCarouselIndex((prev) => Math.max(0, prev - 1))}
-              className="w-9 h-9 rounded-full border border-zinc-300 flex items-center justify-center hover:bg-black hover:text-white hover:border-black transition-colors"
-              aria-label="Previous concert"
-            >
-              <ChevronLeft className="w-4 h-4" />
-            </button>
-            <button
-              onClick={() => setBrowseCarouselIndex((prev) => prev + 1)}
-              className="w-9 h-9 rounded-full border border-zinc-300 flex items-center justify-center hover:bg-black hover:text-white hover:border-black transition-colors"
-              aria-label="Next concert"
-            >
-              <ChevronRight className="w-4 h-4" />
+              Try again
             </button>
           </div>
-        </div>
+        )}
+
+        {eventsQuery.isSuccess && eventsQuery.data.length === 0 && (
+          <p className="mt-8 text-sm text-zinc-500">No events are published yet.</p>
+        )}
+
+        {eventsQuery.isSuccess && eventsQuery.data.length > 0 && (
+          <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+            {eventsQuery.data.map((event) => (
+              <EventCard key={event.id} event={event} />
+            ))}
+          </div>
+        )}
       </section>
-
       {/* =========================================================================
           SECTION 3: FEATURED TOUR & EVENTS SPLIT SHOWCASE (From Screenshot 3 - Dark)
           ========================================================================= */}

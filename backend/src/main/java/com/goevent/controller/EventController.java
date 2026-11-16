@@ -4,6 +4,7 @@ import com.goevent.dto.EventDTO;
 import com.goevent.service.EventService;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.MediaType;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -27,6 +28,18 @@ public class EventController {
 
     public EventController(EventService eventService) {
         this.eventService = eventService;
+    }
+
+    /** Public list of approved events for the home page. */
+    @GetMapping
+    public Map<String, Object> list(@RequestParam(defaultValue = "24") int limit) {
+        return Map.of("status", true, "events", eventService.listApproved(limit));
+    }
+
+    /** Public detail of one approved event. Unapproved or unknown ids return 404. */
+    @GetMapping("/{id}")
+    public Map<String, Object> detail(@PathVariable("id") long id) {
+        return Map.of("status", true, "event", eventService.detail(id));
     }
 
     @PostMapping
