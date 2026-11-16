@@ -357,6 +357,14 @@ class EventServiceTest {
         assertEquals("PENDING", events.get(0).status());
     }
 
+    @Test
+    void reportsEveryReservedDateAsIsoText() {
+        when(repo.approvedEventDates(Status.APPROVED.getId()))
+                .thenReturn(List.of(LocalDate.of(2027, 5, 1), LocalDate.of(2027, 5, 2)));
+
+        assertEquals(List.of("2027-05-01", "2027-05-02"), service.reservedDates());
+    }
+
     private void signedIn(int userId) {
         MockHttpSession session = new MockHttpSession();
         session.setAttribute("userId", userId);

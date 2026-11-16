@@ -48,6 +48,11 @@ public class EventController {
         return Map.of("status", true, "events", eventService.recommended(limit, httpRequest));
     }
 
+    /** Upcoming dates reserved by approved events, for the organizer calendar. */
+    @GetMapping("/calendar")
+    public Map<String, Object> calendar() {
+        return Map.of("status", true, "dates", eventService.reservedDates());
+    }
     /** The signed-in organizer's own events, in any review state. */
     @GetMapping("/mine")
     public Map<String, Object> mine(HttpServletRequest httpRequest) {

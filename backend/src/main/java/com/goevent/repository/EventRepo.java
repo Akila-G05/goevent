@@ -160,6 +160,16 @@ public class EventRepo {
                 statusId, universityId, limit);
     }
 
+    /** Every upcoming date of an approved event, earliest first, for the organizer calendar. */
+    public List<LocalDate> approvedEventDates(int statusId) {
+        return jdbc.query(
+                "SELECT DISTINCT ed.date FROM event_dates ed"
+                        + " JOIN `event` e ON e.id = ed.event_id"
+                        + " WHERE e.event_status_id = ? AND ed.date >= CURDATE()"
+                        + " ORDER BY ed.date",
+                (rs, rowNum) -> rs.getDate(1).toLocalDate(),
+                statusId);
+    }
     /** University of a student account, when one is recorded. */
     public Optional<Integer> studentUniversityId(int userId) {
         return jdbc.queryForList(

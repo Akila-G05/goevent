@@ -340,6 +340,13 @@ public class EventService {
                 .toList();
     }
 
+    /** Upcoming dates reserved by approved events, as yyyy-MM-dd, for the organizer calendar. */
+    @Transactional(readOnly = true)
+    public List<String> reservedDates() {
+        return eventRepo.approvedEventDates(Status.APPROVED.getId()).stream()
+                .map(LocalDate::toString)
+                .toList();
+    }
     private Optional<Integer> studentUniversityId(HttpServletRequest httpRequest) {
 
         HttpSession session = httpRequest == null ? null : httpRequest.getSession(false);

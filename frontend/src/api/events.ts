@@ -138,6 +138,13 @@ export interface OwnedEvent {
 }
 
 export const eventsApi = {
+  /** Every upcoming date reserved by an approved event, as `yyyy-MM-dd`. */
+  reservedDates: async (): Promise<string[]> => {
+    const response = await apiClient.get<{ status: boolean; dates: string[] }>(API_ROUTES.EVENTS.CALENDAR);
+
+    return response.data.dates;
+  },
+
   /** The signed-in organizer's events, every review state, for the profile page. */
   mine: async (): Promise<OwnedEvent[]> => {
     const response = await apiClient.get<{ status: boolean; events: OwnedEvent[] }>(API_ROUTES.EVENTS.MINE);
