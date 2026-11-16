@@ -21,6 +21,9 @@ export interface EventSummary {
   timeRange: string;
 }
 
+/** Ordering for `eventsApi.list`: earliest date first, latest first, or random. */
+export type EventSort = 'asc' | 'desc' | 'random';
+
 interface EventListResponse {
   status: boolean;
   events: EventSummary[];
@@ -125,8 +128,20 @@ export const eventsApi = {
   },
 
   /** Approved events with an upcoming date, for the home page. */
-  list: async (limit = 24): Promise<EventSummary[]> => {
+  list: async (limit = 24, sort: EventSort = 'asc'): Promise<EventSummary[]> => {
     const response = await apiClient.get<EventListResponse>(API_ROUTES.EVENTS.LIST, {
+      params: { limit, sort },
+    });
+
+    return response.data.events;
+  },
+
+  /**
+   * Home-page browsing list. A signed-in student gets events from their
+   * university; everyone else gets a random selection. The server decides.
+   */
+  recommended: async (limit = 6): Promise<EventSummary[]> => {
+    const response = await apiClient.get<EventListResponse>(API_ROUTES.EVENTS.RECOMMENDED, {
       params: { limit },
     });
 

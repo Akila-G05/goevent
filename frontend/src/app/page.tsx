@@ -20,58 +20,31 @@ import {
   X,
 } from 'lucide-react';
 import { eventsApi } from '@/api/events';
-import { EventCard } from '@/components/events/event-card';
-
-// Data types
-interface TourEvent {
-  id: string;
-  slug: string;
-  dayOfWeek: string;
-  dayNumber: string;
-  monthYear: string;
-  city: string;
-  tourSubtitle: string;
-  tag: string;
-  region: 'Asia' | 'International';
-  price: number;
-}
-
-interface UpcomingConcert {
-  id: string;
-  slug: string;
-  title: string;
-  subtitle: string;
-  tags: string[];
-  dayOfWeek: string;
-  dayNumber: string;
-  monthYear: string;
-  badgeOverlay: string;
-  imageUrl: string;
-  price: number;
-}
-
-interface Article {
-  id: string;
-  badge: string;
-  title: string;
-  excerpt: string;
-  imageUrl: string;
-}
-
+import { EventCarousel } from '@/components/events/event-carousel';
+import { EventRows } from '@/components/events/event-rows';
 export default function HomePage() {
   // State for search filters
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCity, setSelectedCity] = useState('Surabaya');
   const [selectedDateFilter, setSelectedDateFilter] = useState('Any Date');
 
-  // Live events for the browsing section (approved events from the backend)
-  const eventsQuery = useQuery({
-    queryKey: ['events', 'approved'],
-    queryFn: () => eventsApi.list(),
+  // Browsing cards: personalised on the server (student university, otherwise random)
+  const recommendedQuery = useQuery({
+    queryKey: ['events', 'recommended'],
+    queryFn: () => eventsApi.recommended(6),
   });
 
+  // Events panel lists newest first; the discover list lists oldest first
+  const eventsDescQuery = useQuery({
+    queryKey: ['events', 'approved', 'desc'],
+    queryFn: () => eventsApi.list(50, 'desc'),
+  });
+
+  const eventsAscQuery = useQuery({
+    queryKey: ['events', 'approved', 'asc'],
+    queryFn: () => eventsApi.list(50, 'asc'),
+  });
   // State for Events split section
-  const [eventRegion, setEventRegion] = useState<'Asia' | 'International'>('Asia');
   const [isPlaying, setIsPlaying] = useState(false);
   const [playbackProgress, setPlaybackProgress] = useState(48); // %
 
@@ -83,181 +56,6 @@ export default function HomePage() {
     date: string;
     price: number;
   } | null>(null);
-
-  const tourEvents: TourEvent[] = [
-    {
-      id: 't1',
-      slug: 'le-pharaohs-bangkok',
-      dayOfWeek: 'SUN',
-      dayNumber: '27',
-      monthYear: 'APR 24',
-      city: 'BANGKOK',
-      tourSubtitle: 'Comeback Again Nailong 24 City All The World',
-      tag: 'Le Pharaohs',
-      region: 'Asia',
-      price: 110,
-    },
-    {
-      id: 't2',
-      slug: 'le-pharaohs-jakarta',
-      dayOfWeek: 'SAT',
-      dayNumber: '16',
-      monthYear: 'MEI 24',
-      city: 'JAKARTA',
-      tourSubtitle: 'Comeback Again Nailong 24 City All The World',
-      tag: 'Le Pharaohs',
-      region: 'Asia',
-      price: 95,
-    },
-    {
-      id: 't3',
-      slug: 'le-pharaohs-surabaya',
-      dayOfWeek: 'FRI',
-      dayNumber: '12',
-      monthYear: 'JUN 24',
-      city: 'SURABAYA',
-      tourSubtitle: 'Comeback Again Nailong 24 City All The World',
-      tag: 'Le Pharaohs',
-      region: 'Asia',
-      price: 85,
-    },
-    {
-      id: 't4',
-      slug: 'le-pharaohs-bali',
-      dayOfWeek: 'SAT',
-      dayNumber: '4',
-      monthYear: 'JUL 24',
-      city: 'BALI',
-      tourSubtitle: 'Comeback Again Nailong 24 City All The World',
-      tag: 'Le Pharaohs',
-      region: 'Asia',
-      price: 125,
-    },
-    {
-      id: 't5',
-      slug: 'le-pharaohs-kuala-lumpur',
-      dayOfWeek: 'SAT',
-      dayNumber: '24',
-      monthYear: 'APR 24',
-      city: 'KUALA LUMPUR',
-      tourSubtitle: 'Comeback Again Nailong 24 City All The World',
-      tag: 'Le Pharaohs',
-      region: 'Asia',
-      price: 105,
-    },
-    {
-      id: 't6',
-      slug: 'le-pharaohs-tokyo',
-      dayOfWeek: 'THU',
-      dayNumber: '15',
-      monthYear: 'AUG 24',
-      city: 'TOKYO',
-      tourSubtitle: 'World Tour Stadium Special - Tokyo Dome',
-      tag: 'Le Pharaohs',
-      region: 'International',
-      price: 160,
-    },
-    {
-      id: 't7',
-      slug: 'le-pharaohs-seoul',
-      dayOfWeek: 'SAT',
-      dayNumber: '28',
-      monthYear: 'SEP 24',
-      city: 'SEOUL',
-      tourSubtitle: 'Olympic Gymnastics Arena Live Experience',
-      tag: 'Le Pharaohs',
-      region: 'International',
-      price: 150,
-    },
-  ];
-
-  const upcomingConcerts: UpcomingConcert[] = [
-    {
-      id: 'u1',
-      slug: 'sir-paul-shaddy-solo',
-      title: 'SIR PAUL SHADDY',
-      subtitle: 'Sir Paul Shaddy - delivered by Tokopedia',
-      tags: ['Surabaya', 'Lapangan Merr'],
-      dayOfWeek: 'SUN',
-      dayNumber: '18',
-      monthYear: 'APR 24',
-      badgeOverlay: 'SIR PAUL SHADDY SOLO',
-      imageUrl: 'https://images.unsplash.com/photo-1506157786151-b8491531f063?auto=format&fit=crop&w=800&q=80',
-      price: 90,
-    },
-    {
-      id: 'u2',
-      slug: 'bring-me-the-star-track',
-      title: 'BRING ME THE STAR TRACK',
-      subtitle: 'Jakarta Tour 2024 - delivered by Ngojek',
-      tags: ['Jakarta', 'Indonesia Arena'],
-      dayOfWeek: 'SAT',
-      dayNumber: '16',
-      monthYear: 'MAY 24',
-      badgeOverlay: 'BRING ME THE STAR TRACK Jakarta Tour 2024',
-      imageUrl: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=800&q=80',
-      price: 120,
-    },
-    {
-      id: 'u3',
-      slug: '4gvs',
-      title: '4GVS',
-      subtitle: 'This is 4GVS - delivered by JLANT',
-      tags: ['Malang', 'Rampal'],
-      dayOfWeek: 'SUN',
-      dayNumber: '18',
-      monthYear: 'APR 24',
-      badgeOverlay: 'THIS IS 4GVS',
-      imageUrl: 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?auto=format&fit=crop&w=800&q=80',
-      price: 75,
-    },
-    {
-      id: 'u4',
-      slug: 'nailong',
-      title: 'NAILONG',
-      subtitle: 'Comeback Again Nailong 24 City All The World',
-      tags: ['Bojonegoro', 'GOR DABONSIA'],
-      dayOfWeek: 'SAT',
-      dayNumber: '16',
-      monthYear: 'APR 24',
-      badgeOverlay: 'COMEBACK AGAIN NAILONG 24 CITY ALL THE WORLD',
-      imageUrl: 'https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?auto=format&fit=crop&w=800&q=80',
-      price: 80,
-    },
-  ];
-
-  const articles: Article[] = [
-    {
-      id: 'a1',
-      badge: 'Tips',
-      title: 'HOW TO PREPARE FOR TICKET SALES',
-      excerpt: 'Before tickets go on sale, follow these tips to get ready',
-      imageUrl: 'https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&w=800&q=80',
-    },
-    {
-      id: 'a2',
-      badge: 'Music',
-      title: 'WHAT TO BRING TO A CONCERT',
-      excerpt: 'Read our ultimate packing checklist before you go to your next concert',
-      imageUrl: 'https://images.unsplash.com/photo-1459749411175-04bf5292ceea?auto=format&fit=crop&w=800&q=80',
-    },
-    {
-      id: 'a3',
-      badge: 'Welcome',
-      title: 'GET STARTED ON GOEVENT',
-      excerpt: 'Read our ultimate packing checklist before you go to your next concert',
-      imageUrl: 'https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?auto=format&fit=crop&w=800&q=80',
-    },
-    {
-      id: 'a4',
-      badge: 'Tips',
-      title: 'CONCERT TICKET BUYING GUIDE',
-      excerpt: 'Read our ultimate packing checklist before you go to your next concert',
-      imageUrl: 'https://images.unsplash.com/photo-1501386761578-eac5c94b800a?auto=format&fit=crop&w=800&q=80',
-    },
-  ];
-
-  const filteredEvents = tourEvents.filter((e) => e.region === eventRegion);
 
   return (
     <div className="w-full bg-[#f8f9fa] text-black">
@@ -389,7 +187,7 @@ export default function HomePage() {
       </section>
 
       {/* =========================================================================
-          SECTION 2: BROWSING EVENTS (approved events loaded from the backend)
+          SECTION 2: BROWSING EVENTS (students: their university; others: random)
           ========================================================================= */}
       <section id="browse" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-24">
         <div className="pb-6 border-b border-zinc-200">
@@ -398,16 +196,16 @@ export default function HomePage() {
           </h2>
         </div>
 
-        {eventsQuery.isPending && (
+        {recommendedQuery.isPending && (
           <p role="status" className="mt-8 text-sm text-zinc-500">Loading events...</p>
         )}
 
-        {eventsQuery.isError && (
+        {recommendedQuery.isError && (
           <div role="alert" className="mt-8 flex flex-wrap items-center gap-4 text-sm text-red-600">
             <span>Events could not be loaded.</span>
             <button
               type="button"
-              onClick={() => eventsQuery.refetch()}
+              onClick={() => recommendedQuery.refetch()}
               className="font-semibold text-black underline underline-offset-4"
             >
               Try again
@@ -415,15 +213,13 @@ export default function HomePage() {
           </div>
         )}
 
-        {eventsQuery.isSuccess && eventsQuery.data.length === 0 && (
-          <p className="mt-8 text-sm text-zinc-500">No events are published yet.</p>
+        {recommendedQuery.isSuccess && recommendedQuery.data.length === 0 && (
+          <p className="mt-8 text-sm text-zinc-500">No events to show yet.</p>
         )}
 
-        {eventsQuery.isSuccess && eventsQuery.data.length > 0 && (
-          <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-            {eventsQuery.data.map((event) => (
-              <EventCard key={event.id} event={event} />
-            ))}
+        {recommendedQuery.isSuccess && recommendedQuery.data.length > 0 && (
+          <div className="mt-8">
+            <EventCarousel events={recommendedQuery.data} />
           </div>
         )}
       </section>
@@ -550,81 +346,19 @@ export default function HomePage() {
                     EVENTS
                   </h3>
 
-                  <div className="flex items-center space-x-4 text-xs font-semibold">
-                    <button
-                      onClick={() => setEventRegion('Asia')}
-                      className={`transition-colors ${eventRegion === 'Asia'
-                        ? 'text-white border-b-2 border-white pb-1'
-                        : 'text-zinc-500 hover:text-zinc-300'
-                        }`}
-                    >
-                      Asia (8)
-                    </button>
-                    <button
-                      onClick={() => setEventRegion('International')}
-                      className={`transition-colors ${eventRegion === 'International'
-                        ? 'text-white border-b-2 border-white pb-1'
-                        : 'text-zinc-500 hover:text-zinc-300'
-                        }`}
-                    >
-                      International (5)
-                    </button>
-                  </div>
                 </div>
 
-                {/* Event Rows */}
-                <div className="divide-y divide-white/5 mt-2">
-                  {filteredEvents.map((evt) => (
-                    <div
-                      key={evt.id}
-                      className="py-4 flex items-center justify-between gap-4 group hover:bg-white/[0.03] px-2 rounded-xl transition-colors"
-                    >
-                      <div className="flex items-center space-x-4 min-w-0">
-                        {/* Date badge */}
-                        <div className="border border-white/15 rounded-lg px-2.5 py-1.5 text-center min-w-[54px] bg-white/5">
-                          <span className="text-[9px] font-bold text-zinc-400 uppercase block">
-                            {evt.dayOfWeek}
-                          </span>
-                          <span className="text-xl font-display font-black text-white leading-none block">
-                            {evt.dayNumber}
-                          </span>
-                          <span className="text-[9px] font-bold text-zinc-400 uppercase block">
-                            {evt.monthYear}
-                          </span>
-                        </div>
-
-                        {/* Event info */}
-                        <div className="min-w-0">
-                          <h4 className="font-display text-2xl font-black text-white leading-tight uppercase group-hover:text-red-400 transition-colors truncate">
-                            {evt.city}
-                          </h4>
-                          <p className="text-[11px] text-zinc-400 truncate max-w-xs">
-                            {evt.tourSubtitle}
-                          </p>
-                          <span className="inline-block mt-1 text-[10px] bg-white/10 text-zinc-300 px-2 py-0.5 rounded-full font-medium">
-                            {evt.tag}
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Find Tickets Button */}
-                      <button
-                        onClick={() =>
-                          setSelectedConcertForBooking({
-                            slug: evt.slug,
-                            title: `${evt.city} - ${evt.tag}`,
-                            city: evt.city,
-                            date: `${evt.dayOfWeek} ${evt.dayNumber} ${evt.monthYear}`,
-                            price: evt.price,
-                          })
-                        }
-                        className="shrink-0 bg-white hover:bg-zinc-200 text-black text-xs font-semibold px-4 py-2 rounded-full flex items-center space-x-1 transition-all active:scale-95 shadow-md"
-                      >
-                        <span>Find Tickets</span>
-                        <ArrowUpRight className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  ))}
+                {/* Event rows: newest first, from the backend */}
+                <div className="mt-2">
+                  {eventsDescQuery.isPending && (
+                    <p role="status" className="py-4 text-sm text-zinc-400">Loading events...</p>
+                  )}
+                  {eventsDescQuery.isError && (
+                    <p role="alert" className="py-4 text-sm text-red-400">Events could not be loaded.</p>
+                  )}
+                  {eventsDescQuery.isSuccess && (
+                    <EventRows variant="dark" events={eventsDescQuery.data} actionLabel="View" />
+                  )}
                 </div>
               </div>
 
@@ -656,97 +390,6 @@ export default function HomePage() {
       </section>
 
       {/* =========================================================================
-          SECTION 4: UPCOMING CONCERTS 2x2 GRID (From Screenshot 5)
-          ========================================================================= */}
-      <section id="upcoming" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-24">
-        <div className="mb-10">
-          <h2 className="font-display text-5xl sm:text-6xl lg:text-7xl font-black tracking-tight text-black leading-[0.9] uppercase">
-            UPCOMING<br />CONCERTS
-          </h2>
-        </div>
-
-        {/* 2x2 Grid of Featured Concert Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          {upcomingConcerts.map((item) => (
-            <div
-              key={item.id}
-              className="bg-white rounded-2xl border border-zinc-200 p-4 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col sm:flex-row gap-5 group"
-            >
-              {/* Left poster with overlay text */}
-              <div className="relative w-full sm:w-1/2 h-56 sm:h-auto rounded-xl overflow-hidden bg-zinc-900 shrink-0">
-                <Image
-                  src={item.imageUrl}
-                  alt={item.title}
-                  fill
-                  className="object-cover group-hover:scale-105 transition-transform duration-500 brightness-90"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
-                <div className="absolute bottom-3 left-3 right-3 text-white">
-                  <span className="font-display text-lg uppercase font-black leading-tight block drop-shadow-md">
-                    {item.badgeOverlay}
-                  </span>
-                </div>
-              </div>
-
-              {/* Right Details */}
-              <div className="flex-1 flex flex-col justify-between py-1 space-y-4">
-                <div className="space-y-2">
-                  <h3 className="font-display text-2xl sm:text-3xl font-black text-black leading-tight uppercase">
-                    {item.title}
-                  </h3>
-                  <p className="text-xs text-zinc-500">
-                    {item.subtitle}
-                  </p>
-                  <div className="flex flex-wrap gap-1.5 pt-1">
-                    {item.tags.map((tag) => (
-                      <span
-                        key={tag}
-                        className="text-[10px] font-medium bg-zinc-100 text-zinc-700 px-2.5 py-0.5 rounded-full"
-                      >
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="pt-4 border-t border-zinc-100 flex items-center justify-between">
-                  {/* Date Badge */}
-                  <div className="border border-zinc-200 rounded-lg px-2.5 py-1 text-center bg-zinc-50">
-                    <span className="text-[9px] font-bold text-zinc-500 uppercase block">
-                      {item.dayOfWeek}
-                    </span>
-                    <span className="text-lg font-display font-black text-black leading-none block">
-                      {item.dayNumber}
-                    </span>
-                    <span className="text-[9px] font-bold text-zinc-600 uppercase block">
-                      {item.monthYear}
-                    </span>
-                  </div>
-
-                  {/* Find Tickets Button */}
-                  <button
-                    onClick={() =>
-                      setSelectedConcertForBooking({
-                        slug: item.slug,
-                        title: item.title,
-                        city: item.tags[0],
-                        date: `${item.dayOfWeek} ${item.dayNumber} ${item.monthYear}`,
-                        price: item.price,
-                      })
-                    }
-                    className="border border-zinc-300 hover:border-black text-black hover:bg-black hover:text-white text-xs font-semibold px-4 py-2 rounded-full flex items-center space-x-1 transition-colors"
-                  >
-                    <span>Find Tickets</span>
-                    <ArrowUpRight className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* =========================================================================
           SECTION 5: DISCOVER MORE / GUIDES (From Screenshot 4)
           ========================================================================= */}
       <section id="discover" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 border-t border-zinc-200">
@@ -756,50 +399,15 @@ export default function HomePage() {
           </h2>
         </div>
 
-        {/* Editorial Articles List */}
-        <div className="divide-y divide-zinc-200">
-          {articles.map((art) => (
-            <div
-              key={art.id}
-              className="py-6 grid grid-cols-1 md:grid-cols-12 gap-6 items-center group cursor-pointer hover:bg-zinc-100/60 px-4 rounded-2xl transition-colors"
-            >
-              {/* Thumbnail */}
-              <div className="md:col-span-3">
-                <div className="relative h-32 w-full rounded-xl overflow-hidden bg-zinc-100">
-                  <Image
-                    src={art.imageUrl}
-                    alt={art.title}
-                    fill
-                    className="object-cover group-hover:scale-105 transition-transform duration-500"
-                  />
-                </div>
-              </div>
+        {eventsAscQuery.isPending && (
+          <p role="status" className="py-6 text-sm text-zinc-500">Loading events...</p>
+        )}
 
-              {/* Title & Badge */}
-              <div className="md:col-span-4 space-y-1">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 bg-zinc-200/80 px-2.5 py-0.5 rounded-full inline-block">
-                  {art.badge}
-                </span>
-                <h3 className="font-display text-2xl font-black text-black uppercase leading-tight group-hover:text-red-600 transition-colors">
-                  {art.title}
-                </h3>
-              </div>
+        {eventsAscQuery.isError && (
+          <p role="alert" className="py-6 text-sm text-red-600">Events could not be loaded.</p>
+        )}
 
-              {/* Excerpt */}
-              <div className="md:col-span-3 text-xs text-zinc-500">
-                <p>{art.excerpt}</p>
-              </div>
-
-              {/* Link */}
-              <div className="md:col-span-2 flex justify-start md:justify-end">
-                <span className="text-xs font-bold text-black flex items-center space-x-1 group-hover:underline">
-                  <span>Discover More</span>
-                  <ArrowUpRight className="w-3.5 h-3.5" />
-                </span>
-              </div>
-            </div>
-          ))}
-        </div>
+        {eventsAscQuery.isSuccess && <EventRows events={eventsAscQuery.data} actionLabel="Discover More" />}
 
         {/* View All Button */}
         <div className="flex justify-end mt-8">
@@ -809,7 +417,6 @@ export default function HomePage() {
           </button>
         </div>
       </section>
-
       {/* =========================================================================
           SECTION 6: PREMIUM FOOTER
           ========================================================================= */}
@@ -841,7 +448,6 @@ export default function HomePage() {
               <ul className="space-y-2 text-xs text-zinc-400">
                 <li><Link href="#browse" className="hover:text-white transition-colors">Concerts in Asia</Link></li>
                 <li><Link href="#events" className="hover:text-white transition-colors">Festivals & Tours</Link></li>
-                <li><Link href="#upcoming" className="hover:text-white transition-colors">Upcoming Concerts</Link></li>
                 <li><Link href="#discover" className="hover:text-white transition-colors">Concert Prep Guides</Link></li>
               </ul>
             </div>

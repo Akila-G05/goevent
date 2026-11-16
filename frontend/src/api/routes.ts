@@ -38,6 +38,7 @@ export const API_ROUTES = {
   EVENTS: {
     LIST: `${API_PREFIX}/events`,
     DETAIL: (id: number) => `${API_PREFIX}/events/${id}`,
+    RECOMMENDED: `${API_PREFIX}/events/recommended`,
     CREATE: `${API_PREFIX}/events`,
     IMAGE: (id: number) => `${API_PREFIX}/events/${id}/image`,
   },
