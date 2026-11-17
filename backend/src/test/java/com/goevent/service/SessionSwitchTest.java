@@ -13,7 +13,7 @@ import static org.mockito.Mockito.*;
 
 class SessionSwitchTest {
     @Test void verifiedGoogleAdminGetsDedicatedSessionAndOrdinaryUsersDoNot() {
-        var service=new AuthenticationService(mock(AuthenticationRepo.class),new BCryptPasswordEncoder(4));
+        var service=new AuthenticationService(mock(AuthenticationRepo.class),new BCryptPasswordEncoder(4),mock(RegistrationService.class));
         var request=new MockHttpServletRequest();
         var previous=(MockHttpSession)request.getSession(true);
         previous.setAttribute("userId",99);
@@ -28,7 +28,7 @@ class SessionSwitchTest {
         assertEquals(8,request.getSession().getAttribute("userId"));
     }
     @Test void inactiveGoogleAdminsCannotEstablishDedicatedAccess() {
-        var service=new AuthenticationService(mock(AuthenticationRepo.class),new BCryptPasswordEncoder(4));
+        var service=new AuthenticationService(mock(AuthenticationRepo.class),new BCryptPasswordEncoder(4),mock(RegistrationService.class));
         for(int status:new int[]{2,3}) {
             var admin=new UserDTO();admin.setId(7);admin.setRoleId(3);admin.setUserStatusId(status);
             var request=new MockHttpServletRequest();
@@ -39,7 +39,7 @@ class SessionSwitchTest {
     @Test void ordinaryLoginReplacesAdminSessionAndRemovesElevatedIdentity() {
         var repository=mock(AuthenticationRepo.class);
         var encoder=new BCryptPasswordEncoder(4);
-        var service=new AuthenticationService(repository,encoder);
+        var service=new AuthenticationService(repository,encoder,mock(RegistrationService.class));
         var user=new UserDTO();
         user.setId(12); user.setEmail("member@example.invalid"); user.setRoleId(1);
         user.setUserStatusId(1); user.setAuthTypeId(2); user.setPassword(encoder.encode("test-password"));

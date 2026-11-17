@@ -273,32 +273,7 @@ export function GoogleRoleModal({
           <label className="text-xs font-semibold text-zinc-300 block">
             I want to join as:
           </label>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            {/* Student Role */}
-            <button
-              type="button"
-              onClick={() => {
-                setSelectedRole('STUDENT');
-              }}
-              className={`p-3 rounded-2xl border text-left flex items-start space-x-2.5 transition-all ${
-                selectedRole === 'STUDENT'
-                  ? 'border-white bg-white/10 text-white shadow-md'
-                  : 'border-white/10 bg-white/5 text-zinc-400 hover:border-white/20'
-              }`}
-            >
-              <GraduationCap
-                className={`w-4 h-4 mt-0.5 shrink-0 ${
-                  selectedRole === 'STUDENT' ? 'text-red-400' : 'text-zinc-500'
-                }`}
-              />
-              <div>
-                <span className="text-xs font-bold block">Student</span>
-                <span className="text-[10px] text-zinc-400 block leading-tight">
-                  University events & student pricing
-                </span>
-              </div>
-            </button>
-
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {/* Organizer Role */}
             <button
               type="button"
@@ -319,7 +294,7 @@ export function GoogleRoleModal({
               <div>
                 <span className="text-xs font-bold block">Organizer</span>
                 <span className="text-[10px] text-zinc-400 block leading-tight">
-                  Create & manage live events
+                  Publish & manage your own events
                 </span>
               </div>
             </button>
@@ -432,6 +407,7 @@ export function GoogleRoleModal({
 
           {selectedRole === 'ORGANIZER' && (
             <div className="space-y-3.5 animate-in fade-in duration-200">
+              <p className="text-xs text-zinc-400">Organization affiliation is self-reported.</p>
               {/* Organization Dropdown */}
               <div className="space-y-1.5">
                 <label className="text-xs font-semibold text-zinc-300 block">
@@ -467,6 +443,7 @@ export function GoogleRoleModal({
                     type="text"
                     value={position}
                     onChange={(e) => setPosition(e.target.value)}
+                    maxLength={45}
                     placeholder="e.g. President, Event Lead, Committee Member"
                     className="w-full bg-white/5 hover:bg-white/10 focus:bg-white/10 border border-white/15 rounded-xl pl-11 pr-4 py-3 text-sm text-white placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-white/40 transition-all"
                   />

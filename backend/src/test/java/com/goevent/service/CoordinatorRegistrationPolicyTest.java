@@ -10,10 +10,10 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 class CoordinatorRegistrationPolicyTest {
-    @Test void privilegedRolesCannotBeSelfRegisteredByEitherLoginMethod() {
+    @Test void unsupportedRolesCannotBeSelfRegisteredByEitherLoginMethod() {
         var users=mock(AuthenticationRepo.class);
-        var service=new AuthenticationService(users,new BCryptPasswordEncoder(4));
-        for(int role:new int[]{2,3,5}) {
+        var service=new AuthenticationService(users,new BCryptPasswordEncoder(4),mock(RegistrationService.class));
+        for(int role:new int[]{3,4,5}) {
             String google=service.handleGoogleAuthentication(Map.of("idToken","test-token","roleId",role),new MockHttpServletRequest());
             assertFalse(JsonParser.parseString(google).getAsJsonObject().get("status").getAsBoolean());
             String manual=service.handleManualRegistration(Map.of("fname","Test","lname","Fixture","email","test@example.invalid","password","testpass1234","confirmPassword","testpass1234","roleId",Integer.toString(role)),new MockHttpServletRequest());

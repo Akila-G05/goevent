@@ -34,6 +34,21 @@ export const API_ROUTES = {
     IMAGE: `${API_PREFIX}/user/image`,
   },
 
+  // Event endpoints
+  EVENTS: {
+    LIST: `${API_PREFIX}/events`,
+    DETAIL: (id: number) => `${API_PREFIX}/events/${id}`,
+    RECOMMENDED: `${API_PREFIX}/events/recommended`,
+    CALENDAR: `${API_PREFIX}/events/calendar`,
+    FILTERS: `${API_PREFIX}/events/filters`,
+    SAVED: `${API_PREFIX}/events/saved`,
+    SAVE: (id: number) => `${API_PREFIX}/events/${id}/save`,
+    MINE: `${API_PREFIX}/events/mine`,
+    MINE_DETAIL: (id: number) => `${API_PREFIX}/events/mine/${id}`,
+    CREATE: `${API_PREFIX}/events`,
+    IMAGE: (id: number) => `${API_PREFIX}/events/${id}/image`,
+  },
+
   // Content endpoints (cached via gateway)
   CONTENT: {
     INITIAL_DATA: `${API_PREFIX}/content/initial-data`,

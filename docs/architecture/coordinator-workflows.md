@@ -1,5 +1,9 @@
 # Coordinator workspace contract
 
+> Historical UI/workflow reference. Public admin/coordinator dashboards are retired.
+> Current self-service organizer behavior is defined by [ADR 0006](../decisions/0006-organizer-self-service-integration.md).
+> Legacy backend contracts and historical records remain protected for compatibility.
+
 Open `/coordinator` or any Create Event link. The browser checks server eligibility;
 guests return here after login. Organization access is independent for each
 organization under the same login. Workspace selection is UI state; every server

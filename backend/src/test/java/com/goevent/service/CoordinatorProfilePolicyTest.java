@@ -10,7 +10,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 class CoordinatorProfilePolicyTest {
-    @Test void coordinatorCannotBypassReviewByChangingOrganizationInProfile() {
+    @Test void organizerCanUpdateSelfReportedOrganizationWithoutReview() {
         var users=mock(UserRepo.class);
         var user=new UserDTO(); user.setId(7); user.setRoleId(2); user.setUserStatusId(1);
         user.setFname("Test"); user.setLname("Fixture");
@@ -20,8 +20,8 @@ class CoordinatorProfilePolicyTest {
         var service=new UserService(users,mock(ContentRepo.class),mock(ImageUploadService.class));
         var request=new MockHttpServletRequest(); request.getSession().setAttribute("userId",7);
         var result=service.updateCurrentUserData("{\"organization\":{\"organizationId\":2,\"position\":\"Coordinator\"}}",request);
-        assertEquals(400,result.getStatusCode().value());
-        verify(users,never()).upsertOrganizerDetail(anyInt(),anyInt(),anyString());
-        verify(users,never()).updateProfile(anyInt(),anyString(),anyString(),any(),any());
+        assertEquals(200,result.getStatusCode().value());
+        verify(users).upsertOrganizerDetail(7,2,"Coordinator");
+        verify(users).updateProfile(anyInt(),anyString(),anyString(),any(),any());
     }
 }

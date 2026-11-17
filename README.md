@@ -1,25 +1,23 @@
 # GoEvent
 
-The [coordinator workflow guide](docs/architecture/coordinator-workflows.md) covers
-organization applications, reviewed event revisions, reports, private proof and
-participant campaigns. Open `/coordinator` to check eligibility. Campaigns default
-disabled; V5 requires a reviewed additive schema rollout.
+GoEvent supports User and Organizer signup through email/password or Google.
+Organizers select an existing organization and publish their own listing events
+immediately, without administrator approval. The organizer workspace is Profile →
+My events. The integration decision and compatibility boundaries are documented in
+[ADR 0006](docs/decisions/0006-organizer-self-service-integration.md).
 
-Admin authentication backend endpoints and their CSRF/session contract are
-documented in [admin authentication](docs/architecture/admin-authentication.md).
-The [admin backend API](docs/architecture/admin-backend.md) documents management,
-moderation, statistics and Azure Communication Services notification delivery.
-Start testing with the [admin API examples and Postman guide](docs/architecture/admin-api-examples.md).
-The [admin frontend guide](docs/architecture/admin-frontend.md) covers the connected
-dashboard, development design preview, login/session behavior and browser tests.
-
-GoEvent is a high-integrity, modular monolith event planning and ticket booking platform designed to support event organizers, attendees, and platform administrators.
+The old coordinator URL redirects to Profile; public admin dashboard routes are
+retired. Protected legacy APIs, role IDs and moderation/audit records remain for
+compatibility. Their historical docs do not describe the current signup/event UI.
+Infrastructure, database safeguards and delivery approval remain unchanged.
 
 ## Features
 
-- **Organizers / Creators (`ROLE_CREATOR`)**: Manage events, ticket tiers, pricing, stock inventory, promotion codes, sales analytics, and verify attendees via QR code check-in.
-- **Attendees / Viewers (`ROLE_VIEWER`)**: Search and discover events, select ticket tiers, checkout with temporary stock reservation, receive verifiable QR tickets, manage personal bookings, and request eligible refunds.
-- **Platform Administrators (`ROLE_ADMIN`)**: Moderate events, oversee dispute resolutions, manage platform settings, and audit transactions.
+- **Organizers:** publish listing-only events, edit their own eligible listings,
+  manage images, multiple dates, venue links and tags.
+- **Users:** discover events, view details and save events under their own login.
+- Checkout, free/paid ticket issuance, QR check-in and payment processing remain
+  separate work; demo ticket panels do not reserve or sell actual tickets.
 
 ---
 
@@ -200,8 +198,8 @@ cd backend
 mvn clean verify
 ```
 
-Neither Java module currently has Java test sources. Maven verification checks
-compilation and packaging; it does not demonstrate business regression coverage.
+Java regression coverage includes authentication, authorization, migrations and
+event workflows. Critical database tests use disposable MySQL Testcontainers.
 For the executable backend and isolated service smoke test, from the root run:
 
 ```bash

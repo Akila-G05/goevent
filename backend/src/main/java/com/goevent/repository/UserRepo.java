@@ -124,25 +124,14 @@ public class UserRepo {
 
 
     public void upsertOrganizerDetail(int userId, int organizationId, String position) {
-
-        if (hasOrganizerDetail(userId)) {
-            String update = """
-                UPDATE user_has_organize
-                SET organization_id = ?, position = ?
-                WHERE user_id = ?
-                ORDER BY registered_date DESC, id DESC LIMIT 1
-                """;
-
-            jdbcTemplate.update(update, organizationId, position, userId);
+        var current = getOrganizerDetail(userId);
+        if (current != null && ((Number)current.get("organization_id")).intValue() == organizationId) {
+            jdbcTemplate.update("UPDATE user_has_organize SET position=? WHERE user_id=? ORDER BY registered_date DESC,id DESC LIMIT 1", position,userId);
             return;
         }
-
-        String insert = """
-            INSERT INTO user_has_organize (user_id, registered_date, organization_id, position)
-            VALUES (?, NOW(), ?, ?)
-            """;
-
-        jdbcTemplate.update(insert, userId, organizationId, position);
+        // Preserve historical organization links; this profile is self-reported, not verified.
+        jdbcTemplate.update("UPDATE user_has_organize SET access_state='REVOKED' WHERE user_id=? AND access_state='APPROVED'",userId);
+        jdbcTemplate.update("INSERT INTO user_has_organize(user_id,registered_date,organization_id,position,access_state) VALUES(?,UTC_TIMESTAMP(),?,?,'APPROVED')",userId,organizationId,position);
     }
 
     public boolean universityExists(int universityId) {

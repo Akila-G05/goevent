@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
@@ -26,7 +26,6 @@ export const Navbar: React.FC = () => {
   const navLinks = [
     { label: 'Home', href: '/' },
     { label: 'Events', href: '/events' },
-    { label: 'Create Event', href: '/coordinator' },
     { label: 'Profile', href: '/profile' },
     { label: 'Contact Us', href: '/#contact' },
   ];
@@ -42,7 +41,7 @@ export const Navbar: React.FC = () => {
     logout();
   };
 
-  if (pathname === '/admin' || pathname.startsWith('/admin/') || pathname === '/coordinator' || pathname.startsWith('/coordinator/')) return null;
+  if (pathname === '/admin' || pathname.startsWith('/admin/')) return null;
 
   return (
     <header

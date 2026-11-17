@@ -1,126 +1,249 @@
-import React from "react";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
-import { CreateEventModal } from "@/components/events/create-event-modal";
-import { EventContent, Catalog, zonedInstant } from "@/api/coordinator";
-const catalog: Catalog = {
-  categories: [{ id: 1, name: "Education" }],
-  organizations: [],
-  organizationTypes: [],
-  universities: [{ id: 1, name: "University" }],
+import React from 'react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { CreateEventModal } from '@/components/events/create-event-modal';
+import { eventsApi } from '@/api/events';
+import { toast } from '@/lib/toast-store';
+
+vi.mock('@/lib/toast-store', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/toast-store')>();
+  return { ...actual, toast: { success: vi.fn(), error: vi.fn(), warning: vi.fn(), info: vi.fn() } };
+});
+
+vi.mock('@/api/events', () => ({
+  eventsApi: {
+    create: vi.fn(),
+    uploadImage: vi.fn(),
+  },
+}));
+
+const createEvent = vi.mocked(eventsApi.create);
+const uploadImage = vi.mocked(eventsApi.uploadImage);
+
+beforeEach(() => {
+  // jsdom does not implement object URLs.
+  global.URL.createObjectURL = vi.fn(() => 'blob:cover');
+  global.URL.revokeObjectURL = vi.fn();
+  createEvent.mockReset();
+  uploadImage.mockReset();
+});
+
+const renderModal = (onClose = vi.fn()) =>
+  render(<CreateEventModal open onClose={onClose} />);
+
+const fillRequiredFields = () => {
+  fireEvent.change(screen.getByLabelText(/^Event name/), {
+    target: { value: 'Tech Fest 2026' },
+  });
+  fireEvent.change(screen.getByLabelText(/^Category/), {
+    target: { value: 'Technology' },
+  });
+  fireEvent.change(screen.getByLabelText(/^Audience/), {
+    target: { value: 'University' },
+  });
+  fireEvent.change(screen.getByLabelText(/^Venue name/), {
+    target: { value: 'Main Auditorium' },
+  });
+  fireEvent.change(screen.getByLabelText(/^City/), {
+    target: { value: 'Colombo' },
+  });
+  fireEvent.change(screen.getByLabelText(/^Link label/), {
+    target: { value: 'Register here' },
+  });
+  fireEvent.change(screen.getByLabelText(/^URL/), {
+    target: { value: 'https://goevent.lk/register' },
+  });
+  fireEvent.change(screen.getByLabelText(/^Date/), {
+    target: { value: '2026-12-24' },
+  });
+  fireEvent.change(screen.getByLabelText(/^Start time/), {
+    target: { value: '18:00' },
+  });
+  fireEvent.change(screen.getByLabelText(/^End time/), {
+    target: { value: '22:00' },
+  });
 };
-const content: EventContent = {
-  name: "Research day",
-  description: "A day of research",
-  categoryId: 1,
-  audienceId: 2,
-  eventLevelId: 1,
-  venueName: "Hall",
-  venueAddress: "Campus",
-  venueCity: "Colombo",
-  timezone: "Asia/Colombo",
-  startsAt: "2027-06-01T03:30:00Z",
-  endsAt: "2027-06-01T04:30:00Z",
-  imagePath: "",
-  bannerPath: "",
-  videoUrl: "",
-  confirmationMessage: "Thank you",
-  currency: "LKR",
-  packages: [],
-  universityIds: [],
-  minimumAge: 0,
-  bookingLimit: 5,
-  qrIntended: false,
-};
-describe("CreateEventModal", () => {
-  it("saves the existing form as a draft with UTC instants and explicit options", async () => {
-    const save = vi.fn().mockResolvedValue(undefined);
-    render(
-      <CreateEventModal
-        open
-        onClose={vi.fn()}
-        catalog={catalog}
-        initial={content}
-        onSave={save}
-      />,
+
+const submitForm = () =>
+  fireEvent.submit(document.getElementById('create-event-form') as HTMLFormElement);
+
+describe('CreateEventModal', () => {
+  it('renders the event details and image upload controls', () => {
+    renderModal();
+
+    expect(screen.getByLabelText(/^Event name/)).toBeInTheDocument();
+    expect(screen.getByLabelText(/^Category/)).toBeInTheDocument();
+    expect(screen.getByLabelText(/^Audience/)).toBeInTheDocument();
+    expect(screen.getByLabelText(/^Venue name/)).toBeInTheDocument();
+    expect(screen.getByText('Upload cover image')).toBeInTheDocument();
+    expect(
+      screen.getByText(/Listing-only events are published as soon as you create them/)
+    ).toBeInTheDocument();
+    expect(screen.queryByLabelText(/^Banner/)).not.toBeInTheDocument();
+    expect(screen.getByText(/Optional - preview only/)).toBeInTheDocument();
+  });
+
+  it('adds and removes schedule rows with start and end times', () => {
+    renderModal();
+
+    expect(screen.getAllByLabelText(/^Date/)).toHaveLength(1);
+    expect(screen.getByLabelText(/^Start time/)).toBeInTheDocument();
+    expect(screen.getByLabelText(/^End time/)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Add another date' }));
+
+    expect(screen.getAllByLabelText(/^Date/)).toHaveLength(2);
+    expect(screen.getAllByLabelText(/^Start time/)).toHaveLength(2);
+    expect(screen.getAllByLabelText(/^End time/)).toHaveLength(2);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Remove date 2' }));
+
+    expect(screen.getAllByLabelText(/^Date/)).toHaveLength(1);
+  });
+
+  it('supports more than one event link', () => {
+    renderModal();
+
+    expect(screen.getAllByLabelText(/^Link label/)).toHaveLength(1);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Add another link' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Add another link' }));
+
+    expect(screen.getAllByLabelText(/^Link label/)).toHaveLength(3);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Remove link 2' }));
+
+    expect(screen.getAllByLabelText(/^Link label/)).toHaveLength(2);
+  });
+
+  it('keeps free and paid event types disabled and offers listing only', () => {
+    renderModal();
+
+    const listing = screen.getByRole('button', { name: /^Listing only/ });
+    const free = screen.getByRole('button', { name: /^Free/ });
+    const paid = screen.getByRole('button', { name: /^Paid/ });
+
+    expect(listing).toHaveAttribute('aria-pressed', 'true');
+    expect(free).toBeDisabled();
+    expect(paid).toBeDisabled();
+    expect(screen.getAllByText('Coming soon')).toHaveLength(2);
+    expect(screen.queryByText('Ticket tiers')).not.toBeInTheDocument();
+
+    fireEvent.click(paid);
+    fireEvent.click(free);
+
+    expect(listing).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.queryByText('Ticket tiers')).not.toBeInTheDocument();
+  });
+
+  it('rejects a file that is not an accepted image type', () => {
+    renderModal();
+
+    const coverInput = document.querySelectorAll<HTMLInputElement>('input[type="file"]')[0];
+    const file = new File(['notes'], 'notes.txt', { type: 'text/plain' });
+
+    fireEvent.change(coverInput, { target: { files: [file] } });
+
+    expect(toast.error).toHaveBeenCalledWith('Choose a JPEG, PNG or WebP image.', expect.anything());
+  });
+
+  it('sends the separate start and end times so the server can join them', async () => {
+    const onClose = vi.fn();
+    createEvent.mockResolvedValue({ status: true, id: 12 });
+    renderModal(onClose);
+
+    fillRequiredFields();
+    submitForm();
+
+    await waitFor(() => expect(createEvent).toHaveBeenCalledTimes(1));
+
+    expect(createEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        name: 'Tech Fest 2026',
+        categoryName: 'Technology',
+        audienceName: 'University',
+        eventLevelId: 1,
+        links: [{ name: 'Register here', url: 'https://goevent.lk/register' }],
+        dates: [{ date: '2026-12-24', startTime: '18:00', endTime: '22:00' }],
+      })
     );
-    fireEvent.click(screen.getByRole("button", { name: "Save draft" }));
-    await waitFor(() => expect(save).toHaveBeenCalledOnce());
-    expect(save.mock.calls[0][0]).toMatchObject({
-      name: "Research day",
-      startsAt: "2027-06-01T03:30:00.000Z",
-      endsAt: "2027-06-01T04:30:00.000Z",
-      bookingLimit: 5,
-      currency: "LKR",
-      packages: [],
+
+    await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1));
+  });
+
+  it('accepts an end time before the start as an overnight event', async () => {
+    createEvent.mockResolvedValue({ status: true, id: 12 });
+    renderModal();
+
+    fillRequiredFields();
+    fireEvent.change(screen.getByLabelText(/^End time/), {
+      target: { value: '02:00' },
     });
+    submitForm();
+
+    await waitFor(() => expect(createEvent).toHaveBeenCalledTimes(1));
+    expect(createEvent).toHaveBeenCalledWith(expect.objectContaining({
+      dates: [expect.objectContaining({ endTime: '02:00' })],
+    }));
   });
-  it("supports free packages and caps packages at three", () => {
-    render(
-      <CreateEventModal
-        open
-        onClose={vi.fn()}
-        catalog={catalog}
-        onSave={vi.fn()}
-      />,
+
+  it('shows the backend error without closing the dialog', async () => {
+    const onClose = vi.fn();
+    createEvent.mockRejectedValue({ message: 'Only organizers can create events.' });
+    renderModal(onClose);
+
+    fillRequiredFields();
+    submitForm();
+
+    await waitFor(() =>
+      expect(toast.error).toHaveBeenCalledWith('Only organizers can create events.', expect.anything())
     );
-    fireEvent.change(screen.getByLabelText("Event type"), {
-      target: { value: "2" },
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it('uploads the chosen cover image after creating the event', async () => {
+    const onClose = vi.fn();
+    createEvent.mockResolvedValue({ status: true, id: 12 });
+    uploadImage.mockResolvedValue({
+      status: true,
+      imagePath: '/goevent/api/images/event/12/cover.png',
     });
-    for (let i = 0; i < 3; i++)
-      fireEvent.click(screen.getByRole("button", { name: "Add package" }));
-    expect(screen.getByRole("button", { name: "Add package" })).toBeDisabled();
-    expect(screen.getAllByLabelText("Price")).toHaveLength(3);
-    expect(screen.getAllByLabelText("Price")[0]).toBeDisabled();
+    renderModal(onClose);
+
+    const file = new File(['bytes'], 'cover.png', { type: 'image/png' });
+    const coverInput = document.querySelectorAll<HTMLInputElement>('input[type="file"]')[0];
+    fireEvent.change(coverInput, { target: { files: [file] } });
+
+    fillRequiredFields();
+    submitForm();
+
+    await waitFor(() => expect(uploadImage).toHaveBeenCalledWith(12, file));
+    await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1));
   });
-  it("requires valid fields and preserves server errors", async () => {
-    const save = vi.fn().mockRejectedValue({
-      message: "Event changed; refresh before editing",
-      status: 409,
-    });
-    render(
-      <CreateEventModal
-        open
-        onClose={vi.fn()}
-        catalog={catalog}
-        initial={content}
-        onSave={save}
-      />,
-    );
-    fireEvent.click(screen.getByRole("button", { name: "Save draft" }));
-    expect(await screen.findByRole("alert")).toHaveTextContent("Event changed");
+
+  it('keeps the created event when only the image upload fails', async () => {
+    const onClose = vi.fn();
+    createEvent.mockResolvedValue({ status: true, id: 12 });
+    uploadImage.mockRejectedValue({ message: 'Could not save the image.' });
+    renderModal(onClose);
+
+    const file = new File(['bytes'], 'cover.png', { type: 'image/png' });
+    const coverInput = document.querySelectorAll<HTMLInputElement>('input[type="file"]')[0];
+    fireEvent.change(coverInput, { target: { files: [file] } });
+
+    fillRequiredFields();
+    submitForm();
+
+    await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1));
+    expect(createEvent).toHaveBeenCalledTimes(1);
   });
-  it("rejects invalid cover content types before preview or upload", () => {
-    render(
-      <CreateEventModal
-        open
-        onClose={vi.fn()}
-        catalog={catalog}
-        onSave={vi.fn()}
-      />,
-    );
-    fireEvent.change(screen.getByLabelText(/Cover image \(/), {
-      target: {
-        files: [new File(["text"], "notes.txt", { type: "text/plain" })],
-      },
-    });
-    expect(screen.getByRole("alert")).toHaveTextContent(
-      "Choose a JPEG, PNG or WebP image.",
-    );
-  });
-  it("does not offer saving outside a workspace", () => {
-    render(<CreateEventModal open onClose={vi.fn()} />);
-    expect(screen.getByRole("button", { name: "Save draft" })).toBeDisabled();
-  });
-  it("resolves event timezone and rejects daylight saving gaps or ambiguous times", () => {
-    expect(zonedInstant("2027-06-01T09:00", "Asia/Colombo")).toBe(
-      "2027-06-01T03:30:00.000Z",
-    );
-    expect(() =>
-      zonedInstant("2027-03-14T02:30", "America/New_York"),
-    ).toThrow();
-    expect(() =>
-      zonedInstant("2027-11-07T01:30", "America/New_York"),
-    ).toThrow();
+
+  it('closes from the Cancel button', () => {
+    const onClose = vi.fn();
+    renderModal(onClose);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+
+    expect(onClose).toHaveBeenCalledTimes(1);
   });
 });

@@ -31,11 +31,15 @@ public class AdminSecurityConfig {
     }
     @Bean
     SecurityFilterChain adminSecurity(HttpSecurity http, AdminAccessRepository access) throws Exception {
-        return http.securityMatcher("/api/auth/**", "/api/user/**", "/api/admin/**", "/api/coordinator-requests/**", "/api/coordinator/**", "/api/public-events/**", "/api/contact/**")
+        return http.securityMatcher("/api/events/**", "/api/auth/**", "/api/user/**", "/api/admin/**", "/api/coordinator-requests/**", "/api/coordinator/**", "/api/public-events/**", "/api/contact/**")
             .cors(org.springframework.security.config.Customizer.withDefaults())
             .securityContext(context -> context.securityContextRepository(new NullSecurityContextRepository()))
             .requestCache(cache -> cache.disable())
             .authorizeHttpRequests(auth -> auth
+                .requestMatchers("/api/events/mine", "/api/events/mine/**").hasRole("MEMBER")
+                .requestMatchers("/api/events/saved").hasRole("MEMBER")
+                .requestMatchers(HttpMethod.GET, "/api/events/**").permitAll()
+                .requestMatchers("/api/events/**").hasRole("MEMBER")
                 .requestMatchers(HttpMethod.GET, "/api/auth/csrf", "/api/auth/session").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/auth/manual", "/api/auth/google",
                     "/api/auth/register", "/api/auth/logout").permitAll()
@@ -88,7 +92,8 @@ public class AdminSecurityConfig {
                 } else { session.invalidate(); SecurityContextHolder.clearContext(); }
             } else if (session != null && session.getAttribute("userId") instanceof Integer id
                     && (request.getRequestURI().startsWith(request.getContextPath()+"/api/coordinator/") || request.getRequestURI().startsWith(request.getContextPath()+"/api/coordinator-requests")
-                        || request.getRequestURI().startsWith(request.getContextPath()+"/api/user/"))) {
+                        || request.getRequestURI().startsWith(request.getContextPath()+"/api/user/")
+                        || request.getRequestURI().startsWith(request.getContextPath()+"/api/events"))) {
                 if (access.isActiveUser(id)) {
                     var context=SecurityContextHolder.createEmptyContext();
                     context.setAuthentication(new UsernamePasswordAuthenticationToken(id,null,

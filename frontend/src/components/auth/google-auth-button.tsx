@@ -11,7 +11,6 @@ import { useSessionStore } from '@/lib/session-store';
 import { getErrorMessage, toast } from '@/lib/toast-store';
 import { useRouter } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
-import { adminApi } from '@/api/admin';
 
 export type { GoogleAuthResponse };
 
@@ -79,17 +78,8 @@ export function GoogleAuthButton({
         return;
       }
 
-      if (data.action === 'LOGIN' && data.roleId === 'ADMIN') {
-        // The server has verified Google and the current database role. Verify
-        // the dedicated session before navigating; decoded JWT claims are not authorization.
-        const session = await adminApi.session();
-        if (!session.status || session.role !== 'ADMIN') throw new Error('Administrator session could not be verified.');
-        await adminApi.csrf();
-        await queryClient.cancelQueries();
-        queryClient.clear();
-        useSessionStore.getState().clear();
-        router.replace('/admin');
-        return;
+      if (data.roleId === 'ADMIN') {
+        throw new Error('This account is not available in the organizer application.');
       }
 
       // Decode Google ID Token (client-side only for prefilling name, email, avatar)
