@@ -3,12 +3,6 @@ package com.goevent.dto;
 import java.util.List;
 import java.util.Objects;
 
-/**
- * Criteria from the events page. Blank values are dropped, so an empty filter
- * means "every approved event".
- *
- * <p>{@code tags} match an event that has any of the selected tag names.</p>
- */
 public record EventFilter(String query, String category, String audience, List<String> tags) {
 
     private static final int MAX_TEXT = 100;

@@ -1,5 +1,5 @@
 import React from 'react';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { beforeEach, describe, it, expect, vi } from 'vitest';
 import HomePage from '@/app/page';
@@ -25,21 +25,23 @@ const renderHome = () =>
   );
 
 describe('HomePage Component', () => {
-  it('renders the GoEvent hero title and search button', () => {
+  it('renders the hero headline and the search button', () => {
     renderHome();
-    expect(screen.getByRole('heading', { level: 1, name: /WHAT'S CONCERT/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1, name: /next event/i })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /Search/i })).toBeInTheDocument();
   });
 
-  it('opens the reservation modal and links Book Now to the event detail page', () => {
+  it('links the hero call to action to the browsing section', () => {
     renderHome();
+    expect(screen.getByRole('link', { name: /Browse events/i })).toHaveAttribute('href', '#browse');
+    const hostLinks = screen.getAllByRole('link', { name: /Host an event/i });
+    expect(hostLinks.length).toBeGreaterThan(0);
+    expect(hostLinks[0]).toHaveAttribute('href', '/signup');
+  });
 
-    fireEvent.click(screen.getByRole('button', { name: /See Detail/i }));
-
-    expect(screen.getByText(/Ticket Reservation/i)).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /Book Now/i })).toHaveAttribute(
-      'href',
-      '/events/le-pharaohs-bangkok'
-    );
+  it('no longer shows the old concert reservation modal', () => {
+    renderHome();
+    expect(screen.queryByText(/Ticket Reservation/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Le Pharaohs/i)).not.toBeInTheDocument();
   });
 });

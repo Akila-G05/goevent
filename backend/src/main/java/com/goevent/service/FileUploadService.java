@@ -43,10 +43,7 @@ public class FileUploadService {
     private final Path root;
     private final String publicBaseUrl;
 
-    public FileUploadService(
-            @Value("${app.storage.root}") String root,
-            @Value("${app.storage.public-base-url}") String publicBaseUrl) {
-
+    public FileUploadService(@Value("${app.storage.root}") String root, @Value("${app.storage.public-base-url}") String publicBaseUrl) {
         this.root = Path.of(root).toAbsolutePath().normalize();
         this.publicBaseUrl = publicBaseUrl;
     }
@@ -95,8 +92,7 @@ public class FileUploadService {
     }
 
     // Find image
-    public Optional<Resource> findFile(
-            String scope, String owner, String fileName) {
+    public Optional<Resource> findFile(String scope, String owner, String fileName) {
 
         if (!SCOPES.contains(scope)
                 || owner == null

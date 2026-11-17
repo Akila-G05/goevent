@@ -21,8 +21,8 @@ const plusJakartaSans = Plus_Jakarta_Sans({
 });
 
 export const metadata: Metadata = {
-  title: 'GoEvent - Concert & Live Event Booking Platform',
-  description: 'What concert is happening in Asia? Discover verified live tours, concert tickets, and instant QR check-ins.',
+  title: 'GoEvent - Event Discovery & Booking Platform',
+  description: 'Discover, host and manage workshops, concerts, sports and campus events in one place.',
 };
 
 export default function RootLayout({

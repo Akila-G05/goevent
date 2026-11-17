@@ -3,8 +3,8 @@ import Link from 'next/link';
 import { ArrowUpRight } from 'lucide-react';
 
 /**
- * Site footer shared by the home page and the event detail pages. Anchors are
- * absolute (`/#events`) so they work from any route.
+ * Site footer shared by the home page, the events pages and the contact page.
+ * Anchors are absolute (`/#events`) so they work from any route.
  */
 export function Footer() {
   return (
@@ -24,44 +24,43 @@ export function Footer() {
               </span>
             </div>
             <p className="text-xs text-zinc-400 leading-relaxed max-w-sm">
-              The premier concert and live event booking platform. Discover verified live tours,
-              reserve tickets with real-time inventory, and access instant QR check-ins.
+              Discover, host and manage events in one place: workshops, concerts, sports and campus festivals.
             </p>
           </div>
 
           {/* Col 2: Navigation */}
           <div>
             <h4 className="font-display text-lg font-bold uppercase text-white tracking-wider mb-4">
-              Explore Events
+              Explore
             </h4>
             <ul className="space-y-2 text-xs text-zinc-400">
               <li>
+                <Link href="/events" className="hover:text-white transition-colors">
+                  All events
+                </Link>
+              </li>
+              <li>
                 <Link href="/#browse" className="hover:text-white transition-colors">
-                  Concerts in Asia
+                  Browse picks
                 </Link>
               </li>
               <li>
                 <Link href="/#events" className="hover:text-white transition-colors">
-                  Festivals &amp; Tours
-                </Link>
-              </li>
-              <li>
-                <Link href="/#upcoming" className="hover:text-white transition-colors">
-                  Upcoming Concerts
+                  Latest events
                 </Link>
               </li>
               <li>
                 <Link href="/#discover" className="hover:text-white transition-colors">
-                  Concert Prep Guides
+                  More events
                 </Link>
               </li>
             </ul>
           </div>
 
-          {/* Col 3: Role Portals */}
+          {/* Col 3: Account */}
           <div>
             <h4 className="font-display text-lg font-bold uppercase text-white tracking-wider mb-4">
-              Account &amp; Access
+              Account
             </h4>
             <ul className="space-y-2 text-xs text-zinc-400">
               <li>
@@ -69,8 +68,8 @@ export function Footer() {
                   href="/login"
                   className="hover:text-white flex items-center space-x-1 transition-colors"
                 >
-                  <span>Sign In to Your Account</span>
-                  <ArrowUpRight className="w-3 h-3 text-red-400" />
+                  <span>Sign in</span>
+                  <ArrowUpRight className="w-3 h-3 text-zinc-400" />
                 </Link>
               </li>
               <li>
@@ -78,47 +77,41 @@ export function Footer() {
                   href="/signup"
                   className="hover:text-white flex items-center space-x-1 transition-colors"
                 >
-                  <span>Create Attendee or Creator Account</span>
+                  <span>Create an account</span>
                   <ArrowUpRight className="w-3 h-3 text-zinc-400" />
                 </Link>
               </li>
               <li>
-                <Link href="/#browse" className="hover:text-white transition-colors">
-                  Browse All Concert Passes
+                <Link href="/signup" className="hover:text-white transition-colors">
+                  Host an event
                 </Link>
               </li>
             </ul>
           </div>
 
-          {/* Col 4: Newsletter */}
+          {/* Col 4: Help */}
           <div>
             <h4 className="font-display text-lg font-bold uppercase text-white tracking-wider mb-4">
-              Concert Drop Alerts
+              Need help?
             </h4>
-            <p className="text-xs text-zinc-400 mb-3">
-              Be the first to know when artist tickets and tour dates drop in your city.
+            <p className="text-xs text-zinc-400 mb-4">
+              Questions about hosting, booking or your account? Send us a message.
             </p>
-            <div className="flex items-center">
-              <input
-                type="email"
-                placeholder="Enter your email"
-                aria-label="Email for concert drop alerts"
-                className="bg-white/10 border border-white/15 rounded-l-full px-4 py-2 text-xs text-white placeholder-zinc-500 focus:outline-none w-full"
-              />
-              <button className="bg-white text-black font-semibold text-xs px-4 py-2 rounded-r-full hover:bg-zinc-200 transition-colors shrink-0">
-                Join
-              </button>
-            </div>
+            <Link
+              href="/contact"
+              className="inline-flex items-center gap-1.5 rounded-full border border-white/20 px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-white/10"
+            >
+              Contact Us
+              <ArrowUpRight className="h-3.5 w-3.5" />
+            </Link>
           </div>
         </div>
 
         <div className="flex flex-col sm:flex-row items-center justify-between pt-8 text-[11px] text-zinc-500 gap-4">
           <p>© {new Date().getFullYear()} GoEvent Platform. All rights reserved.</p>
-          <div className="flex items-center space-x-6">
-            <span className="hover:text-zinc-400 cursor-pointer">Privacy Policy</span>
-            <span className="hover:text-zinc-400 cursor-pointer">Terms of Service</span>
-            <span className="hover:text-zinc-400 cursor-pointer">Ticket Invariant Security</span>
-          </div>
+          <Link href="/contact" className="hover:text-zinc-300 transition-colors">
+            Contact
+          </Link>
         </div>
       </div>
     </footer>
