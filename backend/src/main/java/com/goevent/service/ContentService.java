@@ -1,28 +1,47 @@
 
 package com.goevent.service;
 
-import com.goevent.repository.ContentRepo;
+import com.goevent.service.content.ContentLoader;
 import com.goevent.util.AppUtil;
 import com.google.gson.JsonObject;
 
 import org.slf4j.Logger;
 import org.springframework.stereotype.Service;
 
+import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
 @Service
 public class ContentService {
 
-    private final ContentRepo contentRepo;
+    private static final Logger logger =
+            AppUtil.getLogger(ContentService.class);
 
-    private static final Logger logger = AppUtil.getLogger(ContentService.class);
+    private final Map<String, ContentLoader> loaders;
 
-    public ContentService(ContentRepo contentRepo) {
-        this.contentRepo = contentRepo;
+    public ContentService(List<ContentLoader> contentLoaders) {
+        loaders = new HashMap<>();
+
+        for (ContentLoader loader : contentLoaders) {
+            loaders.put(loader.getKey(), loader);
+        }
     }
 
-    // Load initial content
+    private List<Map<String, Object>> load(String key) {
+        ContentLoader loader = loaders.get(key);
+
+        if (loader == null) {
+            throw new IllegalArgumentException(
+                    "Content loader not found: " + key
+            );
+        }
+
+        return loader.load();
+    }
+
+    // Load inital content
     public String getInitialData() {
         JsonObject responseObject = new JsonObject();
 
@@ -32,13 +51,13 @@ public class ContentService {
         try {
             JsonObject dataObject = new JsonObject();
 
-            dataObject.add("roles", AppUtil.gson.toJsonTree(contentRepo.getRoles()));
+            dataObject.add("roles", AppUtil.gson.toJsonTree(load("roles")));
 
-            dataObject.add("categories", AppUtil.gson.toJsonTree(contentRepo.getCategories()));
+            dataObject.add("categories", AppUtil.gson.toJsonTree(load("categories")));
 
-            dataObject.add("eventStatuses", AppUtil.gson.toJsonTree(contentRepo.getEventStatuses()));
+            dataObject.add("eventStatuses", AppUtil.gson.toJsonTree(load("eventStatuses")));
 
-            dataObject.add("organizationTypes", AppUtil.gson.toJsonTree(contentRepo.getOrganizationTypes()));
+            dataObject.add("organizationTypes", AppUtil.gson.toJsonTree(load("organizationTypes")));
 
             responseObject.add("data", dataObject);
 
@@ -56,7 +75,7 @@ public class ContentService {
         return AppUtil.gson.toJson(responseObject);
     }
 
-    // Load universities
+    // Load universitis
     public String getUniversities() {
         JsonObject responseObject = new JsonObject();
 
@@ -64,9 +83,8 @@ public class ContentService {
         String message = "";
 
         try {
-            List<Map<String, Object>> universities = contentRepo.getUniversities();
-
-            responseObject.add("data", AppUtil.gson.toJsonTree(universities));
+            responseObject.add("data",
+                    AppUtil.gson.toJsonTree(load("universities")));
 
             status = true;
             message = "Universities loaded successfully";
@@ -82,7 +100,7 @@ public class ContentService {
         return AppUtil.gson.toJson(responseObject);
     }
 
-    // Load organizations
+    // Load organisations
     public String getOrganizations() {
         JsonObject responseObject = new JsonObject();
 
@@ -90,9 +108,8 @@ public class ContentService {
         String message = "";
 
         try {
-            List<Map<String, Object>> organizations = contentRepo.getOrganizations();
-
-            responseObject.add("data", AppUtil.gson.toJsonTree(organizations));
+            responseObject.add("data",
+                    AppUtil.gson.toJsonTree(load("organizations")));
 
             status = true;
             message = "Organizations loaded successfully";
