@@ -91,3 +91,6 @@ export function getRoleLabel(roleId?: string): string {
 export function getDisplayName(user: SessionUser | null): string {
   return user?.name || user?.email || 'GoEvent member';
 }
+
+/** UI hint only; the event service rechecks active account and ownership. */
+export function canCreateEvents(role?: string): boolean { return role === "ORGANIZER"; }

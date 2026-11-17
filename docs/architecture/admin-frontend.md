@@ -1,5 +1,9 @@
 # Admin frontend
 
+> Historical UI/workflow reference. Public admin/coordinator dashboards are retired.
+> Current self-service organizer behavior is defined by [ADR 0006](../decisions/0006-organizer-self-service-integration.md).
+> Legacy backend contracts and historical records remain protected for compatibility.
+
 The App Router `/admin` workspace uses the existing GoEvent fonts, light surfaces,
 black controls and muted chart accents. The reference image informs its sidebar,
 card grid and toolbar. All live statistics come from the existing backend; there

@@ -172,10 +172,6 @@ public class UserService {
             if (organizationId == null || !userRepo.organizationExists(organizationId)) {
                 return ApiResponse.badRequest("Select a valid organization");
             }
-            Map<String,Object> approved=userRepo.getOrganizerDetail(userId);
-            if(approved==null || ((Number)approved.get("organization_id")).intValue()!=organizationId) {
-                return ApiResponse.badRequest("Organization changes require administrator approval");
-            }
             if (position == null || position.isBlank()) {
                 return ApiResponse.badRequest("Position is required");
             }

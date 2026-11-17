@@ -4,6 +4,7 @@ import './globals.css';
 import { Providers } from './providers';
 import { Navbar } from '@/components/shared/navbar';
 import { LoadingOverlay } from '@/components/ui/loading-overlay';
+import { RouteLoader } from '@/components/ui/route-loader';
 import { Toaster } from '@/components/ui/toaster';
 
 const bebasNeue = Bebas_Neue({
@@ -37,6 +38,7 @@ export default function RootLayout({
           <main className="flex-1">
             {children}
           </main>
+          <RouteLoader />
           <LoadingOverlay />
           <Toaster />
         </Providers>

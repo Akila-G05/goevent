@@ -2,17 +2,15 @@ package com.goevent.repository;
 
 import com.goevent.dto.UserDTO;
 import com.goevent.enums.AuthType;
-import com.goevent.service.AuthenticationService;
 import com.goevent.util.AppUtil;
 import org.slf4j.Logger;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Repository;
+
 import java.sql.Timestamp;
 import java.time.LocalDateTime;
-
-import java.util.Map;
 
 @Repository
 public class AuthenticationRepo {
@@ -20,7 +18,7 @@ public class AuthenticationRepo {
     private final JdbcTemplate jdbcTemplate;
     private static final Logger logger = AppUtil.getLogger(AuthenticationRepo.class);
 
-    public AuthenticationRepo(JdbcTemplate jdbcTemplate){
+    public AuthenticationRepo(JdbcTemplate jdbcTemplate) {
         this.jdbcTemplate = jdbcTemplate;
     }
 
@@ -47,8 +45,11 @@ public class AuthenticationRepo {
 
     // Get existing Google user
     public UserDTO getUserById(int id) {
-        try { return jdbcTemplate.queryForObject("SELECT * FROM `user` WHERE id=?",userRowMapper,id); }
-        catch(EmptyResultDataAccessException error) { return null; }
+        try {
+            return jdbcTemplate.queryForObject("SELECT * FROM `user` WHERE id=?", userRowMapper, id);
+        } catch (EmptyResultDataAccessException error) {
+            return null;
+        }
     }
 
     public UserDTO getUserByGoogleSub(String googleSub) {
@@ -75,12 +76,12 @@ public class AuthenticationRepo {
     }
 
     // Register new Google user
-    public int registerGoogleUser(String fname, String lname,String email,int userStatusId,int roleId,String googleSub,String profileImgUrl,int authTypeId) {
+    public int registerGoogleUser(String fname, String lname, String email, int userStatusId, int roleId, String googleSub, String profileImgUrl, int authTypeId) {
 
         String query = """
-            INSERT INTO `user` (fname, lname, email, registered_date, v_code, user_status_id, role_id, google_sub, profile_img_url, password, auth_type_id, mobile)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """;
+                INSERT INTO `user` (fname, lname, email, registered_date, v_code, user_status_id, role_id, google_sub, profile_img_url, password, auth_type_id, mobile)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """;
 
         return jdbcTemplate.update(
                 query,
@@ -92,9 +93,9 @@ public class AuthenticationRepo {
     public int registerManualUser(String fname, String lname, String email, String passwordHash, int userStatusId, int roleId) {
 
         String query = """
-            INSERT INTO `user` (fname, lname, email, registered_date, v_code, user_status_id, role_id, google_sub, profile_img_url, password, auth_type_id)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """;
+                INSERT INTO `user` (fname, lname, email, registered_date, v_code, user_status_id, role_id, google_sub, profile_img_url, password, auth_type_id)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """;
 
         return jdbcTemplate.update(
                 query,
@@ -102,22 +103,26 @@ public class AuthenticationRepo {
         );
     }
 
-    public int registerStudentData(int userId, String indexNo,String uniEmail, int uniId) {
+    public int registerStudentData(int userId, String indexNo, String uniEmail, int uniId) {
         String query = """
-            INSERT INTO student_detail(index_no, uni_email, user_id, university_id)
-            VALUES (?, ?, ?, ?)
-            """;
+                INSERT INTO student_detail(index_no, uni_email, user_id, university_id)
+                VALUES (?, ?, ?, ?)
+                """;
 
-        return jdbcTemplate.update(query,indexNo, uniEmail, userId, uniId);
+        return jdbcTemplate.update(query, indexNo, uniEmail, userId, uniId);
     }
 
-    public int registerOrganizerData(int userId,int organizationId,String position) {
-        String query = """
-            INSERT INTO user_has_organize(user_id,registered_date,organization_id,position)
-            VALUES (?, NOW(), ?, ?)
-            """;
+    public boolean organizationExists(int id) {
+        return jdbcTemplate.queryForObject("SELECT COUNT(*) FROM organization WHERE id=?", Integer.class, id) == 1;
+    }
 
-        return jdbcTemplate.update(query,userId,organizationId,position);
+    public int registerOrganizerData(int userId, int organizationId, String position) {
+        String query = """
+                INSERT INTO user_has_organize(user_id,registered_date,organization_id,position,access_state)
+                VALUES (?, UTC_TIMESTAMP(), ?, ?, 'APPROVED')
+                """;
+
+        return jdbcTemplate.update(query, userId, organizationId, position);
     }
 
 }

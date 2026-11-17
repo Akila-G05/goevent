@@ -30,13 +30,14 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class AdminSecurityConfigTest {
     @Configuration @EnableWebMvc @EnableWebSecurity
     @Import({AdminSecurityConfig.class, CorsConfig.class, ApiPrefixConfig.class, AdminAuthenticationController.class,
-        com.goevent.controller.AuthenticationController.class, com.goevent.controller.UserController.class,
+        com.goevent.controller.EventController.class, com.goevent.controller.AuthenticationController.class, com.goevent.controller.UserController.class,
         AdminController.class,CoordinatorRequestController.class,ContactController.class,com.goevent.controller.CoordinatorController.class})
     static class Config {
         @Bean com.goevent.service.CoordinatorService coordinator(){return mock(com.goevent.service.CoordinatorService.class);}
         @Bean com.goevent.service.ImageUploadService images(){return mock(com.goevent.service.ImageUploadService.class);}
         @Bean com.goevent.service.AuthenticationService authentication() { return mock(com.goevent.service.AuthenticationService.class); }
         @Bean com.goevent.service.UserService users() { return mock(com.goevent.service.UserService.class); }
+        @Bean com.goevent.service.EventService events() { return mock(com.goevent.service.EventService.class); }
         @Bean AdminAccessRepository access() { return mock(AdminAccessRepository.class); }
         @Bean AdminAuthenticationService service() { return mock(AdminAuthenticationService.class); }
         @Bean AdminManagementService management() { return mock(AdminManagementService.class); }
@@ -214,6 +215,26 @@ class AdminSecurityConfigTest {
         Assertions.assertTrue(session.isInvalid());
         verify(context.getBean(com.goevent.service.UserService.class),times(1)).updateCurrentUserData(anyString(),any());
         verify(context.getBean(com.goevent.service.UserService.class),times(1)).uploadProfileImage(any(),any());
+    }
+
+    @Test void directEventWritesAndSavedActionsRequireCsrfAndCurrentLogin() throws Exception {
+        mvc.perform(get("/api/events")).andExpect(status().isOk());
+        mvc.perform(get("/api/events/mine")).andExpect(status().isUnauthorized());
+        var session=new MockHttpSession();session.setAttribute("userId",7);
+        when(context.getBean(AdminAccessRepository.class).isActiveUser(7)).thenReturn(true);
+        var service=context.getBean(com.goevent.service.EventService.class);
+        mvc.perform(post("/api/events").session(session).contentType("application/json").content("{}"))
+            .andExpect(status().isForbidden());
+        mvc.perform(delete("/api/events/1/save").session(session)).andExpect(status().isForbidden());
+        mvc.perform(multipart("/api/events/1/image").file(new MockMultipartFile("file",new byte[]{1})).session(session))
+            .andExpect(status().isForbidden());
+        verify(service,never()).create(any(),any());verify(service,never()).unsave(anyLong(),any());
+        var csrf=token(session);
+        mvc.perform(post("/api/events").session(session).header("X-CSRF-TOKEN",csrf.get("token").getAsString())
+            .contentType("application/json").content("{}")) .andExpect(status().isOk());
+        verify(service).create(any(),any());
+        when(context.getBean(AdminAccessRepository.class).isActiveUser(7)).thenReturn(false);
+        mvc.perform(get("/api/events/mine").session(session)).andExpect(status().isUnauthorized());
     }
 
 }

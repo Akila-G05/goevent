@@ -22,7 +22,6 @@ import {
 } from 'lucide-react';
 import { GoogleAuthButton, GoogleAuthResponse, GoogleDecodedUser } from '@/components/auth/google-auth-button';
 import { authApi } from '@/api';
-import { adminApi } from '@/api/admin';
 import { useQueryClient } from '@tanstack/react-query';
 import { loading } from '@/lib/loading-store';
 import { useSessionStore } from '@/lib/session-store';
@@ -56,7 +55,7 @@ export default function LoginPage() {
       }, 1200);
     } else if (data.action === 'LOGIN') {
       // Let the success card show; the user continues via "Visit Site".
-      if (new URLSearchParams(window.location.search).get('returnTo') === '/coordinator') router.replace('/coordinator');
+      if (new URLSearchParams(window.location.search).get('returnTo') === '/coordinator') router.replace('/profile');
       else setAuthSuccess(true);
     }
   };
@@ -87,14 +86,7 @@ export default function LoginPage() {
       });
 
       if (response.status && response.roleId === 'ADMIN') {
-        elevatingAdmin = true;
-        await adminApi.login(data.email, data.password);
-        await queryClient.cancelQueries();
-        queryClient.clear();
-        useSessionStore.getState().clear();
-        setValue('password', '');
-        router.replace('/admin');
-        return;
+        throw new Error('This account is not available in the organizer application.');
       }
       if (response.status) {
         await queryClient.cancelQueries();
@@ -108,7 +100,7 @@ export default function LoginPage() {
         // Pull the display name from the session (login response omits it).
         void useSessionStore.getState().refresh();
         // The backend created the session; the success card offers "Visit Site".
-        if (new URLSearchParams(window.location.search).get('returnTo') === '/coordinator') router.replace('/coordinator');
+        if (new URLSearchParams(window.location.search).get('returnTo') === '/coordinator') router.replace('/profile');
       else setAuthSuccess(true);
       } else {
         toast.error(response.message || 'Invalid email or password', {
