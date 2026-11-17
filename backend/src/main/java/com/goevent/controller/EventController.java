@@ -44,12 +44,13 @@ public class EventController {
         return Map.of("status", true, "events", eventService.listApproved(limit, EventSort.parse(sort), filter));
     }
 
-    /** Category, audience and tag options for the events-page filter. */
+    //Event filtering part
     @GetMapping("/filters")
     public Map<String, Object> filters() {
         return Map.of("status", true, "options", eventService.filterOptions());
     }
 
+    //home page recomended event loading
     @GetMapping("/recommended")
     public Map<String, Object> recommended(
             @RequestParam(defaultValue = "6") int limit,
@@ -58,35 +59,39 @@ public class EventController {
         return Map.of("status", true, "events", eventService.recommended(limit, httpRequest));
     }
 
-    /** The signed-in user's saved events. */
+    //get saved events
     @GetMapping("/saved")
     public Map<String, Object> saved(HttpServletRequest httpRequest) {
         return Map.of("status", true, "events", eventService.saved(httpRequest));
     }
 
+    //save event
     @PostMapping("/{id}/save")
     public Map<String, Object> save(@PathVariable("id") long id, HttpServletRequest httpRequest) {
         eventService.save(id, httpRequest);
         return Map.of("status", true, "saved", true);
     }
 
+    //unsave event
     @DeleteMapping("/{id}/save")
     public Map<String, Object> unsave(@PathVariable("id") long id, HttpServletRequest httpRequest) {
         eventService.unsave(id, httpRequest);
         return Map.of("status", true, "saved", false);
     }
-    /** Upcoming dates reserved by approved events, for the organizer calendar. */
+
+    //organizer event schedule
     @GetMapping("/calendar")
     public Map<String, Object> calendar() {
         return Map.of("status", true, "dates", eventService.reservedDates());
     }
-    /** The signed-in organizer's own events, in any review state. */
+
+    //get organizers' event
     @GetMapping("/mine")
     public Map<String, Object> mine(HttpServletRequest httpRequest) {
         return Map.of("status", true, "events", eventService.mine(httpRequest));
     }
 
-    /** Full detail of one of the organizer's own events, used to prefill the edit form. */
+    //get organizers' event for
     @GetMapping("/mine/{id}")
     public Map<String, Object> ownerDetail(@PathVariable("id") long id, HttpServletRequest httpRequest) {
         return Map.of("status", true, "event", eventService.ownerDetail(id, httpRequest));

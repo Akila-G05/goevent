@@ -516,8 +516,7 @@ public class EventService {
                 text(row, "time_range"));
     }
 
-    // --- authorisation ---------------------------------------------------
-
+    //validate organizer
     private int requireOrganizer(HttpServletRequest httpRequest) {
 
         HttpSession session = httpRequest == null ? null : httpRequest.getSession(false);
@@ -767,7 +766,7 @@ public class EventService {
         }
     }
 
-        private static String text(Map<String, Object> row, String field) {
+    private static String text(Map<String, Object> row, String field) {
         Object value = row.get(field);
         return value == null ? null : value.toString();
     }

@@ -120,7 +120,7 @@ public class AuthenticationService {
                         UserDTO user = authenticationRepo.getUserByGoogleSub(googleSub);
 
                         if (user != null) {
-                            // Convert database ID into enum
+                            // Convert databese ID into enum
                             UserStatus userStatus = UserStatus.fromId(user.getUserStatusId());
 
                             switch (userStatus) {
@@ -133,7 +133,7 @@ public class AuthenticationService {
                                 case ACTIVE -> {
                                     responseObject.addProperty("action", "LOGIN");
 
-                                    // Create user session
+                                    // Create user sesion
                                     createVerifiedGoogleSession(httpRequest, user);
 
                                     responseObject.addProperty("userId", user.getId());
@@ -154,7 +154,6 @@ public class AuthenticationService {
                             } else {
                                 if (role == null) {
                                     // Initial Google sign-in/verification: user does not exist yet.
-                                    // Return REGISTRATION_REQUIRED so the frontend opens the Role Selection popup.
                                     responseObject.addProperty("action", "REGISTRATION_REQUIRED");
                                     message = "Google account verified. Please complete your registration.";
                                     status = true;

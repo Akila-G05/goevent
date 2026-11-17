@@ -66,17 +66,17 @@ public class AuthenticationController {
                     authData.put("position", position);
                 }
             } catch (NumberFormatException e) {
-                // If invalid role format, proceed without throwing 500
+                e.printStackTrace();
             }
         }
 
         return authenticationService.handleGoogleAuthentication(
-                authData,
-                httpRequest
+            authData,
+            httpRequest
         );
     }
 
-    // Current session check (used by the navbar to decide what to render)
+    // Current session check
     @GetMapping("/session")
     public String sessionCheck(HttpServletRequest httpRequest) {
         return authenticationService.handleSessionCheck(httpRequest);
