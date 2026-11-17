@@ -1,10 +1,7 @@
 package com.goevent.config;
 
 import com.goevent.controller.AuthenticationController;
-import com.goevent.controller.ContactController;
 import com.goevent.service.AuthenticationService;
-import com.goevent.service.ContactService;
-import com.goevent.service.ContactThrottle;
 import jakarta.servlet.Filter;
 import org.junit.jupiter.api.*;
 import org.springframework.context.annotation.*;
@@ -21,7 +18,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 class SecurityConfigTest {
     @Configuration @EnableWebMvc @EnableWebSecurity
-    @Import({SecurityConfig.class, ApiPrefixConfig.class, AuthenticationController.class, ContactController.class})
+    @Import({SecurityConfig.class, ApiPrefixConfig.class, AuthenticationController.class})
     static class Config {
         @Bean AuthenticationService authentication() {
             AuthenticationService service = mock(AuthenticationService.class);
@@ -29,12 +26,6 @@ class SecurityConfigTest {
             when(service.handleSessionCheck(any())).thenReturn("{}");
             return service;
         }
-        @Bean ContactService contacts() {
-            ContactService service = mock(ContactService.class);
-            when(service.submit(any())).thenReturn(1L);
-            return service;
-        }
-        @Bean ContactThrottle throttle() { return mock(ContactThrottle.class); }
     }
 
     private AnnotationConfigWebApplicationContext context;
@@ -55,11 +46,5 @@ class SecurityConfigTest {
         mvc.perform(post("/api/auth/manual").contentType("application/json").content("{}"))
             .andExpect(status().isOk());
         mvc.perform(get("/api/auth/session")).andExpect(status().isOk());
-    }
-
-    @Test void publicContactCannotBeSubmittedWithoutCsrf() throws Exception {
-        mvc.perform(get("/api/contact/csrf")).andExpect(status().isOk());
-        mvc.perform(post("/api/contact").contentType("application/json").content("{}"))
-            .andExpect(status().isForbidden());
     }
 }

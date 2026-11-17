@@ -1,7 +1,6 @@
 """Run real services against disposable MySQL/Redis, never the Compose database."""
 
 import base64
-import http.cookiejar
 import json
 import os
 from pathlib import Path
@@ -175,17 +174,6 @@ def main(api_check=None):
                 assert denied['status'] is False
                 assert denied['message'] == 'Google ID token is missing'
             print('PASS: JSON authentication request rejects missing Google token', flush=True)
-            # Real HTTP sessions/CSRF for the public contact form.
-            contact_client = urllib.request.build_opener(
-                urllib.request.HTTPCookieProcessor(http.cookiejar.CookieJar()))
-            contact_url = f'http://127.0.0.1:{backend_port}/goevent/api/contact'
-            try:
-                contact_client.open(urllib.request.Request(contact_url, data=b'{}',
-                    headers={'Content-Type':'application/json'}, method='POST'), timeout=5)
-                raise AssertionError('Contact form accepted a request without CSRF')
-            except urllib.error.HTTPError as error:
-                assert error.code == 403, error.code
-            print('PASS: public contact form rejects a request without CSRF', flush=True)
             public_path = '/goevent/api/content/universities'
             body = get(gateway_port, public_path)
             assert body['status'] is True

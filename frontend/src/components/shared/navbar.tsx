@@ -27,7 +27,6 @@ export const Navbar: React.FC = () => {
     { label: 'Home', href: '/' },
     { label: 'Events', href: '/events' },
     { label: 'Profile', href: '/profile' },
-    { label: 'Contact Us', href: '/#contact' },
   ];
 
   // Profile is only reachable with a session; guests never see the entry.
