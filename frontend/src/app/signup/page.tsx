@@ -47,7 +47,7 @@ const signupSchema = z
 
 type SignupFormData = z.infer<typeof signupSchema>;
 
-type SuccessState = 'registered' | 'registeredManual' | 'signedin' | 'pending';
+type SuccessState = 'registered' | 'registeredManual' | 'signedin';
 
 const SUCCESS_COPY: Record<
   SuccessState,
@@ -73,13 +73,6 @@ const SUCCESS_COPY: Record<
     title: 'AUTHENTICATION COMPLETED',
     description: 'Welcome back to GoEvent. You are signed in and ready to book your next event.',
     cta: 'Visit Site',
-    href: '/',
-  },
-  pending: {
-    title: 'REGISTRATION SUBMITTED',
-    description:
-      'Your organizer account is under review. An admin will approve it shortly, then you can sign in.',
-    cta: 'Back to Home',
     href: '/',
   },
 };
@@ -190,10 +183,7 @@ export default function SignupPage() {
     setIsRoleModalOpen(false);
     setManualForm(null);
 
-    if (data.action === 'REGISTRATION_PENDING') {
-      // Organizer registrations wait for admin approval
-      setSuccessState('pending');
-    } else if (data.status) {
+    if (data.status) {
       if (!wasManualSignup) {
         useSessionStore.getState().setAuthenticated({
           userId: data.userId,

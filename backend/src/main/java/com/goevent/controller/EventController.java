@@ -92,7 +92,7 @@ public class EventController {
         return Map.of("status", true, "event", eventService.ownerDetail(id, httpRequest));
     }
 
-    /** Replaces the listing details of an event the caller owns (or any event, for an administrator). */
+    /** Replaces the listing details of an event the caller owns . */
     @PutMapping("/{id}")
     public Map<String, Object> update(
             @PathVariable("id") long id,

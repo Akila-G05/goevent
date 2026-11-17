@@ -85,12 +85,6 @@ public class AuthenticationService {
                 }
             }
 
-            // Coordinator access is requested by an existing signed-in user.
-            if (role == Role.ORGANIZER || role == Role.ADMIN) {
-                responseObject.addProperty("status", false);
-                responseObject.addProperty("message", "Register as a user, then request coordinator access.");
-                return AppUtil.gson.toJson(responseObject);
-            }
             // 1. Validate ID token
             if (idToken == null || idToken.isBlank()) {
                 message = "Google ID token is missing";
@@ -134,7 +128,7 @@ public class AuthenticationService {
                                     message = "Your account is suspended";
                                 }
                                 case PENDING -> {
-                                    message = "Your account under the review. Please contact the admin";
+                                    message = "Your account is under review.";
                                 }
                                 case ACTIVE -> {
                                     responseObject.addProperty("action", "LOGIN");
@@ -172,16 +166,12 @@ public class AuthenticationService {
                                         && (organizationId == null || position == null || position.isBlank())) {
                                     message = "Organization registration details are incomplete.";
                                 } else {
-                                    int statusId = UserStatus.ACTIVE.getId();
-                                    if(role == Role.ORGANIZER){
-                                        statusId = UserStatus.PENDING.getId();
-                                    }
-                                    // 8. Register Google user with the resolved status
+                                    // 8. Register Google user; every registration is active immediately
                                     int result = authenticationRepo.registerGoogleUser(
                                             fname,
                                             lname,
                                             email,
-                                            statusId,
+                                            UserStatus.ACTIVE.getId(),
                                             role.getId(),
                                             googleSub,
                                             profileImgUrl,
@@ -205,21 +195,15 @@ public class AuthenticationService {
                                                 default -> {}
                                             }
 
-                                            if (statusId == UserStatus.ACTIVE.getId()) {
-                                                // Approved registrations are signed in immediately
-                                                createUserSession(httpRequest, registeredUser);
+                                            // Registrations are signed in immediately
+                                            createUserSession(httpRequest, registeredUser);
 
-                                                responseObject.addProperty("action", "REGISTERED");
-                                                responseObject.addProperty("userId", registeredUser.getId());
-                                                responseObject.addProperty("roleId", Role.fromId(registeredUser.getRoleId()).name());
-                                                responseObject.addProperty("email", registeredUser.getEmail());
+                                            responseObject.addProperty("action", "REGISTERED");
+                                            responseObject.addProperty("userId", registeredUser.getId());
+                                            responseObject.addProperty("roleId", Role.fromId(registeredUser.getRoleId()).name());
+                                            responseObject.addProperty("email", registeredUser.getEmail());
 
-                                                message = "Google registration successful";
-                                            } else {
-                                                // Pending review: no session until an admin approves the account
-                                                responseObject.addProperty("action", "REGISTRATION_PENDING");
-                                                message = "Your registration was submitted and is waiting for admin approval.";
-                                            }
+                                            message = "Google registration successful";
                                             status = true;
                                         } else {
                                             message = "Failed to register Google user";
@@ -299,16 +283,12 @@ public class AuthenticationService {
                         message = "An account with this email already exists. Please sign in.";
                     }
                 } else {
-                    int statusId = role == Role.ORGANIZER
-                            ? UserStatus.PENDING.getId()
-                            : UserStatus.ACTIVE.getId();
-
                     int result = authenticationRepo.registerManualUser(
                             fname,
                             lname,
                             email,
                             passwordEncoder.encode(password),
-                            statusId,
+                            UserStatus.ACTIVE.getId(),
                             role.getId()
                     );
 
@@ -327,20 +307,13 @@ public class AuthenticationService {
                                 }
                             }
 
-                            if (statusId == UserStatus.ACTIVE.getId()) {
-                                // Manual registrations do not open a session; the user signs in explicitly.
-                                responseObject.addProperty("action", "REGISTERED");
-                                responseObject.addProperty("userId", registeredUser.getId());
-                                responseObject.addProperty("roleId", Role.fromId(registeredUser.getRoleId()).name());
-                                responseObject.addProperty("email", registeredUser.getEmail());
+                            // Manual registrations do not open a session; the user signs in explicitly.
+                            responseObject.addProperty("action", "REGISTERED");
+                            responseObject.addProperty("userId", registeredUser.getId());
+                            responseObject.addProperty("roleId", Role.fromId(registeredUser.getRoleId()).name());
+                            responseObject.addProperty("email", registeredUser.getEmail());
 
-                                message = "Registration successful";
-                            } else {
-                                // Pending review: no session until an admin approves the account
-                                responseObject.addProperty("action", "REGISTRATION_PENDING");
-                                message = "Your registration was submitted and is waiting for admin approval.";
-                            }
-
+                            message = "Registration successful";
                             status = true;
                         }
                     } else {
@@ -386,7 +359,7 @@ public class AuthenticationService {
                 } else {
                     switch (UserStatus.fromId(user.getUserStatusId())) {
                         case SUSPENDED -> message = "Your account is suspended";
-                        case PENDING -> message = "Your account under the review. Please contact the admin";
+                        case PENDING -> message = "Your account is under review.";
                         case ACTIVE -> {
                             responseObject.addProperty("action", "LOGIN");
 
@@ -423,6 +396,7 @@ public class AuthenticationService {
 
         return switch (id) {
             case 1 -> Role.USER;
+            case 2 -> Role.ORGANIZER;
             case 4 -> Role.STUDENT;
             default -> null;
         };
@@ -454,17 +428,11 @@ public class AuthenticationService {
         if (user.getUserStatusId() != UserStatus.ACTIVE.getId()) {
             throw new IllegalStateException("Active account required");
         }
-        if (user.getRoleId() == Role.ADMIN.getId()) {
-            HttpSession previous = request.getSession(false);
-            if (previous != null) previous.invalidate();
-            request.getSession(true).setAttribute("adminUserId", user.getId());
-        } else {
-            createUserSession(request, user);
-        }
+        createUserSession(request, user);
     }
 
     private void createUserSession(HttpServletRequest httpRequest, UserDTO user) {
-        // Switching back from an admin session must remove every elevated attribute.
+        // A new sign-in always starts a fresh session.
         HttpSession previous = httpRequest.getSession(false);
         if (previous != null) previous.invalidate();
         HttpSession session = httpRequest.getSession(true);
@@ -525,8 +493,6 @@ public class AuthenticationService {
             responseObject.addProperty("name", name != null ? name.toString() : null);
             responseObject.addProperty("roleId", role != null ? role.toString() : null);
             responseObject.addProperty("email", email != null ? email.toString() : null);
-            responseObject.addProperty("adminUserMode", "ADMIN".equals(role)
-                && userId.equals(session.getAttribute("adminUserModeId")));
         }
 
         return AppUtil.gson.toJson(responseObject);

@@ -69,9 +69,9 @@ def main(redis_only=False):
                 raise AssertionError('Redis TLS readiness failed: '+run(['docker','logs',name])[-2500:])
             assert cli('backend','SET','goevent:session:test','value') == 'OK'
             throttle_script = "local n=redis.call('INCR',KEYS[1]); if n==1 then redis.call('EXPIRE',KEYS[1],900) end; return n"
-            assert cli('backend','EVAL',throttle_script,'1','goevent:admin-login:email:test') == '1'
-            assert 0 < int(cli('backend','TTL','goevent:admin-login:email:test')) <= 900
-            assert 'NOPERM' in cli('gateway','GET','goevent:admin-login:email:test')
+            assert cli('backend','EVAL',throttle_script,'1','goevent:contact:peer:test') == '1'
+            assert 0 < int(cli('backend','TTL','goevent:contact:peer:test')) <= 900
+            assert 'NOPERM' in cli('gateway','GET','goevent:contact:peer:test')
             assert 'NOPERM' in cli('backend','GET','gateway:response:test')
             assert cli('gateway','SET','gateway:response:test','value') == 'OK'
             assert 'NOPERM' in cli('gateway','GET','goevent:session:test')
@@ -84,7 +84,7 @@ def main(redis_only=False):
             unauth = run(['docker','exec',name,'redis-cli','--tls','--cacert','/fixture/redis-ca.crt','PING'])
             assert 'NOAUTH' in unauth
             if redis_only:
-                print('PASS: Redis TLS-only, ACL separation and admin throttle Lua/expiry; Caddy not tested')
+                print('PASS: Redis TLS-only, ACL separation and contact throttle Lua/expiry; Caddy not tested')
                 return
             run(['docker','run','--rm','--network','none','--user','10001:10001',
                  '--group-add',str(os.getgid()),'--read-only','--cap-drop','ALL',

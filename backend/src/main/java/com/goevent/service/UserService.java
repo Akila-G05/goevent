@@ -174,7 +174,7 @@ public class UserService {
             }
             Map<String,Object> approved=userRepo.getOrganizerDetail(userId);
             if(approved==null || ((Number)approved.get("organization_id")).intValue()!=organizationId) {
-                return ApiResponse.badRequest("Organization changes require administrator approval");
+                return ApiResponse.badRequest("Organization changes are not available from your profile");
             }
             if (position == null || position.isBlank()) {
                 return ApiResponse.badRequest("Position is required");

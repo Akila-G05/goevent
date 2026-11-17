@@ -15,8 +15,7 @@ import java.util.List;
  *   <li>{@code event.published_by} - taken from the authenticated session, never the client;</li>
  *   <li>{@code event.event_status_id} - starts as {@code APPROVED} (status id 2), so a
  *       listing-only event is usable as soon as it is created;</li>
- *   <li>{@code event.aproved_by} - stays {@code NULL}; it only records an administrator
- *       decision, and creation is not a decision.</li>
+ *   <li>{@code event.aproved_by} - stays {@code NULL}; no approval step exists yet.</li>
  * </ul>
  *
  * <p>Date and time values are ISO-8601 strings ({@code yyyy-MM-dd}, {@code HH:mm},

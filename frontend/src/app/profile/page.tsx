@@ -45,14 +45,13 @@ import { useMinimumLoading } from '@/hooks/use-minimum-loading';
 import { CreateEventModal } from '@/components/events/create-event-modal';
 import { MyEventsList } from '@/components/events/my-events-list';
 import { EditProfileModal } from '@/components/profile/edit-profile-modal';
-import { ReturnToAdmin } from '@/components/admin/return-to-admin';
 import { EventCalendar } from '@/components/shared/event-calendar';
 import { SavedEventsView } from '@/components/profile/saved-events-view';
 
-type RoleView = 'USER' | 'STUDENT' | 'ORGANIZER' | 'ADMIN';
+type RoleView = 'USER' | 'STUDENT' | 'ORGANIZER';
 type TabType = 'overview' | 'my-events' | 'sales' | 'booked' | 'saved';
 
-const ROLE_VIEWS: RoleView[] = ['USER', 'STUDENT', 'ORGANIZER', 'ADMIN'];
+const ROLE_VIEWS: RoleView[] = ['USER', 'STUDENT', 'ORGANIZER'];
 
 const MONTHS = [
   'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
@@ -137,14 +136,13 @@ export default function ProfilePage() {
 
   const [isCreateEventOpen, setIsCreateEventOpen] = useState(false);
   const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
-  const [isSwitchingToAdmin, setIsSwitchingToAdmin] = useState(false);
 
   const profileQuery = useQuery({
     // Keyed by account so a different sign-in never reuses cached data.
     queryKey: ['user', 'profile', user?.userId],
     queryFn: userApi.getProfile,
     // Fire immediately on page load; a 401 also drives the redirect.
-    enabled: status !== 'guest' && !isSwitchingToAdmin,
+    enabled: status !== 'guest',
     // Always ask the backend when the page is opened.
     staleTime: 0,
     retry: false,
@@ -154,7 +152,7 @@ export default function ProfilePage() {
   const errorStatus = (profileQuery.error as { status?: number } | null)?.status;
 
   const actualRole = profile?.role || user?.roleId || 'USER';
-  const roleView: RoleView = user?.adminUserMode ? 'USER' : ROLE_VIEWS.includes(actualRole as RoleView)
+  const roleView: RoleView = ROLE_VIEWS.includes(actualRole as RoleView)
     ? (actualRole as RoleView)
     : 'USER';
 
@@ -170,27 +168,27 @@ export default function ProfilePage() {
 
   // A page visit without a session goes straight back to sign-in.
   useEffect(() => {
-    if (status === 'guest' && !isSwitchingToAdmin) {
+    if (status === 'guest') {
       router.replace('/login');
     }
-  }, [status, router, isSwitchingToAdmin]);
+  }, [status, router]);
 
   // The profile endpoint also rejects stale sessions.
   useEffect(() => {
-    if (errorStatus === 401 && !isSwitchingToAdmin) {
+    if (errorStatus === 401) {
       router.replace('/login');
     }
-  }, [errorStatus, router, isSwitchingToAdmin]);
+  }, [errorStatus, router]);
 
   const displayName = profile?.name || getDisplayName(user);
   const email = profile?.email || user?.email;
   const mobile = profile?.mobile;
   const joinedDate = formatJoinedDate(profile?.registeredDate);
-  const roleLabel = user?.adminUserMode ? 'User mode · own account' : getRoleLabel(actualRole);
-  const showCreateEvent = !user?.adminUserMode && canCreateEvents(actualRole);
+  const roleLabel = getRoleLabel(actualRole);
+  const showCreateEvent = canCreateEvents(actualRole);
 
-  // Organizers and admins manage events; everyone else browses saved events.
-  const isOrganizer = actualRole === 'ORGANIZER' || actualRole === 'ADMIN';
+  // Organizers manage events; everyone else browses saved events.
+  const isOrganizer = actualRole === 'ORGANIZER';
   // Only the default tab of each role is enabled; the others are shown disabled.
   const visibleTabs: TabType[] = isOrganizer
     ? ['overview', 'my-events', 'sales', 'saved']
@@ -228,23 +226,10 @@ export default function ProfilePage() {
     USER: 'Viewing as USER. Standard attendee view with ticket booking and pass storage.',
     STUDENT: 'Viewing as STUDENT. University discounts, verified campus credentials, and student passes unlocked.',
     ORGANIZER: 'Viewing as ORGANIZER. Full event publishing, ticket tiers, and gate check-in tools unlocked.',
-    ADMIN: 'Administrator account. Open the administration workspace for platform management.',
   };
 
   return (
     <div className="relative min-h-screen bg-[#f7f5f4] text-[#1c1b1b] pt-20 pb-20">
-      {actualRole === 'ADMIN' && (
-        <section className="w-full bg-[#ede9e8] border-b border-[#ddd8d6] py-2 px-4 sm:px-6 lg:px-8">
-          <div className="max-w-7xl mx-auto flex items-center justify-end gap-2">
-            {user?.adminUserMode && <ReturnToAdmin onSwitching={setIsSwitchingToAdmin} />}
-            {!user?.adminUserMode && (
-              <Link href="/admin" className="px-3.5 py-1 rounded-full bg-[#1c1b1b] text-white text-xs font-semibold uppercase shrink-0">
-                Admin dashboard
-              </Link>
-            )}
-          </div>
-        </section>
-      )}
       {/* Main Container */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex flex-col gap-6">
         {/* Profile Header Hero Card */}

@@ -62,7 +62,6 @@ export interface ManualLoginPayload {
 }
 
 export interface SessionResponse {
-  adminUserMode?: boolean;
   status: boolean;
   authenticated?: boolean;
   userId?: number;

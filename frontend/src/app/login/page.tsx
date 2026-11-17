@@ -22,7 +22,6 @@ import {
 } from 'lucide-react';
 import { GoogleAuthButton, GoogleAuthResponse, GoogleDecodedUser } from '@/components/auth/google-auth-button';
 import { authApi } from '@/api';
-import { adminApi } from '@/api/admin';
 import { useQueryClient } from '@tanstack/react-query';
 import { loading } from '@/lib/loading-store';
 import { useSessionStore } from '@/lib/session-store';
@@ -78,23 +77,12 @@ export default function LoginPage() {
     setIsSubmitting(true);
     loading.open();
 
-    let elevatingAdmin = false;
     try {
       const response = await authApi.authenticateManual({
         email: data.email,
         password: data.password,
       });
 
-      if (response.status && response.roleId === 'ADMIN') {
-        elevatingAdmin = true;
-        await adminApi.login(data.email, data.password);
-        await queryClient.cancelQueries();
-        queryClient.clear();
-        useSessionStore.getState().clear();
-        setValue('password', '');
-        router.replace('/admin');
-        return;
-      }
       if (response.status) {
         await queryClient.cancelQueries();
         queryClient.clear();
@@ -114,29 +102,11 @@ export default function LoginPage() {
         });
       }
     } catch (e) {
-      if (elevatingAdmin) {
-        useSessionStore.getState().clear();
-        queryClient.clear();
-        setValue('password', '');
-      }
       // Network/HTTP failures are normalised by the API client.
       toast.error(getErrorMessage(e), { title: 'Login failed' });
     } finally {
       setIsSubmitting(false);
       loading.close(500);
-    }
-  };
-
-  const handleQuickDemoFill = (role: 'viewer' | 'creator' | 'admin') => {
-    if (role === 'viewer') {
-      setValue('email', 'attendee@goevent.com');
-      setValue('password', 'password123');
-    } else if (role === 'creator') {
-      setValue('email', 'organizer@goevent.com');
-      setValue('password', 'password123');
-    } else {
-      setValue('email', 'admin@goevent.com');
-      setValue('password', 'password123');
     }
   };
 

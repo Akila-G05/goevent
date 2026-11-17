@@ -64,11 +64,6 @@ remains blocked pending the staging handoff and external verification. See [migr
    - Attendee lists and QR code check-in validation.
    - Sales reporting and revenue dashboards.
 
-3. **Administrator (`ROLE_ADMIN`)**:
-   - Platform moderation and event reviews.
-   - User account management and dispute resolution.
-   - System settings and financial audit tracking.
-
 ## Backend Layered Architecture
 
 The backend follows a clean **Package-by-Layer** pattern:

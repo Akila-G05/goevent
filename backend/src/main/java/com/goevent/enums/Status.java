@@ -5,8 +5,7 @@ package com.goevent.enums;
  * shared {@code status} lookup table.
  *
  * <p>Events use {@code PENDING → APPROVED | REJECTED}; {@code DRAFT} is reserved
- * for events the creator has not submitted yet. Coordinator requests reuse the
- * same ids for pending/approved/rejected decisions.
+ * for events the creator has not submitted yet.
  */
 public enum Status {
 

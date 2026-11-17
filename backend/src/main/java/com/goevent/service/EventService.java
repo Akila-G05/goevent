@@ -92,7 +92,7 @@ public class EventService {
     }
 
     /**
-     * Replaces an event's listing details. The owner or an administrator may edit.
+     * Replaces an event's listing details. Only the owner may edit.
      * The review status is kept, so an approved event stays visible while it is edited.
      */
     @Transactional
@@ -159,7 +159,7 @@ public class EventService {
         return toDetails(eventId, row);
     }
 
-    /** Event row and owner check: the owner or an administrator only. */
+    /** Event row and owner check: the owner only. */
     private Map<String, Object> requireOwnedEvent(long eventId, int actor) {
 
         Map<String, Object> owner = eventRepo.eventOwnerRow(eventId);
@@ -168,7 +168,7 @@ public class EventService {
             throw EventException.notFound("Event not found.");
         }
 
-        if (number(owner, "published_by") != actor && !isAdmin(actor)) {
+        if (number(owner, "published_by") != actor) {
             throw EventException.forbidden("You can only change your own events.");
         }
 
@@ -249,7 +249,7 @@ public class EventService {
     /**
      * Stores the event's cover image (and an optional banner) and points
      * {@code event.img_id} at the resulting {@code img} row. The owner of the
-     * event, or an administrator, may upload.
+     * event may upload.
      */
     @Transactional
     public Map<String, Object> attachImage(
@@ -267,7 +267,7 @@ public class EventService {
             throw EventException.notFound("Event not found.");
         }
 
-        if (number(eventRow, "published_by") != actor && !isAdmin(actor)) {
+        if (number(eventRow, "published_by") != actor) {
             throw EventException.forbidden("You can only add images to your own events.");
         }
 
@@ -516,11 +516,6 @@ public class EventService {
                 text(row, "time_range"));
     }
 
-    private boolean isAdmin(int userId) {
-        Map<String, Object> account = eventRepo.account(userId);
-        return account != null && number(account, "role_id") == Role.ADMIN.getId();
-    }
-
     // --- authorisation ---------------------------------------------------
 
     private int requireOrganizer(HttpServletRequest httpRequest) {
@@ -545,7 +540,7 @@ public class EventService {
             throw EventException.forbidden("This account is not active.");
         }
 
-        if (role != Role.ORGANIZER.getId() && role != Role.ADMIN.getId()) {
+        if (role != Role.ORGANIZER.getId()) {
             throw EventException.forbidden("Only organizers can create events.");
         }
 

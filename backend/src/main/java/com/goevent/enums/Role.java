@@ -3,7 +3,6 @@ package com.goevent.enums;
 public enum Role {
     USER(1),
     ORGANIZER(2),
-    ADMIN(3),
     STUDENT(4);
 
     private final int id;

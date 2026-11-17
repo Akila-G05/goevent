@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
@@ -20,7 +20,7 @@ export const Navbar: React.FC = () => {
   const { logout, isLoggingOut } = useLogout();
 
   useEffect(() => {
-    if (!pathname.startsWith('/admin')) refresh();
+    refresh();
   }, [refresh, pathname]);
 
   const navLinks = [
@@ -40,8 +40,6 @@ export const Navbar: React.FC = () => {
     setMobileMenuOpen(false);
     logout();
   };
-
-  if (pathname === '/admin' || pathname.startsWith('/admin/')) return null;
 
   return (
     <header

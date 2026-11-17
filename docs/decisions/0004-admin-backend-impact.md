@@ -1,3 +1,5 @@
+> **Superseded (2026-11-18).** The admin backend, admin frontend and Azure Communication Services email delivery were removed from the application. This record is kept for history only.
+
 # Admin backend: schema and change-impact assessment
 
 Status: implementation in progress; not deployed.

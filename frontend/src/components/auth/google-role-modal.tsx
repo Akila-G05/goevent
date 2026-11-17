@@ -207,7 +207,7 @@ export function GoogleRoleModal({
       }
 
       if (response.action === 'REGISTRATION_PENDING') {
-        toast.info(response.message || 'Registration submitted and waiting for admin approval.');
+        toast.info(response.message || 'Registration submitted.');
       } else {
         toast.success('Registration completed');
       }

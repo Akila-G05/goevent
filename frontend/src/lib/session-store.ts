@@ -4,7 +4,6 @@ import { authApi } from '@/api';
 export type SessionStatus = 'loading' | 'authenticated' | 'guest';
 
 export interface SessionUser {
-  adminUserMode?: boolean;
   userId?: number;
   name?: string;
   roleId?: string;
@@ -45,7 +44,6 @@ export const useSessionStore = create<SessionState>((set, get) => ({
               name: data.name,
               roleId: data.roleId,
               email: data.email,
-              adminUserMode: data.adminUserMode,
             },
           });
         } else {
@@ -74,7 +72,6 @@ export const useSessionStore = create<SessionState>((set, get) => ({
 const ROLE_LABELS: Record<string, string> = {
   USER: 'Attendee',
   ORGANIZER: 'Organizer',
-  ADMIN: 'Administrator',
   STUDENT: 'Student',
 };
 
@@ -86,9 +83,9 @@ export function getRoleLabel(roleId?: string): string {
   return ROLE_LABELS[roleId] ?? roleId;
 }
 
-/** Organizers and admins may publish events. */
+/** Organizers may publish events. */
 export function canCreateEvents(roleId?: string): boolean {
-  return roleId === 'ORGANIZER' || roleId === 'ADMIN';
+  return roleId === 'ORGANIZER';
 }
 
 /** Name shown in the UI, falling back to the email address. */

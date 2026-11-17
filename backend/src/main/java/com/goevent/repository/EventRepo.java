@@ -294,7 +294,7 @@ public class EventRepo {
         return rows.isEmpty() ? null : rows.get(0);
     }
 
-    /** Any event's detail row regardless of review status, for its owner or an administrator. */
+    /** Any event's detail row regardless of review status, for its owner. */
     public Map<String, Object> eventRowById(long eventId) {
         List<Map<String, Object>> rows = jdbc.queryForList(DETAIL_ROW_SQL, eventId);
 
