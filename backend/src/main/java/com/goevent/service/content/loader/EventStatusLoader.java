@@ -9,7 +9,6 @@ import java.util.Map;
 
 @Component
 public class EventStatusLoader implements ContentLoader {
-
     private final ContentRepo contentRepo;
 
     public EventStatusLoader(ContentRepo contentRepo) {

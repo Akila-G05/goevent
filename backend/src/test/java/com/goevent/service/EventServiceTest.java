@@ -42,7 +42,7 @@ class EventServiceTest {
     private static final ZoneId UTC = ZoneId.of("UTC");
 
     private EventRepo repo;
-    private ImageUploadService images;
+    private FileUploadService images;
     private MapLinkResolver mapLinks;
     private EventService service;
     private MockHttpServletRequest request;
@@ -51,7 +51,7 @@ class EventServiceTest {
     @BeforeEach
     void setUp() {
         repo = mock(EventRepo.class);
-        images = mock(ImageUploadService.class);
+        images = mock(FileUploadService.class);
         mapLinks = mock(MapLinkResolver.class);
         service = new EventService(repo, images, mapLinks);
         request = new MockHttpServletRequest();
@@ -173,7 +173,7 @@ class EventServiceTest {
 
         when(repo.eventImageRow(99L)).thenReturn(row);
         when(repo.insertImage(anyString(), isNull())).thenReturn(5L);
-        when(images.uploadEventImage(eq(99), any()))
+        when(images.uploadFile(eq(FileUploadService.SCOPE_EVENT), eq(99), any()))
                 .thenReturn("/goevent/api/images/event/99/cover.png");
 
         Map<String, Object> result = service.attachImage(
@@ -197,7 +197,7 @@ class EventServiceTest {
                 () -> service.attachImage(99L, imageFile(), null, request));
 
         assertEquals(HttpStatus.FORBIDDEN, error.status());
-        verify(images, never()).uploadEventImage(anyInt(), any());
+        verify(images, never()).uploadFile(anyString(), anyInt(), any());
     }
 
     @Test

@@ -1,6 +1,6 @@
 package com.goevent.controller;
 
-import com.goevent.service.ImageUploadService;
+import com.goevent.service.FileUploadService;
 import org.springframework.core.io.Resource;
 import org.springframework.http.CacheControl;
 import org.springframework.http.MediaType;
@@ -14,7 +14,7 @@ import java.time.Duration;
 import java.util.Locale;
 
 /**
- * Public read endpoint for every stored image. Filenames are random UUIDs and
+ * Public read endpoint for uploaded images. Filenames are random UUIDs and
  * never change, so responses are cached as immutable.
  */
 @RestController
@@ -24,10 +24,10 @@ public class ImageController {
     private static final CacheControl CACHE =
             CacheControl.maxAge(Duration.ofDays(365)).cachePublic().immutable();
 
-    private final ImageUploadService imageUploadService;
+    private final FileUploadService fileUploadService;
 
-    public ImageController(ImageUploadService imageUploadService) {
-        this.imageUploadService = imageUploadService;
+    public ImageController(FileUploadService fileUploadService) {
+        this.fileUploadService = fileUploadService;
     }
 
     @GetMapping("/{scope}/{owner}/{filename}")
@@ -36,7 +36,7 @@ public class ImageController {
             @PathVariable String owner,
             @PathVariable String filename
     ) {
-        return imageUploadService.load(scope, owner, filename)
+        return fileUploadService.findFile(scope, owner, filename)
                 .map(resource -> ResponseEntity.ok()
                         .contentType(mediaTypeFor(filename))
                         .cacheControl(CACHE)

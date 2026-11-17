@@ -16,8 +16,7 @@ import java.util.Map;
 @Service
 public class ContentService {
 
-    private static final Logger logger =
-            AppUtil.getLogger(ContentService.class);
+    private static final Logger logger = AppUtil.getLogger(ContentService.class);
 
     private final Map<String, ContentLoader> loaders;
 

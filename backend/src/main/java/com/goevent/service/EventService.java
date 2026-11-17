@@ -1,6 +1,5 @@
 package com.goevent.service;
 
-import com.goevent.config.FileStorageConfig;
 import com.goevent.dto.EventDTO;
 import com.goevent.dto.EventDetails;
 import com.goevent.dto.EventFilter;
@@ -47,12 +46,12 @@ public class EventService {
     private static final int MAX_LIST_SIZE = 50;
 
     private final EventRepo eventRepo;
-    private final ImageUploadService imageUploadService;
+    private final FileUploadService fileUploadService;
     private final MapLinkResolver mapLinks;
 
-    public EventService(EventRepo eventRepo, ImageUploadService imageUploadService, MapLinkResolver mapLinks) {
+    public EventService(EventRepo eventRepo, FileUploadService fileUploadService, MapLinkResolver mapLinks) {
         this.eventRepo = eventRepo;
-        this.imageUploadService = imageUploadService;
+        this.fileUploadService = fileUploadService;
         this.mapLinks = mapLinks;
     }
 
@@ -271,10 +270,10 @@ public class EventService {
             throw EventException.forbidden("You can only add images to your own events.");
         }
 
-        String imagePath = imageUploadService.uploadEventImage((int) eventId, image);
+        String imagePath = fileUploadService.uploadFile(FileUploadService.SCOPE_EVENT, (int) eventId, image);
         String bannerPath = banner == null || banner.isEmpty()
                 ? null
-                : imageUploadService.uploadEventBanner((int) eventId, banner);
+                : fileUploadService.uploadFile(FileUploadService.SCOPE_BANNER, (int) eventId, banner);
 
         try {
             Object existing = eventRow.get("img_id");
@@ -286,10 +285,10 @@ public class EventService {
             }
         } catch (RuntimeException error) {
             // The files are already written; remove them so a failed write leaves nothing behind.
-            imageUploadService.deleteByPath(FileStorageConfig.SCOPE_EVENT, imagePath);
+            fileUploadService.deleteFile(FileUploadService.SCOPE_EVENT, imagePath);
 
             if (bannerPath != null) {
-                imageUploadService.deleteByPath(FileStorageConfig.SCOPE_BANNER, bannerPath);
+                fileUploadService.deleteFile(FileUploadService.SCOPE_BANNER, bannerPath);
             }
 
             throw error;

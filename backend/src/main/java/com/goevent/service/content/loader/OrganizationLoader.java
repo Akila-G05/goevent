@@ -9,7 +9,6 @@ import java.util.Map;
 
 @Component
 public class OrganizationLoader implements ContentLoader {
-
     private final ContentRepo contentRepo;
 
     public OrganizationLoader(ContentRepo contentRepo) {

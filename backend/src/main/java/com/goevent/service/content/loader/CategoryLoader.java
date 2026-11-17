@@ -9,7 +9,6 @@ import java.util.Map;
 
 @Component
 public class CategoryLoader implements ContentLoader {
-
     private final ContentRepo contentRepo;
 
     public CategoryLoader(ContentRepo contentRepo) {

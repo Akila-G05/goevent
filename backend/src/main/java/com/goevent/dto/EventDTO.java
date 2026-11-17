@@ -45,7 +45,7 @@ public class EventDTO {
     /** event.event_level_id - required, references event_level.id (LISTING_ONLY/FREE/PAYED). */
     private Integer eventLevelId;
 
-    /** img.path - optional; public image path returned by ImageUploadService. */
+    /** img.path - optional; public image path returned by FileUploadService. */
     private String imagePath;
 
     /** img.bannerpath - optional banner for the event. */

@@ -17,7 +17,7 @@ class CoordinatorProfilePolicyTest {
         when(users.getUserById(7)).thenReturn(user);
         when(users.organizationExists(2)).thenReturn(true);
         when(users.getOrganizerDetail(7)).thenReturn(Map.of("organization_id",1));
-        var service=new UserService(users,mock(ContentRepo.class),mock(ImageUploadService.class));
+        var service=new UserService(users,mock(ContentRepo.class),mock(FileUploadService.class));
         var request=new MockHttpServletRequest(); request.getSession().setAttribute("userId",7);
         var result=service.updateCurrentUserData("{\"organization\":{\"organizationId\":2,\"position\":\"Coordinator\"}}",request);
         assertEquals(400,result.getStatusCode().value());

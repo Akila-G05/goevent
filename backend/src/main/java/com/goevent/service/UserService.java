@@ -1,7 +1,6 @@
 package com.goevent.service;
 
 import com.goevent.common.ApiResponse;
-import com.goevent.config.FileStorageConfig;
 import com.goevent.dto.UserDTO;
 import com.goevent.enums.AuthType;
 import com.goevent.enums.Role;
@@ -30,16 +29,16 @@ public class UserService {
 
     private final UserRepo userRepo;
     private final ContentRepo contentRepo;
-    private final ImageUploadService imageUploadService;
+    private final FileUploadService fileUploadService;
 
     public UserService(
             UserRepo userRepo,
             ContentRepo contentRepo,
-            ImageUploadService imageUploadService
+            FileUploadService fileUploadService
     ) {
         this.userRepo = userRepo;
         this.contentRepo = contentRepo;
-        this.imageUploadService = imageUploadService;
+        this.fileUploadService = fileUploadService;
     }
 
     /**
@@ -197,7 +196,7 @@ public class UserService {
         // Only after the database points at the new file do we remove the old
         // one, so a failed save never leaves the profile without an image.
         if (previousProfileImgUrl != null && !previousProfileImgUrl.equals(profileImgUrl)) {
-            imageUploadService.deleteByPath(FileStorageConfig.SCOPE_PROFILE, previousProfileImgUrl);
+            fileUploadService.deleteFile(FileUploadService.SCOPE_PROFILE, previousProfileImgUrl);
         }
 
         refreshSessionProfile(httpRequest, userId);
@@ -223,7 +222,7 @@ public class UserService {
             return ApiResponse.unauthorized("Not authenticated");
         }
 
-        String profileImgUrl = imageUploadService.uploadProfilePicture(userId, file);
+        String profileImgUrl = fileUploadService.uploadFile(FileUploadService.SCOPE_PROFILE, userId, file);
 
         JsonObject response = new JsonObject();
 
@@ -373,7 +372,7 @@ public class UserService {
      * external Google avatar); arbitrary client paths are rejected.
      */
     private boolean isAllowedImageUrl(String url) {
-        return imageUploadService.isManagedUrl(FileStorageConfig.SCOPE_PROFILE, url)
+        return fileUploadService.isOwnUrl(FileUploadService.SCOPE_PROFILE, url)
                 || url.startsWith("http://")
                 || url.startsWith("https://");
     }

@@ -9,7 +9,6 @@ import java.util.Map;
 
 @Component
 public class RoleLoader implements ContentLoader {
-
     private final ContentRepo contentRepo;
 
     public RoleLoader(ContentRepo contentRepo) {

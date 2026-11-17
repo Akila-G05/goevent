@@ -9,7 +9,6 @@ import java.util.Map;
 
 @Component
 public class UniversityLoader implements ContentLoader {
-
     private final ContentRepo contentRepo;
 
     public UniversityLoader(ContentRepo contentRepo) {

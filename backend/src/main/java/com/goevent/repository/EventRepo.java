@@ -19,14 +19,6 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 
-/**
- * Every SQL statement used by the event module.
- *
- * <p>An event is written across several tables ({@code venue}, {@code link},
- * {@code event}, {@code event_has_links}, {@code event_dates},
- * {@code event_has_tags}); the service owns the transaction and this class only
- * performs the statements.</p>
- */
 @Repository
 public class EventRepo {
 
