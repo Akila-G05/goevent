@@ -1,6 +1,7 @@
 package com.goevent.service;
 
 import com.goevent.dto.UserDTO;
+import com.goevent.dto.UserProfileDTO;
 import com.goevent.repository.UserRepo;
 import com.goevent.repository.ContentRepo;
 import org.junit.jupiter.api.Test;
@@ -19,7 +20,7 @@ class CoordinatorProfilePolicyTest {
         when(users.getOrganizerDetail(7)).thenReturn(Map.of("organization_id",1));
         var service=new UserService(users,mock(ContentRepo.class),mock(FileUploadService.class));
         var request=new MockHttpServletRequest(); request.getSession().setAttribute("userId",7);
-        var result=service.updateCurentUserData("{\"organization\":{\"organizationId\":2,\"position\":\"Coordinator\"}}",request);
+        var result=service.updateCurentUserData(new UserProfileDTO(null,null,null,null,null,null,null,null,null,null,null,new UserProfileDTO.Organization(2,null,"Coordinator"),null),request);
         assertEquals(400,result.getStatusCode().value());
         verify(users,never()).upsertOrganizerDetail(anyInt(),anyInt(),anyString());
         verify(users,never()).updateProfile(anyInt(),anyString(),anyString(),any(),any());

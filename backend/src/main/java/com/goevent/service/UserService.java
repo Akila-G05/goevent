@@ -3,17 +3,17 @@ package com.goevent.service;
 
 import com.goevent.common.ApiResponse;
 import com.goevent.dto.UserDTO;
+import com.goevent.dto.UserProfileDTO;
 import com.goevent.enums.AuthType;
 import com.goevent.enums.Role;
 import com.goevent.repository.ContentRepo;
 import com.goevent.repository.UserRepo;
 import com.goevent.util.AppUtil;
-import com.google.gson.*;
+import com.google.gson.JsonObject;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
 
 import org.slf4j.Logger;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -46,14 +46,14 @@ public class UserService {
             return ApiResponse.unauthorized("Not authenticated");
         }
 
-        JsonObject profile = buildProfileJson(userId);
+        UserProfileDTO profile = buildProfile(userId);
 
-        return profile != null ? ApiResponse.ok(profile) : ApiResponse.unauthorized("Not authenticated");
+        return profile != null ? ApiResponse.ok(toJson(profile)) : ApiResponse.unauthorized("Not authenticated");
     }
 
     //update current user profile
     @Transactional
-    public ResponseEntity<String> updateCurentUserData(String body, HttpServletRequest request) {
+    public ResponseEntity<String> updateCurentUserData(UserProfileDTO input, HttpServletRequest request) {
         Integer userId = currentUserId(request);
 
         if (userId == null) {
@@ -66,30 +66,15 @@ public class UserService {
             return ApiResponse.unauthorized("Not authenticated");
         }
 
-        JsonObject payload;
-
-        try {
-            JsonElement parsed = JsonParser.parseString(body);
-
-            if (!parsed.isJsonObject()) {
-                return ApiResponse.badRequest("Invalid request body");
-            }
-
-            payload = parsed.getAsJsonObject();
-
-        } catch (RuntimeException e) {
-            return ApiResponse.badRequest("Invalid request body");
-        }
-
-        String firstName = stringField(payload, "firstName", user.getFname());
-        String lastName = stringField(payload, "lastName", user.getLname());
-        String mobile = stringField(payload, "mobile", user.getMobile());
+        // A null field keeps the current value (see UserProfileDTO).
+        String firstName = valueOrCurrent(input.firstName(), user.getFname());
+        String lastName = valueOrCurrent(input.lastName(), user.getLname());
+        String mobile = valueOrCurrent(input.mobile(), user.getMobile());
 
         String previousImage = user.getProfileImgUrl();
-        String profileImage = stringField(
-                payload, "profileImgUrl", previousImage
-        );
+        String profileImage = valueOrCurrent(input.profileImgUrl(), previousImage);
 
+        // An empty picture URL removes the picture.
         if (profileImage != null && profileImage.isBlank()) {
             profileImage = null;
         }
@@ -138,13 +123,11 @@ public class UserService {
         String position = null;
 
         //student details
-        if (role == Role.STUDENT && isObjectField(payload, "student")) {
+        if (role == Role.STUDENT && input.student() != null) {
 
-            JsonObject student = payload.getAsJsonObject("student");
-
-            indexNo = stringField(student, "indexNo", null);
-            uniEmail = stringField(student, "uniEmail", null);
-            universityId = intField(student, "universityId");
+            indexNo = trimmed(input.student().indexNo());
+            uniEmail = trimmed(input.student().uniEmail());
+            universityId = input.student().universityId();
 
             if (indexNo == null || indexNo.isBlank()) {
                 return ApiResponse.badRequest("Index number is required");
@@ -175,14 +158,10 @@ public class UserService {
         }
 
         //organizer details
-        if (role == Role.ORGANIZER
-                && isObjectField(payload, "organization")) {
+        if (role == Role.ORGANIZER && input.organization() != null) {
 
-            JsonObject organization =
-                    payload.getAsJsonObject("organization");
-
-            organizationId = intField(organization, "organizationId");
-            position = stringField(organization, "position", null);
+            organizationId = input.organization().organizationId();
+            position = trimmed(input.organization().position());
 
             if (organizationId == null
                     || !userRepo.organizationExists(organizationId)) {
@@ -237,16 +216,15 @@ public class UserService {
 
         refreshSessionProfile(request, userId);
 
-        JsonObject profile = buildProfileJson(userId);
+        UserProfileDTO profile = buildProfile(userId);
 
         return profile != null
-                ? ApiResponse.ok(profile)
+                ? ApiResponse.ok(toJson(profile))
                 : ApiResponse.unauthorized("Not authenticated");
     }
 
     //upload profile image
-    public ResponseEntity<String> uploadProfileImage(
-            MultipartFile file, HttpServletRequest request) {
+    public ResponseEntity<String> uploadProfileImage(MultipartFile file, HttpServletRequest request) {
 
         Integer userId = currentUserId(request);
 
@@ -258,16 +236,11 @@ public class UserService {
                 FileUploadService.SCOPE_PROFILE, userId, file
         );
 
-        JsonObject response = new JsonObject();
-
-        response.addProperty("status", true);
-        response.addProperty("profileImgUrl", imageUrl);
-
-        return ApiResponse.ok(response);
+        return ApiResponse.ok(toJson(UserProfileDTO.imageUploaded(imageUrl)));
     }
 
     // Build complete profile response
-    private JsonObject buildProfileJson(int userId) {
+    private UserProfileDTO buildProfile(int userId) {
 
         UserDTO user = userRepo.getUserById(userId);
 
@@ -275,60 +248,47 @@ public class UserService {
             return null;
         }
 
-        JsonObject response = new JsonObject();
+        Map<String, Object> studentRow = userRepo.getStudentDetail(userId);
 
-        response.addProperty("status", true);
-        response.addProperty("firstName", user.getFname());
-        response.addProperty("lastName", user.getLname());
-        response.addProperty("name", buildDisplayName(user));
-        response.addProperty("email", user.getEmail());
-        response.addProperty("mobile", user.getMobile());
-        response.addProperty("role", roleName(user.getRoleId()));
-        response.addProperty("authType", authTypeName(user.getAuthTypeId()));
-        response.addProperty("profileImgUrl", user.getProfileImgUrl());
+        UserProfileDTO.Student student = studentRow == null ? null
+                : new UserProfileDTO.Student(
+                        stringValue(studentRow.get("index_no")),
+                        stringValue(studentRow.get("uni_email")),
+                        intValue(studentRow.get("university_id")),
+                        stringValue(studentRow.get("university_name")));
 
-        response.addProperty("registeredDate", user.getRegisteredDate() != null ? user.getRegisteredDate().toLocalDateTime().toLocalDate().toString() : null);
+        Map<String, Object> organizerRow = userRepo.getOrganizerDetail(userId);
 
-        //student details
-        Map<String, Object> student = userRepo.getStudentDetail(userId);
+        UserProfileDTO.Organization organization = organizerRow == null ? null
+                : new UserProfileDTO.Organization(
+                        intValue(organizerRow.get("organization_id")),
+                        stringValue(organizerRow.get("organization_name")),
+                        stringValue(organizerRow.get("position")));
 
-        if (student != null) {
-            JsonObject studentJson = new JsonObject();
+        UserProfileDTO.Options options = new UserProfileDTO.Options(
+                contentRepo.getUniversities(),
+                contentRepo.getOrganizations());
 
-            studentJson.addProperty("indexNo", stringValue(student.get("index_no")));
-            studentJson.addProperty("uniEmail", stringValue(student.get("uni_email")));
-            studentJson.addProperty("universityId", intValue(student.get("university_id")));
-            studentJson.addProperty("universityName", stringValue(student.get("university_name")));
+        return new UserProfileDTO(
+                true,
+                user.getFname(),
+                user.getLname(),
+                buildDisplayName(user),
+                user.getEmail(),
+                user.getMobile(),
+                roleName(user.getRoleId()),
+                authTypeName(user.getAuthTypeId()),
+                user.getProfileImgUrl(),
+                user.getRegisteredDate() != null
+                        ? user.getRegisteredDate().toLocalDateTime().toLocalDate().toString()
+                        : null,
+                student,
+                organization,
+                options);
+    }
 
-            response.add("student", studentJson);
-        } else {
-            response.add("student", JsonNull.INSTANCE);
-        }
-
-        //organization details
-        Map<String, Object> organizer =
-                userRepo.getOrganizerDetail(userId);
-
-        if (organizer != null) {
-            JsonObject organizationJson = new JsonObject();
-
-            organizationJson.addProperty("organizationId", intValue(organizer.get("organization_id")));
-            organizationJson.addProperty("organizationName", stringValue(organizer.get("organization_name")));
-            organizationJson.addProperty("position", stringValue(organizer.get("position")));
-
-            response.add("organization", organizationJson);
-        } else {
-            response.add("organization", JsonNull.INSTANCE);
-        }
-
-        //dropdown options
-        JsonObject options = new JsonObject();
-
-        options.add("universities", AppUtil.gson.toJsonTree(contentRepo.getUniversities()));
-        options.add("organizations", AppUtil.gson.toJsonTree(contentRepo.getOrganizations()));
-        response.add("options", options);
-
-        return response;
+    private static JsonObject toJson(UserProfileDTO profile) {
+        return AppUtil.gson.toJsonTree(profile).getAsJsonObject();
     }
 
     // get authenticated user ID
@@ -418,32 +378,12 @@ public class UserService {
         ) || url.startsWith("http://") || url.startsWith("https://");
     }
 
-    private boolean isObjectField(JsonObject object, String key) {
-        return object.has(key)
-                && !object.get(key).isJsonNull()
-                && object.get(key).isJsonObject();
+    private static String valueOrCurrent(String value, String current) {
+        return value == null ? current : value.trim();
     }
 
-    private String stringField(JsonObject object, String key, String fallback) {
-        if (object == null || !object.has(key) || object.get(key).isJsonNull()) {
-            return fallback;
-        }
-
-        JsonElement element = object.get(key);
-
-        return element.isJsonPrimitive() ? element.getAsString().trim() : fallback;
-    }
-
-    private Integer intField(JsonObject object, String key) {
-        if (object == null || !object.has(key) || object.get(key).isJsonNull()) {
-            return null;
-        }
-
-        try {
-            return object.get(key).getAsInt();
-        } catch (RuntimeException e) {
-            return null;
-        }
+    private static String trimmed(String value) {
+        return value == null ? null : value.trim();
     }
 
     private String stringValue(Object value) {

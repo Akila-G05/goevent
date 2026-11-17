@@ -1,5 +1,6 @@
 package com.goevent.controller;
 
+import com.goevent.dto.UserProfileDTO;
 import com.goevent.service.UserService;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.MediaType;
@@ -31,7 +32,7 @@ public class UserController {
 
     //update user data
     @PutMapping("/data")
-    public ResponseEntity<String> updateUserData(@RequestBody String body, HttpServletRequest httpRequest) {
+    public ResponseEntity<String> updateUserData(@RequestBody UserProfileDTO body, HttpServletRequest httpRequest) {
         return userService.updateCurentUserData(body, httpRequest);
     }
 
