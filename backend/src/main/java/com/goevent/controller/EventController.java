@@ -31,6 +31,22 @@ public class EventController {
         this.eventService = eventService;
     }
 
+    @PostMapping
+    public Map<String, Object> create(@RequestBody EventDTO input, HttpServletRequest httpRequest) {
+        long id = eventService.create(input, httpRequest);
+        return Map.of("status", true, "id", id);
+    }
+
+    @PostMapping(value = "/{id}/image", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public Map<String, Object> uploadImage(
+            @PathVariable("id") long id,
+            @RequestParam(value = "file", required = false) MultipartFile file,
+            @RequestParam(value = "banner", required = false) MultipartFile banner,
+            HttpServletRequest httpRequest
+    ) {
+        return eventService.attachImage(id, file, banner, httpRequest);
+    }
+
     @GetMapping
     public Map<String, Object> list(
         @RequestParam(defaultValue = "24") int limit,
@@ -103,21 +119,7 @@ public class EventController {
         return Map.of("status", true, "event", eventService.detail(id));
     }
 
-    @PostMapping
-    public Map<String, Object> create(@RequestBody EventDTO input, HttpServletRequest httpRequest) {
-        long id = eventService.create(input, httpRequest);
-        return Map.of("status", true, "id", id);
-    }
 
-    @PostMapping(value = "/{id}/image", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public Map<String, Object> uploadImage(
-            @PathVariable("id") long id,
-            @RequestParam(value = "file", required = false) MultipartFile file,
-            @RequestParam(value = "banner", required = false) MultipartFile banner,
-            HttpServletRequest httpRequest
-    ) {
-        return eventService.attachImage(id, file, banner, httpRequest);
-    }
 
     //organizer event schedule
     @GetMapping("/calendar")

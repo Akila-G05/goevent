@@ -35,8 +35,8 @@ public class EventRepo {
 
     public Optional<Integer> categoryId(String name) {
         return firstInt(
-                "SELECT id FROM category WHERE UPPER(name)=? ORDER BY id LIMIT 1",
-                name.trim().toUpperCase(Locale.ROOT)
+            "SELECT id FROM category WHERE UPPER(name)=? ORDER BY id LIMIT 1",
+            name.trim().toUpperCase(Locale.ROOT)
         );
     }
 
@@ -46,8 +46,9 @@ public class EventRepo {
 
     public Optional<Integer> audienceId(String name) {
         return firstInt(
-                "SELECT id FROM audience WHERE UPPER(type)=? ORDER BY id LIMIT 1",
-                name.trim().toUpperCase(Locale.ROOT));
+            "SELECT id FROM audience WHERE UPPER(type)=? ORDER BY id LIMIT 1",
+            name.trim().toUpperCase(Locale.ROOT)
+        );
     }
 
     public boolean audienceExists(int id) {
@@ -56,16 +57,16 @@ public class EventRepo {
 
     public Optional<Integer> tagId(String name) {
         return firstInt(
-                "SELECT id FROM tags WHERE UPPER(name)=? ORDER BY id LIMIT 1",
-                name.trim().toUpperCase(Locale.ROOT));
+            "SELECT id FROM tags WHERE UPPER(name)=? ORDER BY id LIMIT 1",
+            name.trim().toUpperCase(Locale.ROOT)
+        );
     }
 
     // --- writes ----------------------------------------------------------
 
     public long insertVenue(String name, String address, String city, String link) {
-        return insert(
-                "INSERT INTO venue(name,address,city,link) VALUES(?,?,?,?)",
-                name, address, city, link);
+        return insert("INSERT INTO venue(name,address,city,link) VALUES(?,?,?,?)",
+            name, address, city, link);
     }
 
     public long insertLink(String name, String url) {
@@ -75,9 +76,6 @@ public class EventRepo {
     }
 
     public long insertEvent(String name, String description, int categoryId, long venueId, int statusId, int audienceId, int levelId, Long linkId, int publishedBy, LocalDateTime startsAt, LocalDateTime endsAt) {
-        // `link_id` is the legacy single-link column: it keeps the first link so
-        // older readers still resolve something. Every link, including the first,
-        // is also written to `event_has_links` by `linkEvent`.
         return insert(
                 "INSERT INTO `event`(name,description,category_id,venue_id,event_status_id,"
                         + "audience_id,event_level_id,img_id,link_id,published_by,aproved_by,"
@@ -87,21 +85,18 @@ public class EventRepo {
     }
 
     public void linkEvent(long eventId, long linkId) {
-        jdbc.update(
-                "INSERT INTO event_has_links(event_id,link_id) VALUES(?,?)",
-                eventId, linkId);
+        jdbc.update("INSERT INTO event_has_links(event_id,link_id) VALUES(?,?)",
+            eventId, linkId);
     }
 
     public void insertEventDate(long eventId, LocalDate date, String timeRange) {
-        jdbc.update(
-                "INSERT INTO event_dates(`date`,`time`,event_id) VALUES(?,?,?)",
-                Date.valueOf(date), timeRange, eventId);
+        jdbc.update("INSERT INTO event_dates(`date`,`time`,event_id) VALUES(?,?,?)",
+            Date.valueOf(date), timeRange, eventId);
     }
 
     public void attachTag(long eventId, int tagId) {
-        jdbc.update(
-                "INSERT INTO event_has_tags(event_id,tags_id) VALUES(?,?)",
-                eventId, tagId);
+        jdbc.update("INSERT INTO event_has_tags(event_id,tags_id) VALUES(?,?)",
+            eventId, tagId);
     }
 
     // --- public listing --------------------------------------------------
@@ -124,17 +119,13 @@ public class EventRepo {
                 ORDER BY ed.date, ed.id LIMIT 1)
             """;
 
-    /** Approved events that still have an upcoming date, in the requested order. */
     public List<Map<String, Object>> approvedEvents(int statusId, EventSort sort, int limit) {
         return jdbc.queryForList(
                 SUMMARY_SELECT + " WHERE e.event_status_id = ? " + orderBy(sort) + " LIMIT ?",
                 statusId, limit);
     }
 
-    /**
-     * Approved upcoming events published by a student of the given university,
-     * earliest first.
-     */
+
     public List<Map<String, Object>> approvedEventsForUniversity(int statusId, int universityId, int limit) {
         return jdbc.queryForList(
                 SUMMARY_SELECT
@@ -145,7 +136,6 @@ public class EventRepo {
                 statusId, universityId, limit);
     }
 
-    /** Every upcoming date of an approved event, earliest first, for the organizer calendar. */
     public List<LocalDate> approvedEventDates(int statusId) {
         return jdbc.query(
                 "SELECT DISTINCT ed.date FROM event_dates ed"
@@ -155,7 +145,7 @@ public class EventRepo {
                 (rs, rowNum) -> rs.getDate(1).toLocalDate(),
                 statusId);
     }
-    /** Approved upcoming events the user has saved, earliest first. */
+
     public List<Map<String, Object>> approvedSavedBy(int userId, int statusId) {
         return jdbc.queryForList(
                 SUMMARY_SELECT
@@ -165,7 +155,7 @@ public class EventRepo {
                 userId, statusId);
     }
 
-    /** Stores the save; saving twice is harmless because the pair is the primary key. */
+    //insert saved events
     public void saveEvent(int userId, long eventId) {
         jdbc.update("INSERT IGNORE INTO saved_event(user_id, event_id) VALUES(?,?)", userId, eventId);
     }
@@ -173,17 +163,14 @@ public class EventRepo {
     public void unsaveEvent(int userId, long eventId) {
         jdbc.update("DELETE FROM saved_event WHERE user_id=? AND event_id=?", userId, eventId);
     }
-    /** University of a student account, when one is recorded. */
+
     public Optional<Integer> studentUniversityId(int userId) {
         return jdbc.queryForList(
                 "SELECT university_id FROM student_detail WHERE user_id=? ORDER BY id LIMIT 1",
                 Integer.class, userId).stream().findFirst();
     }
 
-    /**
-     * Approved upcoming events matching the filter. Text is bound as parameters
-     * (LIKE wildcards escaped); the sort comes from a fixed set of SQL fragments.
-     */
+
     public List<Map<String, Object>> searchApproved(int statusId, EventFilterDTO filter, EventSort sort, int limit) {
         StringBuilder sql = new StringBuilder(SUMMARY_SELECT).append(" WHERE e.event_status_id = ?");
         List<Object> args = new ArrayList<>();
@@ -226,22 +213,22 @@ public class EventRepo {
         return value.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_");
     }
 
-    /** Category names for the events-page filter. */
+    //load category data in event sorting page
     public List<String> categoryNames() {
         return jdbc.queryForList("SELECT name FROM category ORDER BY name", String.class);
     }
 
-    /** Audience names for the events-page filter. */
+    //load audience data in event sorting page
     public List<String> audienceNames() {
         return jdbc.queryForList("SELECT type FROM audience ORDER BY id", String.class);
     }
 
-    /** Distinct tag names for the events-page filter. */
+    //load tags for sorting
     public List<String> tagNames() {
-        return jdbc.queryForList(
-                "SELECT DISTINCT name FROM tags WHERE name IS NOT NULL ORDER BY name", String.class);
+        return jdbc.queryForList("SELECT DISTINCT name FROM tags WHERE name IS NOT NULL ORDER BY name", String.class);
     }
-    /** Fixed SQL per sort value; the enum is never concatenated from user input. */
+
+
     private static String orderBy(EventSort sort) {
         return switch (sort) {
             case ASC -> "ORDER BY next_date.date, e.id";

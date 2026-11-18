@@ -1,4 +1,3 @@
-
 package com.goevent.service;
 
 import com.goevent.dto.EventDTO;
@@ -58,33 +57,34 @@ public class EventService {
         this.mapLinks = mapLinks;
     }
 
+    //create event
     @Transactional
     public long create(EventDTO input, HttpServletRequest request) {
 
-        int userId = requireOrganizer(request);
+        int userId = requireOrganizer(request); //vaidate the user. only orgnizer a]can upload events
         Prepared event = prepare(input);
 
         long venueId = eventRepo.insertVenue(
-                event.venueName(),
-                event.venueAddress(),
-                event.venueCity(),
-                event.venueLink()
+            event.venueName(),
+            event.venueAddress(),
+            event.venueCity(),
+            event.venueLink()
         );
 
         List<Long> linkIds = insertLinks(event.links());
 
         long eventId = eventRepo.insertEvent(
-                event.name(),
-                event.description(),
-                event.categoryId(),
-                venueId,
-                Status.APPROVED.getId(),
-                event.audienceId(),
-                LISTING_ONLY,
-                linkIds.isEmpty() ? null : linkIds.get(0),
-                userId,
-                startsAt(event),
-                endsAt(event)
+            event.name(),
+            event.description(),
+            event.categoryId(),
+            venueId,
+            Status.APPROVED.getId(),
+            event.audienceId(),
+            LISTING_ONLY,
+            linkIds.isEmpty() ? null : linkIds.get(0),
+            userId,
+            startsAt(event),
+            endsAt(event)
         );
 
         linkIds.forEach(linkId -> eventRepo.linkEvent(eventId, linkId));
@@ -104,10 +104,7 @@ public class EventService {
         return eventId;
     }
 
-    // =========================================================
-    // UPDATE EVENT
-    // =========================================================
-
+    //Update Event
     @Transactional
     public long update(long eventId, EventDTO input, HttpServletRequest request) {
 
@@ -160,10 +157,9 @@ public class EventService {
 
         return eventId;
     }
-
-    // =========================================================
+    // -------------------------------------------------------------------------
     // ORGANIZER EVENTS
-    // =========================================================
+    // -------------------------------------------------------------------------
 
     @Transactional(readOnly = true)
     public List<OwnedEventSummaryDTO> mine(HttpServletRequest request) {
@@ -207,10 +203,7 @@ public class EventService {
         return owner;
     }
 
-    // =========================================================
     // PREPARE EVENT DATA
-    // =========================================================
-
     private Prepared prepare(EventDTO input) {
 
         if (input == null) {
@@ -246,12 +239,8 @@ public class EventService {
         );
     }
 
-    // =========================================================
-    // SAVE EVENT RELATED DATA
-    // =========================================================
-
+    //saved event related data
     private List<Long> insertLinks(List<LinkRow> links) {
-
         List<Long> ids = new ArrayList<>();
 
         for (LinkRow link : links) {
@@ -262,20 +251,18 @@ public class EventService {
     }
 
     private void writeSchedule(long eventId, Prepared event) {
-
         event.schedules().forEach(schedule ->
-                eventRepo.insertEventDate(
-                        eventId,
-                        schedule.date(),
-                        schedule.timeRange()
-                )
+            eventRepo.insertEventDate(
+                eventId,
+                schedule.date(),
+                schedule.timeRange()
+            )
         );
     }
 
     private void writeTags(long eventId, Prepared event) {
-
         event.tagIds().forEach(tagId ->
-                eventRepo.attachTag(eventId, tagId)
+            eventRepo.attachTag(eventId, tagId)
         );
     }
 
@@ -287,17 +274,9 @@ public class EventService {
         return event.schedules().getLast().end();
     }
 
-    // =========================================================
-    // EVENT IMAGE UPLOAD
-    // =========================================================
-
+    //event image upload
     @Transactional
-    public Map<String, Object> attachImage(
-            long eventId,
-            MultipartFile image,
-            MultipartFile banner,
-            HttpServletRequest request) {
-
+    public Map<String, Object> attachImage(long eventId, MultipartFile image, MultipartFile banner, HttpServletRequest request) {
         int userId = requireOrganizer(request);
 
         Map<String, Object> event = eventRepo.eventImageRow(eventId);
@@ -313,21 +292,20 @@ public class EventService {
         }
 
         String imagePath = fileUploadService.uploadFile(
-                FileUploadService.SCOPE_EVENT,
-                (int) eventId,
-                image
+            FileUploadService.SCOPE_EVENT,
+            (int) eventId,
+            image
         );
 
         String bannerPath = banner == null || banner.isEmpty()
-                ? null
-                : fileUploadService.uploadFile(
-                FileUploadService.SCOPE_BANNER,
-                (int) eventId,
-                banner
+            ? null
+            : fileUploadService.uploadFile(
+            FileUploadService.SCOPE_BANNER,
+            (int) eventId,
+            banner
         );
 
         try {
-
             Object existingImageId = event.get("img_id");
 
             if (existingImageId instanceof Number imageId) {
@@ -374,10 +352,9 @@ public class EventService {
 
         return result;
     }
-
-    // =========================================================
+    // -------------------------------------------------------------------------
     // PUBLIC EVENT LISTING
-    // =========================================================
+    // -------------------------------------------------------------------------
 
     @Transactional(readOnly = true)
     public List<EventSummaryDTO> listApproved(int limit, EventSort sort) {
@@ -405,10 +382,9 @@ public class EventService {
                 .map(EventService::summary)
                 .toList();
     }
-
-    // =========================================================
+    // -------------------------------------------------------------------------
     // FILTER OPTIONS
-    // =========================================================
+    // -------------------------------------------------------------------------
 
     @Transactional(readOnly = true)
     public Map<String, List<String>> filterOptions() {
@@ -419,10 +395,9 @@ public class EventService {
                 "tags", eventRepo.tagNames()
         );
     }
-
-    // =========================================================
+    // -------------------------------------------------------------------------
     // RECOMMENDED EVENTS
-    // =========================================================
+    // -------------------------------------------------------------------------
 
     @Transactional(readOnly = true)
     public List<EventSummaryDTO> recommended(
@@ -458,10 +433,9 @@ public class EventService {
                 .map(EventService::summary)
                 .toList();
     }
-
-    // =========================================================
+    // -------------------------------------------------------------------------
     // RESERVED DATES
-    // =========================================================
+    // -------------------------------------------------------------------------
 
     @Transactional(readOnly = true)
     public List<String> reservedDates() {
@@ -471,10 +445,9 @@ public class EventService {
                 .map(LocalDate::toString)
                 .toList();
     }
-
-    // =========================================================
+    // -------------------------------------------------------------------------
     // SAVED EVENTS
-    // =========================================================
+    // -------------------------------------------------------------------------
 
     @Transactional(readOnly = true)
     public List<EventSummaryDTO> saved(HttpServletRequest request) {
@@ -506,10 +479,9 @@ public class EventService {
 
         eventRepo.unsaveEvent(userId, eventId);
     }
-
-    // =========================================================
+    // -------------------------------------------------------------------------
     // USER SESSION
-    // =========================================================
+    // -------------------------------------------------------------------------
 
     private Integer sessionUserId(HttpServletRequest request) {
 
@@ -583,10 +555,9 @@ public class EventService {
 
         return userId;
     }
-
-    // =========================================================
+    // -------------------------------------------------------------------------
     // EVENT DETAILS
-    // =========================================================
+    // -------------------------------------------------------------------------
 
     @Transactional(readOnly = true)
     public EventDetailsDTO detail(long eventId) {
@@ -648,10 +619,9 @@ public class EventService {
                 eventRepo.eventTagNames(eventId)
         );
     }
-
-    // =========================================================
+    // -------------------------------------------------------------------------
     // DTO MAPPING
-    // =========================================================
+    // -------------------------------------------------------------------------
 
     private static OwnedEventSummaryDTO owned(Map<String, Object> row) {
 
@@ -687,10 +657,7 @@ public class EventService {
         );
     }
 
-    // =========================================================
-    // EVENT VALIDATION
-    // =========================================================
-
+    //event validation
     private static void requireListingOnly(Integer eventLevelId) {
 
         if (eventLevelId == null) {
@@ -705,11 +672,9 @@ public class EventService {
     }
 
     private int resolveCategory(EventDTO input) {
-
         Integer categoryId = input.getCategoryId();
 
         if (categoryId != null) {
-
             if (!eventRepo.categoryExists(categoryId)) {
                 throw EventException.badRequest("Unknown category.");
             }
@@ -745,10 +710,9 @@ public class EventService {
                         EventException.badRequest("Unknown audience: " + name)
                 );
     }
-
-    // =========================================================
+    // -------------------------------------------------------------------------
     // LINK VALIDATION
-    // =========================================================
+    // -------------------------------------------------------------------------
 
     private List<LinkRow> validLinks(List<EventDTO.LinkDTO> links) {
 
@@ -781,10 +745,9 @@ public class EventService {
 
         return result;
     }
-
-    // =========================================================
+    // -------------------------------------------------------------------------
     // SCHEDULE VALIDATION
-    // =========================================================
+    // -------------------------------------------------------------------------
 
     private List<Schedule> validSchedules(List<EventDTO.EventDateDTO> dates) {
 
@@ -862,10 +825,9 @@ public class EventService {
 
         return schedules;
     }
-
-    // =========================================================
+    // -------------------------------------------------------------------------
     // TAG VALIDATION
-    // =========================================================
+    // -------------------------------------------------------------------------
 
     private List<Integer> resolveTags(List<String> tags) {
 
@@ -875,14 +837,13 @@ public class EventService {
 
         if (tags.size() > MAX_TAGS) {
             throw EventException.badRequest(
-                    "Choose at most " + MAX_TAGS + " tags."
+                "Choose at most " + MAX_TAGS + " tags."
             );
         }
 
         List<Integer> ids = new ArrayList<>();
 
         for (String tag : tags) {
-
             String name = required(tag, 45, "Tag");
 
             eventRepo.tagId(name).ifPresent(id -> {
@@ -895,10 +856,7 @@ public class EventService {
         return ids;
     }
 
-    // =========================================================
-    // COMMON FIELD VALIDATION
-    // =========================================================
-
+    //field validation
     private static String required(String value, int max, String field) {
 
         if (value == null || value.isBlank()) {
@@ -968,10 +926,9 @@ public class EventService {
             );
         }
     }
-
-    // =========================================================
+    // -------------------------------------------------------------------------
     // MAP VALUE HELPERS
-    // =========================================================
+    // -------------------------------------------------------------------------
 
     private static String text(Map<String, Object> row, String field) {
         Object value = row.get(field);
@@ -989,10 +946,7 @@ public class EventService {
         return Math.max(1, Math.min(limit, MAX_LIST_SIZE));
     }
 
-    // =========================================================
-    // INTERNAL DATA TYPES
-    // =========================================================
-
+    //internal data types
     private record Prepared(
             String name,
             String description,
