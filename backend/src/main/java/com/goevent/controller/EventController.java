@@ -33,12 +33,12 @@ public class EventController {
 
     @GetMapping
     public Map<String, Object> list(
-            @RequestParam(defaultValue = "24") int limit,
-            @RequestParam(defaultValue = "desc") String sort,
-            @RequestParam(value = "q", required = false) String query,
-            @RequestParam(value = "category", required = false) String category,
-            @RequestParam(value = "audience", required = false) String audience,
-            @RequestParam(value = "tag", required = false) List<String> tags
+        @RequestParam(defaultValue = "24") int limit,
+        @RequestParam(defaultValue = "desc") String sort,
+        @RequestParam(value = "q", required = false) String query,
+        @RequestParam(value = "category", required = false) String category,
+        @RequestParam(value = "audience", required = false) String audience,
+        @RequestParam(value = "tag", required = false) List<String> tags
     ) {
         EventFilterDTO filter = EventFilterDTO.of(query, category, audience, tags);
         return Map.of("status", true, "events", eventService.listApproved(limit, EventSort.parse(sort), filter));
@@ -93,11 +93,7 @@ public class EventController {
 
     /** Replaces the listing details of an event the caller owns . */
     @PutMapping("/{id}")
-    public Map<String, Object> update(
-            @PathVariable("id") long id,
-            @RequestBody EventDTO input,
-            HttpServletRequest httpRequest
-    ) {
+    public Map<String, Object> update(@PathVariable("id") long id, @RequestBody EventDTO input, HttpServletRequest httpRequest) {
         long updated = eventService.update(id, input, httpRequest);
         return Map.of("status", true, "id", updated);
     }

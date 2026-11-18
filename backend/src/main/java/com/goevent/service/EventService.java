@@ -1,3 +1,4 @@
+
 package com.goevent.service;
 
 import com.goevent.dto.EventDTO;
@@ -13,8 +14,10 @@ import com.goevent.exception.EventException;
 import com.goevent.repository.EventRepo;
 import com.goevent.util.AppUtil;
 import com.goevent.util.ScheduleTime;
+
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
+
 import org.slf4j.Logger;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,9 +31,9 @@ import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
-import java.util.Optional;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 @Service
 public class EventService {
@@ -41,9 +44,9 @@ public class EventService {
     private static final int MAX_LINKS = 10;
     private static final int MAX_DATES = 30;
     private static final int MAX_TAGS = 20;
-    private static final ZoneId UTC = ZoneId.of("UTC");
-
     private static final int MAX_LIST_SIZE = 50;
+
+    private static final ZoneId UTC = ZoneId.of("UTC");
 
     private final EventRepo eventRepo;
     private final FileUploadService fileUploadService;
@@ -56,12 +59,18 @@ public class EventService {
     }
 
     @Transactional
-    public long create(EventDTO input, HttpServletRequest httpRequest) {
+    public long create(EventDTO input, HttpServletRequest request) {
 
-        int actor = requireOrganizer(httpRequest);
+        int userId = requireOrganizer(request);
         Prepared event = prepare(input);
 
-        long venueId = eventRepo.insertVenue(event.venueName(), event.venueAddress(), event.venueCity(), event.venueLink());
+        long venueId = eventRepo.insertVenue(
+                event.venueName(),
+                event.venueAddress(),
+                event.venueCity(),
+                event.venueLink()
+        );
+
         List<Long> linkIds = insertLinks(event.links());
 
         long eventId = eventRepo.insertEvent(
@@ -73,81 +82,106 @@ public class EventService {
                 event.audienceId(),
                 LISTING_ONLY,
                 linkIds.isEmpty() ? null : linkIds.get(0),
-                actor,
+                userId,
                 startsAt(event),
-                endsAt(event));
+                endsAt(event)
+        );
 
-        for (long linkId : linkIds) {
-            eventRepo.linkEvent(eventId, linkId);
-        }
+        linkIds.forEach(linkId -> eventRepo.linkEvent(eventId, linkId));
 
         writeSchedule(eventId, event);
         writeTags(eventId, event);
 
-        logger.info("Created listing event {} for user {} ({} dates, {} links, {} tags).",
-                eventId, actor, event.schedules().size(), linkIds.size(), event.tagIds().size());
+        logger.info(
+                "Created event {} by user {} ({} dates, {} links, {} tags).",
+                eventId,
+                userId,
+                event.schedules().size(),
+                linkIds.size(),
+                event.tagIds().size()
+        );
 
         return eventId;
     }
 
-    /**
-     * Replaces an event's listing details. Only the owner may edit.
-     * The review status is kept, so an approved event stays visible while it is edited.
-     */
-    @Transactional
-    public long update(long eventId, EventDTO input, HttpServletRequest httpRequest) {
+    // =========================================================
+    // UPDATE EVENT
+    // =========================================================
 
-        int actor = requireOrganizer(httpRequest);
-        Map<String, Object> owner = requireOwnedEvent(eventId, actor);
+    @Transactional
+    public long update(long eventId, EventDTO input, HttpServletRequest request) {
+
+        int userId = requireOrganizer(request);
+
+        Map<String, Object> owner = requireOwnedEvent(eventId, userId);
         Prepared event = prepare(input);
 
-        eventRepo.updateVenue(number(owner, "venue_id"), event.venueName(), event.venueAddress(),
-                event.venueCity(), event.venueLink());
+        // Update venue
+        eventRepo.updateVenue(
+                number(owner, "venue_id"),
+                event.venueName(),
+                event.venueAddress(),
+                event.venueCity(),
+                event.venueLink()
+        );
 
-        List<Long> previousLinks = eventRepo.eventLinkIds(eventId);
+        // Replace links
+        List<Long> oldLinks = eventRepo.eventLinkIds(eventId);
+
         eventRepo.clearEventLinks(eventId);
-        List<Long> linkIds = insertLinks(event.links());
 
-        for (long linkId : linkIds) {
-            eventRepo.linkEvent(eventId, linkId);
-        }
+        List<Long> newLinks = insertLinks(event.links());
 
-        for (long linkId : previousLinks) {
-            eventRepo.deleteLinkIfUnused(linkId);
-        }
+        newLinks.forEach(linkId -> eventRepo.linkEvent(eventId, linkId));
 
-        eventRepo.updateEvent(eventId, event.name(), event.description(), event.categoryId(),
-                event.audienceId(), startsAt(event), endsAt(event),
-                linkIds.isEmpty() ? null : linkIds.get(0));
+        oldLinks.forEach(eventRepo::deleteLinkIfUnused);
 
+        // Update event details
+        eventRepo.updateEvent(
+                eventId,
+                event.name(),
+                event.description(),
+                event.categoryId(),
+                event.audienceId(),
+                startsAt(event),
+                endsAt(event),
+                newLinks.isEmpty() ? null : newLinks.get(0)
+        );
+
+        // Replace schedule
         eventRepo.clearEventDates(eventId);
         writeSchedule(eventId, event);
 
+        // Replace tags
         eventRepo.clearEventTags(eventId);
         writeTags(eventId, event);
 
-        logger.info("Updated listing event {} by user {}.", eventId, actor);
+        logger.info("Updated event {} by user {}.", eventId, userId);
 
         return eventId;
     }
 
-    /** Every event the signed-in organizer published, in any review state. */
+    // =========================================================
+    // ORGANIZER EVENTS
+    // =========================================================
+
     @Transactional(readOnly = true)
-    public List<OwnedEventSummaryDTO> mine(HttpServletRequest httpRequest) {
+    public List<OwnedEventSummaryDTO> mine(HttpServletRequest request) {
 
-        int actor = requireOrganizer(httpRequest);
+        int userId = requireOrganizer(request);
 
-        return eventRepo.ownedEventRows(actor).stream()
+        return eventRepo.ownedEventRows(userId)
+                .stream()
                 .map(EventService::owned)
                 .toList();
     }
 
-    /** Full detail of one of the organizer's own events, whatever its review state. */
     @Transactional(readOnly = true)
-    public EventDetailsDTO ownerDetail(long eventId, HttpServletRequest httpRequest) {
+    public EventDetailsDTO ownerDetail(long eventId, HttpServletRequest request) {
 
-        int actor = requireOrganizer(httpRequest);
-        requireOwnedEvent(eventId, actor);
+        int userId = requireOrganizer(request);
+
+        requireOwnedEvent(eventId, userId);
 
         Map<String, Object> row = eventRepo.eventRowById(eventId);
 
@@ -158,8 +192,7 @@ public class EventService {
         return toDetails(eventId, row);
     }
 
-    /** Event row and owner check: the owner only. */
-    private Map<String, Object> requireOwnedEvent(long eventId, int actor) {
+    private Map<String, Object> requireOwnedEvent(long eventId, int userId) {
 
         Map<String, Object> owner = eventRepo.eventOwnerRow(eventId);
 
@@ -167,14 +200,17 @@ public class EventService {
             throw EventException.notFound("Event not found.");
         }
 
-        if (number(owner, "published_by") != actor) {
+        if (number(owner, "published_by") != userId) {
             throw EventException.forbidden("You can only change your own events.");
         }
 
         return owner;
     }
 
-    /** Validates a submission once, for both create and update. */
+    // =========================================================
+    // PREPARE EVENT DATA
+    // =========================================================
+
     private Prepared prepare(EventDTO input) {
 
         if (input == null) {
@@ -185,116 +221,148 @@ public class EventService {
 
         String name = required(input.getName(), 100, "Event name");
         String description = optional(input.getDescription(), 5000, "Description");
+
         int categoryId = resolveCategory(input);
         int audienceId = resolveAudience(input);
 
-        EventDTO.VenueDTO venueInput = input.getVenue();
+        EventDTO.VenueDTO venue = input.getVenue();
 
-        if (venueInput == null) {
+        if (venue == null) {
             throw EventException.badRequest("Venue details are required.");
         }
-
-        String venueName = required(venueInput.getName(), 45, "Venue name");
-        String venueCity = required(venueInput.getCity(), 45, "Venue city");
-        String venueAddress = optional(venueInput.getAddress(), 150, "Venue address");
-        String venueLink = optionalUrl(venueInput.getLink(), 150, "Map link");
 
         return new Prepared(
                 name,
                 description,
                 categoryId,
                 audienceId,
-                venueName,
-                venueAddress,
-                venueCity,
-                venueLink,
+                required(venue.getName(), 45, "Venue name"),
+                optional(venue.getAddress(), 150, "Venue address"),
+                required(venue.getCity(), 45, "Venue city"),
+                optionalUrl(venue.getLink(), 150, "Map link"),
                 validLinks(input.getLinks()),
                 validSchedules(input.getDates()),
-                resolveTags(input.getTags()));
+                resolveTags(input.getTags())
+        );
     }
+
+    // =========================================================
+    // SAVE EVENT RELATED DATA
+    // =========================================================
 
     private List<Long> insertLinks(List<LinkRow> links) {
 
-        List<Long> linkIds = new ArrayList<>();
+        List<Long> ids = new ArrayList<>();
 
         for (LinkRow link : links) {
-            linkIds.add(eventRepo.insertLink(link.name(), link.url()));
+            ids.add(eventRepo.insertLink(link.name(), link.url()));
         }
 
-        return linkIds;
+        return ids;
     }
 
     private void writeSchedule(long eventId, Prepared event) {
 
-        for (Schedule schedule : event.schedules()) {
-            eventRepo.insertEventDate(eventId, schedule.date(), schedule.timeRange());
-        }
+        event.schedules().forEach(schedule ->
+                eventRepo.insertEventDate(
+                        eventId,
+                        schedule.date(),
+                        schedule.timeRange()
+                )
+        );
     }
 
     private void writeTags(long eventId, Prepared event) {
 
-        for (int tagId : event.tagIds()) {
-            eventRepo.attachTag(eventId, tagId);
-        }
+        event.tagIds().forEach(tagId ->
+                eventRepo.attachTag(eventId, tagId)
+        );
     }
 
     private static LocalDateTime startsAt(Prepared event) {
-        return event.schedules().get(0).start();
+        return event.schedules().getFirst().start();
     }
 
     private static LocalDateTime endsAt(Prepared event) {
-        return event.schedules().get(event.schedules().size() - 1).end();
+        return event.schedules().getLast().end();
     }
-    /**
-     * Stores the event's cover image (and an optional banner) and points
-     * {@code event.img_id} at the resulting {@code img} row. The owner of the
-     * event may upload.
-     */
+
+    // =========================================================
+    // EVENT IMAGE UPLOAD
+    // =========================================================
+
     @Transactional
     public Map<String, Object> attachImage(
             long eventId,
             MultipartFile image,
             MultipartFile banner,
-            HttpServletRequest httpRequest
-    ) {
+            HttpServletRequest request) {
 
-        int actor = requireOrganizer(httpRequest);
+        int userId = requireOrganizer(request);
 
-        Map<String, Object> eventRow = eventRepo.eventImageRow(eventId);
+        Map<String, Object> event = eventRepo.eventImageRow(eventId);
 
-        if (eventRow == null) {
+        if (event == null) {
             throw EventException.notFound("Event not found.");
         }
 
-        if (number(eventRow, "published_by") != actor) {
-            throw EventException.forbidden("You can only add images to your own events.");
+        if (number(event, "published_by") != userId) {
+            throw EventException.forbidden(
+                    "You can only add images to your own events."
+            );
         }
 
-        String imagePath = fileUploadService.uploadFile(FileUploadService.SCOPE_EVENT, (int) eventId, image);
+        String imagePath = fileUploadService.uploadFile(
+                FileUploadService.SCOPE_EVENT,
+                (int) eventId,
+                image
+        );
+
         String bannerPath = banner == null || banner.isEmpty()
                 ? null
-                : fileUploadService.uploadFile(FileUploadService.SCOPE_BANNER, (int) eventId, banner);
+                : fileUploadService.uploadFile(
+                FileUploadService.SCOPE_BANNER,
+                (int) eventId,
+                banner
+        );
 
         try {
-            Object existing = eventRow.get("img_id");
 
-            if (existing instanceof Number imageId) {
-                eventRepo.updateImage(imageId.longValue(), imagePath, bannerPath);
+            Object existingImageId = event.get("img_id");
+
+            if (existingImageId instanceof Number imageId) {
+
+                eventRepo.updateImage(
+                        imageId.longValue(),
+                        imagePath,
+                        bannerPath
+                );
+
             } else {
-                eventRepo.setEventImage(eventId, eventRepo.insertImage(imagePath, bannerPath));
+
+                long imageId = eventRepo.insertImage(imagePath, bannerPath);
+                eventRepo.setEventImage(eventId, imageId);
             }
+
         } catch (RuntimeException error) {
-            // The files are already written; remove them so a failed write leaves nothing behind.
-            fileUploadService.deleteFile(FileUploadService.SCOPE_EVENT, imagePath);
+
+            fileUploadService.deleteFile(
+                    FileUploadService.SCOPE_EVENT,
+                    imagePath
+            );
 
             if (bannerPath != null) {
-                fileUploadService.deleteFile(FileUploadService.SCOPE_BANNER, bannerPath);
+                fileUploadService.deleteFile(
+                        FileUploadService.SCOPE_BANNER,
+                        bannerPath
+                );
             }
 
             throw error;
         }
 
         Map<String, Object> result = new LinkedHashMap<>();
+
         result.put("status", true);
         result.put("imagePath", imagePath);
 
@@ -302,20 +370,30 @@ public class EventService {
             result.put("bannerPath", bannerPath);
         }
 
-        logger.info("Stored the image for event {} (uploaded by user {}).", eventId, actor);
+        logger.info("Stored image for event {} by user {}.", eventId, userId);
 
         return result;
     }
 
-    /** Public listing: approved events only, capped so one request stays bounded. */
+    // =========================================================
+    // PUBLIC EVENT LISTING
+    // =========================================================
+
     @Transactional(readOnly = true)
     public List<EventSummaryDTO> listApproved(int limit, EventSort sort) {
-        return listApproved(limit, sort, EventFilterDTO.of(null, null, null, List.of()));
+
+        return listApproved(
+                limit,
+                sort,
+                EventFilterDTO.of(null, null, null, List.of())
+        );
     }
 
-    /** Approved events matching the events-page filter, in the requested order. */
     @Transactional(readOnly = true)
-    public List<EventSummaryDTO> listApproved(int limit, EventSort sort, EventFilterDTO filter) {
+    public List<EventSummaryDTO> listApproved(
+            int limit,
+            EventSort sort,
+            EventFilterDTO filter) {
 
         int size = clampSize(limit);
 
@@ -328,62 +406,91 @@ public class EventService {
                 .toList();
     }
 
-    /** Category, audience and tag names offered by the events-page filter. */
+    // =========================================================
+    // FILTER OPTIONS
+    // =========================================================
+
     @Transactional(readOnly = true)
     public Map<String, List<String>> filterOptions() {
+
         return Map.of(
                 "categories", eventRepo.categoryNames(),
                 "audiences", eventRepo.audienceNames(),
-                "tags", eventRepo.tagNames());
+                "tags", eventRepo.tagNames()
+        );
     }
 
-    /**
-     * Browsing list for the home page. A signed-in student sees approved events
-     * published by students of their university, earliest first. Everyone else,
-     * including anonymous visitors and organizers, gets a random selection.
-     */
+    // =========================================================
+    // RECOMMENDED EVENTS
+    // =========================================================
+
     @Transactional(readOnly = true)
-    public List<EventSummaryDTO> recommended(int limit, HttpServletRequest httpRequest) {
+    public List<EventSummaryDTO> recommended(
+            int limit,
+            HttpServletRequest request) {
 
         int size = clampSize(limit);
-        Optional<Integer> universityId = studentUniversityId(httpRequest);
+
+        Optional<Integer> universityId = studentUniversityId(request);
 
         if (universityId.isPresent()) {
-            List<Map<String, Object>> universityRows =
-                    eventRepo.approvedEventsForUniversity(Status.APPROVED.getId(), universityId.get(), size);
 
-            if (!universityRows.isEmpty()) {
-                return universityRows.stream().map(EventService::summary).toList();
+            List<Map<String, Object>> events =
+                    eventRepo.approvedEventsForUniversity(
+                            Status.APPROVED.getId(),
+                            universityId.get(),
+                            size
+                    );
+
+            if (!events.isEmpty()) {
+                return events.stream()
+                        .map(EventService::summary)
+                        .toList();
             }
         }
 
-        return eventRepo.approvedEvents(Status.APPROVED.getId(), EventSort.CREATED, size).stream()
+        return eventRepo.approvedEvents(
+                        Status.APPROVED.getId(),
+                        EventSort.CREATED,
+                        size
+                )
+                .stream()
                 .map(EventService::summary)
                 .toList();
     }
 
-    /** Upcoming dates reserved by approved events, as yyyy-MM-dd, for the organizer calendar. */
+    // =========================================================
+    // RESERVED DATES
+    // =========================================================
+
     @Transactional(readOnly = true)
     public List<String> reservedDates() {
-        return eventRepo.approvedEventDates(Status.APPROVED.getId()).stream()
+
+        return eventRepo.approvedEventDates(Status.APPROVED.getId())
+                .stream()
                 .map(LocalDate::toString)
                 .toList();
     }
-    /** The signed-in user's saved events that are still approved and upcoming. */
+
+    // =========================================================
+    // SAVED EVENTS
+    // =========================================================
+
     @Transactional(readOnly = true)
-    public List<EventSummaryDTO> saved(HttpServletRequest httpRequest) {
+    public List<EventSummaryDTO> saved(HttpServletRequest request) {
 
-        int userId = requireSignedIn(httpRequest);
+        int userId = requireSignedIn(request);
 
-        return eventRepo.approvedSavedBy(userId, Status.APPROVED.getId()).stream()
+        return eventRepo.approvedSavedBy(userId, Status.APPROVED.getId())
+                .stream()
                 .map(EventService::summary)
                 .toList();
     }
 
     @Transactional
-    public void save(long eventId, HttpServletRequest httpRequest) {
+    public void save(long eventId, HttpServletRequest request) {
 
-        int userId = requireSignedIn(httpRequest);
+        int userId = requireSignedIn(request);
 
         if (eventRepo.approvedEventRow(eventId, Status.APPROVED.getId()) == null) {
             throw EventException.notFound("Event not found.");
@@ -393,36 +500,50 @@ public class EventService {
     }
 
     @Transactional
-    public void unsave(long eventId, HttpServletRequest httpRequest) {
+    public void unsave(long eventId, HttpServletRequest request) {
 
-        int userId = requireSignedIn(httpRequest);
+        int userId = requireSignedIn(request);
+
         eventRepo.unsaveEvent(userId, eventId);
     }
 
-    /** Any active account may save events; the user id comes from the session only. */
-    private int requireSignedIn(HttpServletRequest httpRequest) {
+    // =========================================================
+    // USER SESSION
+    // =========================================================
 
-        HttpSession session = httpRequest == null ? null : httpRequest.getSession(false);
-        Object sessionUser = session == null ? null : session.getAttribute("userId");
+    private Integer sessionUserId(HttpServletRequest request) {
 
-        if (!(sessionUser instanceof Integer userId)) {
-            throw EventException.unauthorized("Sign in to save events.");
+        if (request == null) {
+            return null;
         }
 
-        Map<String, Object> account = eventRepo.account(userId);
+        HttpSession session = request.getSession(false);
 
-        if (account == null) {
+        if (session == null) {
+            return null;
+        }
+
+        Object userId = session.getAttribute("userId");
+
+        return userId instanceof Integer id ? id : null;
+    }
+
+    private int requireSignedIn(HttpServletRequest request) {
+
+        Integer userId = sessionUserId(request);
+
+        if (userId == null || eventRepo.account(userId) == null) {
             throw EventException.unauthorized("Sign in to save events.");
         }
 
         return userId;
     }
-    private Optional<Integer> studentUniversityId(HttpServletRequest httpRequest) {
 
-        HttpSession session = httpRequest == null ? null : httpRequest.getSession(false);
-        Object sessionUser = session == null ? null : session.getAttribute("userId");
+    private Optional<Integer> studentUniversityId(HttpServletRequest request) {
 
-        if (!(sessionUser instanceof Integer userId)) {
+        Integer userId = sessionUserId(request);
+
+        if (userId == null) {
             return Optional.empty();
         }
 
@@ -435,15 +556,43 @@ public class EventService {
         return eventRepo.studentUniversityId(userId);
     }
 
-    private static int clampSize(int limit) {
-        return Math.max(1, Math.min(limit, MAX_LIST_SIZE));
+    private int requireOrganizer(HttpServletRequest request) {
+        Integer userId = sessionUserId(request);
+
+        if (userId == null) {
+            throw EventException.unauthorized(
+                    "Sign in as an organizer to create an event."
+            );
+        }
+
+        Map<String, Object> account = eventRepo.account(userId);
+
+        if (account == null) {
+            throw EventException.unauthorized(
+                    "Your account could not be found. Sign in again."
+            );
+        }
+
+        if (number(account, "user_status_id") != UserStatus.ACTIVE.getId()) {
+            throw EventException.forbidden("This account is not active.");
+        }
+
+        if (number(account, "role_id") != Role.ORGANIZER.getId()) {
+            throw EventException.forbidden("Only organizers can create events.");
+        }
+
+        return userId;
     }
 
-    /** Public detail: approved events only; anything else is reported as not found. */
+    // =========================================================
+    // EVENT DETAILS
+    // =========================================================
+
     @Transactional(readOnly = true)
     public EventDetailsDTO detail(long eventId) {
 
-        Map<String, Object> row = eventRepo.approvedEventRow(eventId, Status.APPROVED.getId());
+        Map<String, Object> row =
+                eventRepo.approvedEventRow(eventId, Status.APPROVED.getId());
 
         if (row == null) {
             throw EventException.notFound("Event not found.");
@@ -454,13 +603,23 @@ public class EventService {
 
     private EventDetailsDTO toDetails(long eventId, Map<String, Object> row) {
 
-        List<EventDetailsDTO.DateSlotDTO> dates = eventRepo.eventDateRows(eventId).stream()
-                .map(date -> new EventDetailsDTO.DateSlotDTO(text(date, "date"), text(date, "time")))
-                .toList();
+        List<EventDetailsDTO.DateSlotDTO> dates =
+                eventRepo.eventDateRows(eventId)
+                        .stream()
+                        .map(date -> new EventDetailsDTO.DateSlotDTO(
+                                text(date, "date"),
+                                text(date, "time")
+                        ))
+                        .toList();
 
-        List<EventDetailsDTO.LinkDTO> links = eventRepo.eventLinkRows(eventId).stream()
-                .map(link -> new EventDetailsDTO.LinkDTO(text(link, "link_name"), text(link, "link")))
-                .toList();
+        List<EventDetailsDTO.LinkDTO> links =
+                eventRepo.eventLinkRows(eventId)
+                        .stream()
+                        .map(link -> new EventDetailsDTO.LinkDTO(
+                                text(link, "link_name"),
+                                text(link, "link")
+                        ))
+                        .toList();
 
         EventDetailsDTO.VenueDTO venue = new EventDetailsDTO.VenueDTO(
                 text(row, "venue_name"),
@@ -478,15 +637,24 @@ public class EventService {
                 text(row, "audience"),
                 text(row, "event_level"),
                 venue,
-                new EventDetailsDTO.OrganizerDTO(text(row, "organizer_name"), text(row, "organizer_since")),
+                new EventDetailsDTO.OrganizerDTO(
+                        text(row, "organizer_name"),
+                        text(row, "organizer_since")
+                ),
                 text(row, "image_path"),
                 text(row, "banner_path"),
                 dates,
                 links,
-                eventRepo.eventTagNames(eventId));
+                eventRepo.eventTagNames(eventId)
+        );
     }
 
+    // =========================================================
+    // DTO MAPPING
+    // =========================================================
+
     private static OwnedEventSummaryDTO owned(Map<String, Object> row) {
+
         return new OwnedEventSummaryDTO(
                 number(row, "id"),
                 text(row, "name"),
@@ -498,9 +666,12 @@ public class EventService {
                 text(row, "venue_city"),
                 text(row, "image_path"),
                 text(row, "starts_on"),
-                text(row, "time_range"));
+                text(row, "time_range")
+        );
     }
+
     private static EventSummaryDTO summary(Map<String, Object> row) {
+
         return new EventSummaryDTO(
                 number(row, "id"),
                 text(row, "name"),
@@ -512,38 +683,13 @@ public class EventService {
                 text(row, "venue_city"),
                 text(row, "image_path"),
                 text(row, "starts_on"),
-                text(row, "time_range"));
+                text(row, "time_range")
+        );
     }
 
-    //validate organizer
-    private int requireOrganizer(HttpServletRequest httpRequest) {
-
-        HttpSession session = httpRequest == null ? null : httpRequest.getSession(false);
-        Object sessionUser = session == null ? null : session.getAttribute("userId");
-
-        if (!(sessionUser instanceof Integer userId)) {
-            throw EventException.unauthorized("Sign in as an organizer to create an event.");
-        }
-
-        Map<String, Object> account = eventRepo.account(userId);
-
-        if (account == null) {
-            throw EventException.unauthorized("Your account could not be found. Sign in again.");
-        }
-
-        int status = number(account, "user_status_id");
-        int role = number(account, "role_id");
-
-        if (status != UserStatus.ACTIVE.getId()) {
-            throw EventException.forbidden("This account is not active.");
-        }
-
-        if (role != Role.ORGANIZER.getId()) {
-            throw EventException.forbidden("Only organizers can create events.");
-        }
-
-        return userId;
-    }
+    // =========================================================
+    // EVENT VALIDATION
+    // =========================================================
 
     private static void requireListingOnly(Integer eventLevelId) {
 
@@ -553,44 +699,56 @@ public class EventService {
 
         if (eventLevelId != LISTING_ONLY) {
             throw EventException.badRequest(
-                    "Free and paid ticketing are coming soon. Create a listing-only event for now.");
+                    "Free and paid ticketing are coming soon. Create a listing-only event for now."
+            );
         }
     }
 
-    // --- validation ------------------------------------------------------
-
     private int resolveCategory(EventDTO input) {
 
-        if (input.getCategoryId() != null) {
+        Integer categoryId = input.getCategoryId();
 
-            if (!eventRepo.categoryExists(input.getCategoryId())) {
+        if (categoryId != null) {
+
+            if (!eventRepo.categoryExists(categoryId)) {
                 throw EventException.badRequest("Unknown category.");
             }
 
-            return input.getCategoryId();
+            return categoryId;
         }
 
         String name = required(input.getCategoryName(), 45, "Category");
 
         return eventRepo.categoryId(name)
-                .orElseThrow(() -> EventException.badRequest("Unknown category: " + name));
+                .orElseThrow(() ->
+                        EventException.badRequest("Unknown category: " + name)
+                );
     }
 
     private int resolveAudience(EventDTO input) {
 
-        if (input.getAudienceId() != null) {
+        Integer audienceId = input.getAudienceId();
 
-            if (!eventRepo.audienceExists(input.getAudienceId())) {
+        if (audienceId != null) {
+
+            if (!eventRepo.audienceExists(audienceId)) {
                 throw EventException.badRequest("Unknown audience.");
             }
 
-            return input.getAudienceId();
+            return audienceId;
         }
 
         String name = required(input.getAudienceName(), 45, "Audience");
 
-        return eventRepo.audienceId(name).orElseThrow(() -> EventException.badRequest("Unknown audience: " + name));
+        return eventRepo.audienceId(name)
+                .orElseThrow(() ->
+                        EventException.badRequest("Unknown audience: " + name)
+                );
     }
+
+    // =========================================================
+    // LINK VALIDATION
+    // =========================================================
 
     private List<LinkRow> validLinks(List<EventDTO.LinkDTO> links) {
 
@@ -602,12 +760,12 @@ public class EventService {
             throw EventException.badRequest("Add at most " + MAX_LINKS + " links.");
         }
 
-        List<LinkRow> valid = new ArrayList<>();
+        List<LinkRow> result = new ArrayList<>();
 
-        for (int index = 0; index < links.size(); index++) {
+        for (int i = 0; i < links.size(); i++) {
 
-            EventDTO.LinkDTO link = links.get(index);
-            String label = "Link " + (index + 1);
+            EventDTO.LinkDTO link = links.get(i);
+            String label = "Link " + (i + 1);
 
             if (link == null) {
                 throw EventException.badRequest(label + " is empty.");
@@ -618,29 +776,37 @@ public class EventService {
 
             requireHttpUrl(url, label + " URL");
 
-            valid.add(new LinkRow(name, url));
+            result.add(new LinkRow(name, url));
         }
 
-        return valid;
+        return result;
     }
+
+    // =========================================================
+    // SCHEDULE VALIDATION
+    // =========================================================
 
     private List<Schedule> validSchedules(List<EventDTO.EventDateDTO> dates) {
 
         if (dates == null || dates.isEmpty()) {
-            throw EventException.badRequest("Add at least one date to the schedule.");
+            throw EventException.badRequest(
+                    "Add at least one date to the schedule."
+            );
         }
 
         if (dates.size() > MAX_DATES) {
-            throw EventException.badRequest("Add at most " + MAX_DATES + " dates.");
+            throw EventException.badRequest(
+                    "Add at most " + MAX_DATES + " dates."
+            );
         }
 
         LocalDate today = LocalDate.now(UTC);
         List<Schedule> schedules = new ArrayList<>();
 
-        for (int index = 0; index < dates.size(); index++) {
+        for (int i = 0; i < dates.size(); i++) {
 
-            EventDTO.EventDateDTO row = dates.get(index);
-            String label = "Schedule row " + (index + 1);
+            EventDTO.EventDateDTO row = dates.get(i);
+            String label = "Schedule row " + (i + 1);
 
             if (row == null) {
                 throw EventException.badRequest(label + " is empty.");
@@ -653,33 +819,53 @@ public class EventService {
             try {
                 date = LocalDate.parse(rawDate);
             } catch (DateTimeParseException error) {
-                throw EventException.badRequest(label + " date must use yyyy-MM-dd.");
+                throw EventException.badRequest(
+                        label + " date must use yyyy-MM-dd."
+                );
             }
 
             if (date.isBefore(today)) {
-                throw EventException.badRequest(label + " date cannot be in the past.");
+                throw EventException.badRequest(
+                        label + " date cannot be in the past."
+                );
             }
-
-            String timeRange;
-            LocalDateTime start;
-            LocalDateTime end;
 
             try {
-                timeRange = ScheduleTime.range(row.getStartTime(), row.getEndTime());
-                start = ScheduleTime.at(date, row.getStartTime());
-                end = ScheduleTime.endAt(date, row.getStartTime(), row.getEndTime());
-            } catch (IllegalArgumentException error) {
-                throw EventException.badRequest(label + ": " + error.getMessage());
-            }
 
-            schedules.add(new Schedule(date, start, end, timeRange));
+                String timeRange = ScheduleTime.range(
+                        row.getStartTime(),
+                        row.getEndTime()
+                );
+
+                LocalDateTime start = ScheduleTime.at(
+                        date,
+                        row.getStartTime()
+                );
+
+                LocalDateTime end = ScheduleTime.endAt(
+                        date,
+                        row.getStartTime(),
+                        row.getEndTime()
+                );
+
+                schedules.add(new Schedule(date, start, end, timeRange));
+
+            } catch (IllegalArgumentException error) {
+
+                throw EventException.badRequest(
+                        label + ": " + error.getMessage()
+                );
+            }
         }
 
-        // The event-level window is the earliest start and the latest end.
         schedules.sort(Comparator.comparing(Schedule::start));
 
         return schedules;
     }
+
+    // =========================================================
+    // TAG VALIDATION
+    // =========================================================
 
     private List<Integer> resolveTags(List<String> tags) {
 
@@ -688,7 +874,9 @@ public class EventService {
         }
 
         if (tags.size() > MAX_TAGS) {
-            throw EventException.badRequest("Choose at most " + MAX_TAGS + " tags.");
+            throw EventException.badRequest(
+                    "Choose at most " + MAX_TAGS + " tags."
+            );
         }
 
         List<Integer> ids = new ArrayList<>();
@@ -707,7 +895,9 @@ public class EventService {
         return ids;
     }
 
-    // --- field helpers ---------------------------------------------------
+    // =========================================================
+    // COMMON FIELD VALIDATION
+    // =========================================================
 
     private static String required(String value, int max, String field) {
 
@@ -715,13 +905,15 @@ public class EventService {
             throw EventException.badRequest(field + " is required.");
         }
 
-        String trimmed = value.trim();
+        String result = value.trim();
 
-        if (trimmed.length() > max) {
-            throw EventException.badRequest(field + " must be " + max + " characters or fewer.");
+        if (result.length() > max) {
+            throw EventException.badRequest(
+                    field + " must be " + max + " characters or fewer."
+            );
         }
 
-        return trimmed;
+        return result;
     }
 
     private static String optional(String value, int max, String field) {
@@ -730,16 +922,19 @@ public class EventService {
             return null;
         }
 
-        String trimmed = value.trim();
+        String result = value.trim();
 
-        if (trimmed.length() > max) {
-            throw EventException.badRequest(field + " must be " + max + " characters or fewer.");
+        if (result.length() > max) {
+            throw EventException.badRequest(
+                    field + " must be " + max + " characters or fewer."
+            );
         }
 
-        return trimmed;
+        return result;
     }
 
     private static String optionalUrl(String value, int max, String field) {
+
         String url = optional(value, max, field);
 
         if (url != null) {
@@ -752,31 +947,52 @@ public class EventService {
     private static void requireHttpUrl(String value, String field) {
 
         try {
+
             URI uri = URI.create(value);
             String scheme = uri.getScheme();
 
-            boolean http = "http".equalsIgnoreCase(scheme) || "https".equalsIgnoreCase(scheme);
+            boolean validScheme =
+                    "http".equalsIgnoreCase(scheme)
+                            || "https".equalsIgnoreCase(scheme);
 
-            if (!http || uri.getHost() == null) {
-                throw EventException.badRequest(field + " must be a full http(s) link.");
+            if (!validScheme || uri.getHost() == null) {
+                throw EventException.badRequest(
+                        field + " must be a full http(s) link."
+                );
             }
+
         } catch (IllegalArgumentException error) {
-            throw EventException.badRequest(field + " must be a full http(s) link.");
+
+            throw EventException.badRequest(
+                    field + " must be a full http(s) link."
+            );
         }
     }
 
+    // =========================================================
+    // MAP VALUE HELPERS
+    // =========================================================
+
     private static String text(Map<String, Object> row, String field) {
         Object value = row.get(field);
+
         return value == null ? null : value.toString();
     }
 
     private static int number(Map<String, Object> row, String field) {
+
         return ((Number) row.get(field)).intValue();
     }
 
-    // --- internal value types -------------------------------------------
+    private static int clampSize(int limit) {
 
-    /** A validated submission, shared by create and update. */
+        return Math.max(1, Math.min(limit, MAX_LIST_SIZE));
+    }
+
+    // =========================================================
+    // INTERNAL DATA TYPES
+    // =========================================================
+
     private record Prepared(
             String name,
             String description,
@@ -788,11 +1004,15 @@ public class EventService {
             String venueLink,
             List<LinkRow> links,
             List<Schedule> schedules,
-            List<Integer> tagIds) {
-    }
-    private record LinkRow(String name, String url) {
-    }
+            List<Integer> tagIds
+    ) {}
 
-    private record Schedule(LocalDate date, LocalDateTime start, LocalDateTime end, String timeRange) {
-    }
+    private record LinkRow(String name, String url) {}
+
+    private record Schedule(
+            LocalDate date,
+            LocalDateTime start,
+            LocalDateTime end,
+            String timeRange
+    ) {}
 }

@@ -21,29 +21,23 @@ import java.util.Optional;
 
 @Repository
 public class EventRepo {
-
-    /** Role and status of the signed-in account, used for authorisation. */
-    private static final String ACCOUNT_ROW =
-            "SELECT role_id, user_status_id FROM `user` WHERE id=?";
-
+    private static final String ACCOUNT_ROW = "SELECT role_id, user_status_id FROM `user` WHERE id=?";
     private final JdbcTemplate jdbc;
 
     public EventRepo(JdbcTemplate jdbc) {
         this.jdbc = jdbc;
     }
 
-    // --- lookups ---------------------------------------------------------
-
     public Map<String, Object> account(int userId) {
-        List<Map<String, Object>> rows =
-                jdbc.queryForList(ACCOUNT_ROW, userId);
+        List<Map<String, Object>> rows = jdbc.queryForList(ACCOUNT_ROW, userId);
         return rows.isEmpty() ? null : rows.get(0);
     }
 
     public Optional<Integer> categoryId(String name) {
         return firstInt(
                 "SELECT id FROM category WHERE UPPER(name)=? ORDER BY id LIMIT 1",
-                name.trim().toUpperCase(Locale.ROOT));
+                name.trim().toUpperCase(Locale.ROOT)
+        );
     }
 
     public boolean categoryExists(int id) {

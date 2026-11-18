@@ -177,32 +177,32 @@ public class UserService {
 
             if (position.length() > 45) {
                 return ApiResponse.badRequest(
-                        "Position must be 45 characters or fewer"
+                    "Position must be 45 characters or fewer"
                 );
             }
         }
 
         //save profile
         userRepo.updateProfile(
-                userId, firstName, lastName, mobile, profileImage
+            userId, firstName, lastName, mobile, profileImage
         );
 
         if (indexNo != null) {
             userRepo.upsertStudentDetail(
-                    userId, indexNo, uniEmail, universityId
+                userId, indexNo, uniEmail, universityId
             );
         }
 
         if (organizationId != null) {
             userRepo.upsertOrganizerDetail(
-                    userId, organizationId, position
+                userId, organizationId, position
             );
         }
 
         //delete old profile image
         if (previousImage != null && !previousImage.equals(profileImage)) {
             fileUploadService.deleteFile(
-                    FileUploadService.SCOPE_PROFILE, previousImage
+                FileUploadService.SCOPE_PROFILE, previousImage
             );
         }
 
@@ -211,8 +211,8 @@ public class UserService {
         UserProfileDTO profile = buildProfile(userId);
 
         return profile != null
-                ? ApiResponse.ok(toJson(profile))
-                : ApiResponse.unauthorized("Not authenticated");
+            ? ApiResponse.ok(toJson(profile))
+            : ApiResponse.unauthorized("Not authenticated");
     }
 
     //upload profile image
@@ -311,9 +311,7 @@ public class UserService {
         return userId;
     }
 
-    // Refresh session data
-    private void refreshSessionProfile(
-            HttpServletRequest request, int userId) {
+    private void refreshSessionProfile(HttpServletRequest request, int userId) {
 
         HttpSession session = request.getSession(false);
 
