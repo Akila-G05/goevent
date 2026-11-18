@@ -2,10 +2,6 @@ package com.goevent.exception;
 
 import org.springframework.http.HttpStatus;
 
-/**
- * A rejected event submission. The attached status becomes the HTTP response
- * status, so callers never receive a generic 500 for a validation problem.
- */
 public class EventException extends RuntimeException {
 
     private static final long serialVersionUID = 1L;

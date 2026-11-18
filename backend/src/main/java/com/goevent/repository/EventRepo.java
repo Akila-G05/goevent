@@ -35,8 +35,8 @@ public class EventRepo {
 
     public Optional<Integer> categoryId(String name) {
         return firstInt(
-            "SELECT id FROM category WHERE UPPER(name)=? ORDER BY id LIMIT 1",
-            name.trim().toUpperCase(Locale.ROOT)
+                "SELECT id FROM category WHERE UPPER(name)=? ORDER BY id LIMIT 1",
+                name.trim().toUpperCase(Locale.ROOT)
         );
     }
 
@@ -46,8 +46,8 @@ public class EventRepo {
 
     public Optional<Integer> audienceId(String name) {
         return firstInt(
-            "SELECT id FROM audience WHERE UPPER(type)=? ORDER BY id LIMIT 1",
-            name.trim().toUpperCase(Locale.ROOT)
+                "SELECT id FROM audience WHERE UPPER(type)=? ORDER BY id LIMIT 1",
+                name.trim().toUpperCase(Locale.ROOT)
         );
     }
 
@@ -57,16 +57,16 @@ public class EventRepo {
 
     public Optional<Integer> tagId(String name) {
         return firstInt(
-            "SELECT id FROM tags WHERE UPPER(name)=? ORDER BY id LIMIT 1",
-            name.trim().toUpperCase(Locale.ROOT)
+                "SELECT id FROM tags WHERE UPPER(name)=? ORDER BY id LIMIT 1",
+                name.trim().toUpperCase(Locale.ROOT)
         );
     }
 
-    // --- writes ----------------------------------------------------------
+    // Create event data
 
     public long insertVenue(String name, String address, String city, String link) {
         return insert("INSERT INTO venue(name,address,city,link) VALUES(?,?,?,?)",
-            name, address, city, link);
+                name, address, city, link);
     }
 
     public long insertLink(String name, String url) {
@@ -75,7 +75,19 @@ public class EventRepo {
                 name, url);
     }
 
-    public long insertEvent(String name, String description, int categoryId, long venueId, int statusId, int audienceId, int levelId, Long linkId, int publishedBy, LocalDateTime startsAt, LocalDateTime endsAt) {
+    public long insertEvent(
+            String name,
+            String description,
+            int categoryId,
+            long venueId,
+            int statusId,
+            int audienceId,
+            int levelId,
+            Long linkId,
+            int publishedBy,
+            LocalDateTime startsAt,
+            LocalDateTime endsAt) {
+        // Keep the first link in the old column for compatibility.
         return insert(
                 "INSERT INTO `event`(name,description,category_id,venue_id,event_status_id,"
                         + "audience_id,event_level_id,img_id,link_id,published_by,aproved_by,"
@@ -86,20 +98,20 @@ public class EventRepo {
 
     public void linkEvent(long eventId, long linkId) {
         jdbc.update("INSERT INTO event_has_links(event_id,link_id) VALUES(?,?)",
-            eventId, linkId);
+                eventId, linkId);
     }
 
     public void insertEventDate(long eventId, LocalDate date, String timeRange) {
         jdbc.update("INSERT INTO event_dates(`date`,`time`,event_id) VALUES(?,?,?)",
-            Date.valueOf(date), timeRange, eventId);
+                Date.valueOf(date), timeRange, eventId);
     }
 
     public void attachTag(long eventId, int tagId) {
         jdbc.update("INSERT INTO event_has_tags(event_id,tags_id) VALUES(?,?)",
-            eventId, tagId);
+                eventId, tagId);
     }
 
-    // --- public listing --------------------------------------------------
+    // Public event lists
 
     private static final String SUMMARY_SELECT = """
             SELECT e.id, e.name, e.description, c.name AS category,
@@ -124,7 +136,6 @@ public class EventRepo {
                 SUMMARY_SELECT + " WHERE e.event_status_id = ? " + orderBy(sort) + " LIMIT ?",
                 statusId, limit);
     }
-
 
     public List<Map<String, Object>> approvedEventsForUniversity(int statusId, int universityId, int limit) {
         return jdbc.queryForList(
@@ -155,7 +166,7 @@ public class EventRepo {
                 userId, statusId);
     }
 
-    //insert saved events
+    // Save and unsave events
     public void saveEvent(int userId, long eventId) {
         jdbc.update("INSERT IGNORE INTO saved_event(user_id, event_id) VALUES(?,?)", userId, eventId);
     }
@@ -169,7 +180,6 @@ public class EventRepo {
                 "SELECT university_id FROM student_detail WHERE user_id=? ORDER BY id LIMIT 1",
                 Integer.class, userId).stream().findFirst();
     }
-
 
     public List<Map<String, Object>> searchApproved(int statusId, EventFilterDTO filter, EventSort sort, int limit) {
         StringBuilder sql = new StringBuilder(SUMMARY_SELECT).append(" WHERE e.event_status_id = ?");
@@ -213,21 +223,20 @@ public class EventRepo {
         return value.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_");
     }
 
-    //load category data in event sorting page
+    // Category options
     public List<String> categoryNames() {
         return jdbc.queryForList("SELECT name FROM category ORDER BY name", String.class);
     }
 
-    //load audience data in event sorting page
+    // Audience options
     public List<String> audienceNames() {
         return jdbc.queryForList("SELECT type FROM audience ORDER BY id", String.class);
     }
 
-    //load tags for sorting
+    // Tag options
     public List<String> tagNames() {
         return jdbc.queryForList("SELECT DISTINCT name FROM tags WHERE name IS NOT NULL ORDER BY name", String.class);
     }
-
 
     private static String orderBy(EventSort sort) {
         return switch (sort) {
@@ -238,9 +247,9 @@ public class EventRepo {
             case CREATED -> "ORDER BY e.created_at DESC, e.id DESC";
         };
     }
-    // --- public detail --------------------------------------------------
+    // Event details
 
-    /** SQL for one event's full detail row; callers add the status condition they need. */
+    // Shared query for event details
     private static final String DETAIL_ROW_SQL = """
             SELECT e.id, e.name, e.description, c.name AS category,
                    a.type AS audience, l.name AS event_level,
@@ -259,7 +268,7 @@ public class EventRepo {
             WHERE e.id = ?
             """;
 
-    /** One approved event with its category, audience, level, venue and cover image; null when not found. */
+    // Get an approved event
     public Map<String, Object> approvedEventRow(long eventId, int statusId) {
         List<Map<String, Object>> rows = jdbc.queryForList(
                 DETAIL_ROW_SQL + " AND e.event_status_id = ?", eventId, statusId);
@@ -267,14 +276,14 @@ public class EventRepo {
         return rows.isEmpty() ? null : rows.get(0);
     }
 
-    /** Any event's detail row regardless of review status, for its owner. */
+    // Get an event for its owner
     public Map<String, Object> eventRowById(long eventId) {
         List<Map<String, Object>> rows = jdbc.queryForList(DETAIL_ROW_SQL, eventId);
 
         return rows.isEmpty() ? null : rows.get(0);
     }
 
-    /** Every event the user published, in any review state, latest first. */
+    // Get all events published by a user
     public List<Map<String, Object>> ownedEventRows(int userId) {
         return jdbc.queryForList(
                 """
@@ -300,7 +309,7 @@ public class EventRepo {
                 userId);
     }
 
-    /** Venue and cover-image ownership fields needed before an update. */
+    // Get event ownership details
     public Map<String, Object> eventOwnerRow(long eventId) {
         List<Map<String, Object>> rows = jdbc.queryForList(
                 "SELECT published_by, venue_id, img_id FROM `event` WHERE id=?", eventId);
@@ -308,8 +317,15 @@ public class EventRepo {
         return rows.isEmpty() ? null : rows.get(0);
     }
 
-    public void updateEvent(long eventId, String name, String description, int categoryId,
-                            int audienceId, LocalDateTime startsAt, LocalDateTime endsAt, Long linkId) {
+    public void updateEvent(
+            long eventId,
+            String name,
+            String description,
+            int categoryId,
+            int audienceId,
+            LocalDateTime startsAt,
+            LocalDateTime endsAt,
+            Long linkId) {
         jdbc.update(
                 "UPDATE `event` SET name=?, description=?, category_id=?, audience_id=?,"
                         + " starts_at=?, ends_at=?, link_id=? WHERE id=?",
@@ -327,12 +343,12 @@ public class EventRepo {
                 "SELECT link_id FROM event_has_links WHERE event_id=?", Long.class, eventId);
     }
 
-    /** Removes the event's link associations; the link rows themselves are removed separately. */
+    // Remove event link associations
     public void clearEventLinks(long eventId) {
         jdbc.update("DELETE FROM event_has_links WHERE event_id=?", eventId);
     }
 
-    /** Deletes a link row only when no event still uses it. */
+    // Delete a link if no event uses it
     public void deleteLinkIfUnused(long linkId) {
         jdbc.update(
                 "DELETE FROM link WHERE id=? AND id NOT IN (SELECT link_id FROM event_has_links)",
@@ -366,12 +382,9 @@ public class EventRepo {
                 String.class, eventId);
     }
 
-    // --- images ----------------------------------------------------------
+    // Event images
 
-    /**
-     * Owner and current {@code img_id} of an event, used to authorise an upload
-     * and to replace a previous image instead of leaking orphan rows.
-     */
+    // Get the event owner and current image.
     public Map<String, Object> eventImageRow(long eventId) {
         List<Map<String, Object>> rows = jdbc.queryForList(
                 "SELECT published_by, img_id FROM `event` WHERE id=?", eventId);
@@ -392,7 +405,7 @@ public class EventRepo {
         jdbc.update("UPDATE `event` SET img_id=? WHERE id=?", imageId, eventId);
     }
 
-    // --- helpers ---------------------------------------------------------
+    // Database helpers
 
     private Optional<Integer> firstInt(String sql, Object... args) {
         List<Integer> values = jdbc.queryForList(sql, Integer.class, args);

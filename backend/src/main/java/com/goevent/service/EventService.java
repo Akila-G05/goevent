@@ -157,10 +157,8 @@ public class EventService {
 
         return eventId;
     }
-    // -------------------------------------------------------------------------
-    // ORGANIZER EVENTS
-    // -------------------------------------------------------------------------
 
+    //load organizer's events
     @Transactional(readOnly = true)
     public List<OwnedEventSummaryDTO> mine(HttpServletRequest request) {
 
@@ -250,6 +248,7 @@ public class EventService {
         return ids;
     }
 
+    //insert scheduke
     private void writeSchedule(long eventId, Prepared event) {
         event.schedules().forEach(schedule ->
             eventRepo.insertEventDate(
@@ -260,6 +259,7 @@ public class EventService {
         );
     }
 
+//    insert tags
     private void writeTags(long eventId, Prepared event) {
         event.tagIds().forEach(tagId ->
             eventRepo.attachTag(eventId, tagId)
@@ -352,10 +352,8 @@ public class EventService {
 
         return result;
     }
-    // -------------------------------------------------------------------------
-    // PUBLIC EVENT LISTING
-    // -------------------------------------------------------------------------
 
+    //public events listing
     @Transactional(readOnly = true)
     public List<EventSummaryDTO> listApproved(int limit, EventSort sort) {
 
@@ -382,10 +380,8 @@ public class EventService {
                 .map(EventService::summary)
                 .toList();
     }
-    // -------------------------------------------------------------------------
-    // FILTER OPTIONS
-    // -------------------------------------------------------------------------
 
+    //filter options
     @Transactional(readOnly = true)
     public Map<String, List<String>> filterOptions() {
 
@@ -395,10 +391,8 @@ public class EventService {
                 "tags", eventRepo.tagNames()
         );
     }
-    // -------------------------------------------------------------------------
-    // RECOMMENDED EVENTS
-    // -------------------------------------------------------------------------
 
+    //home pasge recomended events
     @Transactional(readOnly = true)
     public List<EventSummaryDTO> recommended(
             int limit,
@@ -479,10 +473,8 @@ public class EventService {
 
         eventRepo.unsaveEvent(userId, eventId);
     }
-    // -------------------------------------------------------------------------
-    // USER SESSION
-    // -------------------------------------------------------------------------
 
+    //user session
     private Integer sessionUserId(HttpServletRequest request) {
 
         if (request == null) {
@@ -555,9 +547,8 @@ public class EventService {
 
         return userId;
     }
-    // -------------------------------------------------------------------------
-    // EVENT DETAILS
-    // -------------------------------------------------------------------------
+
+//    event details
 
     @Transactional(readOnly = true)
     public EventDetailsDTO detail(long eventId) {
@@ -619,10 +610,8 @@ public class EventService {
                 eventRepo.eventTagNames(eventId)
         );
     }
-    // -------------------------------------------------------------------------
-    // DTO MAPPING
-    // -------------------------------------------------------------------------
 
+//    dto mapping
     private static OwnedEventSummaryDTO owned(Map<String, Object> row) {
 
         return new OwnedEventSummaryDTO(
@@ -710,9 +699,8 @@ public class EventService {
                         EventException.badRequest("Unknown audience: " + name)
                 );
     }
-    // -------------------------------------------------------------------------
-    // LINK VALIDATION
-    // -------------------------------------------------------------------------
+
+    //link validation
 
     private List<LinkRow> validLinks(List<EventDTO.LinkDTO> links) {
 
@@ -745,10 +733,8 @@ public class EventService {
 
         return result;
     }
-    // -------------------------------------------------------------------------
-    // SCHEDULE VALIDATION
-    // -------------------------------------------------------------------------
 
+    //schedule validation
     private List<Schedule> validSchedules(List<EventDTO.EventDateDTO> dates) {
 
         if (dates == null || dates.isEmpty()) {
@@ -825,10 +811,8 @@ public class EventService {
 
         return schedules;
     }
-    // -------------------------------------------------------------------------
-    // TAG VALIDATION
-    // -------------------------------------------------------------------------
 
+//tag validatoin
     private List<Integer> resolveTags(List<String> tags) {
 
         if (tags == null || tags.isEmpty()) {
@@ -926,10 +910,8 @@ public class EventService {
             );
         }
     }
-    // -------------------------------------------------------------------------
-    // MAP VALUE HELPERS
-    // -------------------------------------------------------------------------
 
+    //map valu helpers
     private static String text(Map<String, Object> row, String field) {
         Object value = row.get(field);
 
