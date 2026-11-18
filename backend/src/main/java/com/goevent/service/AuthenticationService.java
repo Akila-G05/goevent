@@ -430,7 +430,6 @@ public class AuthenticationService {
     }
 
     private void createUserSession(HttpServletRequest httpRequest, UserDTO user) {
-        // A new sign-in always starts a fresh session.
         HttpSession previous = httpRequest.getSession(false);
         if (previous != null) previous.invalidate();
         HttpSession session = httpRequest.getSession(true);

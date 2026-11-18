@@ -17,14 +17,13 @@ import org.springframework.web.multipart.MultipartFile;
 @RestController
 @RequestMapping("/user")
 public class UserController {
-
     private final UserService userService;
 
     public UserController(UserService userService) {
         this.userService = userService;
     }
 
-    //get profile data
+    //get pofile data
     @GetMapping("/data")
     public ResponseEntity<String> userData(HttpServletRequest httpRequest) {
         return userService.getCurentUserData(httpRequest);
@@ -32,7 +31,7 @@ public class UserController {
 
     //update user data
     @PutMapping("/data")
-    public ResponseEntity<String> updateUserData(@RequestBody UserProfileDTO body, HttpServletRequest httpRequest) {
+    public ResponseEntity<String> updateUserData(@RequestBody UserProfileDTO body, HttpServletRequest httpRequest) { //Spring Boot uses a component called Jackson ObjectMapper to deserialize the incoming JSON into a Java object.
         return userService.updateCurentUserData(body, httpRequest);
     }
 

@@ -66,7 +66,7 @@ public class UserService {
             return ApiResponse.unauthorized("Not authenticated");
         }
 
-        // A null field keeps the current value (see UserProfileDTO).
+        //get clientside value if not exist just use the db values
         String firstName = valueOrCurrent(input.getFirstName(), user.getFname());
         String lastName = valueOrCurrent(input.getLastName(), user.getLname());
         String mobile = valueOrCurrent(input.getMobile(), user.getMobile());
@@ -74,7 +74,7 @@ public class UserService {
         String previousImage = user.getProfileImgUrl();
         String profileImage = valueOrCurrent(input.getProfileImgUrl(), previousImage);
 
-        // An empty picture URL removes the picture.
+        // check img url
         if (profileImage != null && profileImage.isBlank()) {
             profileImage = null;
         }
@@ -99,8 +99,7 @@ public class UserService {
             );
         }
 
-        if (mobile != null && !mobile.isBlank()
-                && !MOBILE.matcher(mobile).matches()) {
+        if (mobile != null && !mobile.isBlank() && !MOBILE.matcher(mobile).matches()) {
             return ApiResponse.badRequest("Enter a valid mobile number");
         }
 
@@ -112,7 +111,6 @@ public class UserService {
             return ApiResponse.badRequest("Invalid profile image");
         }
 
-        //role-specific fields
         Role role = roleOf(user.getRoleId());
 
         String indexNo = null;
@@ -151,29 +149,23 @@ public class UserService {
                 );
             }
 
-            if (universityId == null
-                    || !userRepo.universityExists(universityId)) {
+            if (universityId == null || !userRepo.universityExists(universityId)) {
                 return ApiResponse.badRequest("Select a valid university");
             }
         }
 
-        //organizer details
+        //oragenizer details
         if (role == Role.ORGANIZER && input.getOrganization() != null) {
-
             organizationId = input.getOrganization().getOrganizationId();
             position = trimmed(input.getOrganization().getPosition());
 
-            if (organizationId == null
-                    || !userRepo.organizationExists(organizationId)) {
+            if (organizationId == null || !userRepo.organizationExists(organizationId)) {
                 return ApiResponse.badRequest("Select a valid organization");
             }
 
-            Map<String, Object> approved =
-                    userRepo.getOrganizerDetail(userId);
+            Map<String, Object> approved = userRepo.getOrganizerDetail(userId);
 
-            if (approved == null
-                    || ((Number) approved.get("organization_id"))
-                    .intValue() != organizationId) {
+            if (approved == null || ((Number) approved.get("organization_id")).intValue() != organizationId) {
                 return ApiResponse.badRequest(
                         "Organization changes are not available from your profile"
                 );
@@ -207,7 +199,7 @@ public class UserService {
             );
         }
 
-        // Delete old profile image
+        //delete old profile image
         if (previousImage != null && !previousImage.equals(profileImage)) {
             fileUploadService.deleteFile(
                     FileUploadService.SCOPE_PROFILE, previousImage
@@ -239,7 +231,7 @@ public class UserService {
         return ApiResponse.ok(toJson(UserProfileDTO.imageUploaded(imageUrl)));
     }
 
-    // Build complete profile response
+    //build complete profile response usig dto
     private UserProfileDTO buildProfile(int userId) {
 
         UserDTO user = userRepo.getUserById(userId);
@@ -250,41 +242,44 @@ public class UserService {
 
         Map<String, Object> studentRow = userRepo.getStudentDetail(userId);
 
+        //calling UserProfileDTO subcalss contructor and create obj
         UserProfileDTO.StudentDTO student = studentRow == null ? null
-                : new UserProfileDTO.StudentDTO(
-                        stringValue(studentRow.get("index_no")),
-                        stringValue(studentRow.get("uni_email")),
-                        intValue(studentRow.get("university_id")),
-                        stringValue(studentRow.get("university_name")));
+            : new UserProfileDTO.StudentDTO(
+                stringValue(studentRow.get("index_no")),
+                stringValue(studentRow.get("uni_email")),
+                intValue(studentRow.get("university_id")),
+                stringValue(studentRow.get("university_name")));
 
         Map<String, Object> organizerRow = userRepo.getOrganizerDetail(userId);
 
         UserProfileDTO.OrganizationDTO organization = organizerRow == null ? null
-                : new UserProfileDTO.OrganizationDTO(
-                        intValue(organizerRow.get("organization_id")),
-                        stringValue(organizerRow.get("organization_name")),
-                        stringValue(organizerRow.get("position")));
+            : new UserProfileDTO.OrganizationDTO(
+                intValue(organizerRow.get("organization_id")),
+                stringValue(organizerRow.get("organization_name")),
+                stringValue(organizerRow.get("position")));
 
         UserProfileDTO.OptionsDTO options = new UserProfileDTO.OptionsDTO(
-                contentRepo.getUniversities(),
-                contentRepo.getOrganizations());
+            contentRepo.getUniversities(),
+            contentRepo.getOrganizations()
+        );
 
         return new UserProfileDTO(
-                true,
-                user.getFname(),
-                user.getLname(),
-                buildDisplayName(user),
-                user.getEmail(),
-                user.getMobile(),
-                roleName(user.getRoleId()),
-                authTypeName(user.getAuthTypeId()),
-                user.getProfileImgUrl(),
-                user.getRegisteredDate() != null
-                        ? user.getRegisteredDate().toLocalDateTime().toLocalDate().toString()
-                        : null,
-                student,
-                organization,
-                options);
+            true,
+            user.getFname(),
+            user.getLname(),
+            buildDisplayName(user),
+            user.getEmail(),
+            user.getMobile(),
+            roleName(user.getRoleId()),
+            authTypeName(user.getAuthTypeId()),
+            user.getProfileImgUrl(),
+            user.getRegisteredDate() != null
+                    ? user.getRegisteredDate().toLocalDateTime().toLocalDate().toString()
+                    : null,
+            student,
+            organization,
+            options
+        );
     }
 
     private static JsonObject toJson(UserProfileDTO profile) {
@@ -348,12 +343,13 @@ public class UserService {
         return name.isEmpty() ? user.getEmail() : name;
     }
 
-    // Get role name
+    //get role name
     private String roleName(int roleId) {
         Role role = roleOf(roleId);
         return role != null ? role.name() : null;
     }
 
+    //validate the role using enum
     private Role roleOf(int roleId) {
         try {
             return Role.fromId(roleId);
@@ -362,7 +358,7 @@ public class UserService {
         }
     }
 
-    // Get authentication type
+    //get authentication type
     private String authTypeName(int authTypeId) {
         try {
             return AuthType.fromId(authTypeId).name();
@@ -371,7 +367,7 @@ public class UserService {
         }
     }
 
-    // Validate profile image URL
+    //vlidate profile image url
     private boolean isAllowedImageUrl(String url) {
         return fileUploadService.isOwnUrl(
                 FileUploadService.SCOPE_PROFILE, url

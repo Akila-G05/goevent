@@ -17,19 +17,19 @@ public class AuthenticationController {
         this.authenticationService = authenticationService;
     }
 
-    //Manual Registeration
+    //manual Registeration
     @PostMapping("/register")
     public String manualRegistration(@RequestBody Map<String, String> request, HttpServletRequest httpRequest) {
         return authenticationService.handleManualRegistration(request, httpRequest);
     }
 
-    //Manual Signin
+    //manual Signin
     @PostMapping("/manual")
     public String manualAuthentication(@RequestBody Map<String, String> request, HttpServletRequest httpRequest) {
         return authenticationService.handleManualAuthentication(request, httpRequest);
     }
 
-    // Google REgisteration & Signin
+    //Google REgisteration & Signin
     @PostMapping("/google")
     public String googleAuthentication(@RequestBody Map<String, String> request, HttpServletRequest httpRequest) {
         String idToken = request.get("idToken");
@@ -76,13 +76,11 @@ public class AuthenticationController {
         );
     }
 
-    // Current session check
     @GetMapping("/session")
     public String sessionCheck(HttpServletRequest httpRequest) {
         return authenticationService.handleSessionCheck(httpRequest);
     }
 
-    // Sign out: invalidates the server-side session
     @PostMapping("/logout")
     public String logout(HttpServletRequest httpRequest) {
         return authenticationService.handleLogout(httpRequest);
