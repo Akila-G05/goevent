@@ -23,9 +23,7 @@ import java.util.List;
 import java.util.Map;
 
 @Component
-public class ResponseCacheGatewayFilterFactory
-        extends AbstractGatewayFilterFactory<
-        ResponseCacheGatewayFilterFactory.Config> {
+public class ResponseCacheGatewayFilterFactory extends AbstractGatewayFilterFactory<ResponseCacheGatewayFilterFactory.Config> {
 
     private static final Logger log =
             LoggerFactory.getLogger(
@@ -40,17 +38,9 @@ public class ResponseCacheGatewayFilterFactory
             ResponseCacheGatewayFilterFactory.class.getName()
                     + ".cacheTtl";
 
-    public static final String CACHE_BYPASS_ATTRIBUTE =
-            ResponseCacheGatewayFilterFactory.class.getName()
+    public static final String CACHE_BYPASS_ATTRIBUTE = ResponseCacheGatewayFilterFactory.class.getName()
                     + ".cacheBypass";
 
-    /**
-     * Endpoints whose response is identical for every caller. Only these
-     * may be stored in the shared response cache, and only when they are
-     * reached with a GET request that carries no Authorization header.
-     *
-     * <p>Configured in application.yml under goevent.cache.public-paths.</p>
-     */
     private final CacheProperties cacheProperties;
 
     private final ReactiveStringRedisTemplate redis;

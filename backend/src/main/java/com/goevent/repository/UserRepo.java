@@ -21,8 +21,6 @@ public class UserRepo {
         this.jdbcTemplate = jdbcTemplate;
     }
 
-    // Only profile-safe columns; password, verification code and Google
-    // subject are intentionally never loaded here.
     private final RowMapper<UserDTO> userRowMapper = (rs, rowNum) -> {
         UserDTO user = new UserDTO();
 
