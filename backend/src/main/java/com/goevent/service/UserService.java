@@ -67,12 +67,12 @@ public class UserService {
         }
 
         // A null field keeps the current value (see UserProfileDTO).
-        String firstName = valueOrCurrent(input.firstName(), user.getFname());
-        String lastName = valueOrCurrent(input.lastName(), user.getLname());
-        String mobile = valueOrCurrent(input.mobile(), user.getMobile());
+        String firstName = valueOrCurrent(input.getFirstName(), user.getFname());
+        String lastName = valueOrCurrent(input.getLastName(), user.getLname());
+        String mobile = valueOrCurrent(input.getMobile(), user.getMobile());
 
         String previousImage = user.getProfileImgUrl();
-        String profileImage = valueOrCurrent(input.profileImgUrl(), previousImage);
+        String profileImage = valueOrCurrent(input.getProfileImgUrl(), previousImage);
 
         // An empty picture URL removes the picture.
         if (profileImage != null && profileImage.isBlank()) {
@@ -123,11 +123,11 @@ public class UserService {
         String position = null;
 
         //student details
-        if (role == Role.STUDENT && input.student() != null) {
+        if (role == Role.STUDENT && input.getStudent() != null) {
 
-            indexNo = trimmed(input.student().indexNo());
-            uniEmail = trimmed(input.student().uniEmail());
-            universityId = input.student().universityId();
+            indexNo = trimmed(input.getStudent().getIndexNo());
+            uniEmail = trimmed(input.getStudent().getUniEmail());
+            universityId = input.getStudent().getUniversityId();
 
             if (indexNo == null || indexNo.isBlank()) {
                 return ApiResponse.badRequest("Index number is required");
@@ -158,10 +158,10 @@ public class UserService {
         }
 
         //organizer details
-        if (role == Role.ORGANIZER && input.organization() != null) {
+        if (role == Role.ORGANIZER && input.getOrganization() != null) {
 
-            organizationId = input.organization().organizationId();
-            position = trimmed(input.organization().position());
+            organizationId = input.getOrganization().getOrganizationId();
+            position = trimmed(input.getOrganization().getPosition());
 
             if (organizationId == null
                     || !userRepo.organizationExists(organizationId)) {
@@ -250,8 +250,8 @@ public class UserService {
 
         Map<String, Object> studentRow = userRepo.getStudentDetail(userId);
 
-        UserProfileDTO.Student student = studentRow == null ? null
-                : new UserProfileDTO.Student(
+        UserProfileDTO.StudentDTO student = studentRow == null ? null
+                : new UserProfileDTO.StudentDTO(
                         stringValue(studentRow.get("index_no")),
                         stringValue(studentRow.get("uni_email")),
                         intValue(studentRow.get("university_id")),
@@ -259,13 +259,13 @@ public class UserService {
 
         Map<String, Object> organizerRow = userRepo.getOrganizerDetail(userId);
 
-        UserProfileDTO.Organization organization = organizerRow == null ? null
-                : new UserProfileDTO.Organization(
+        UserProfileDTO.OrganizationDTO organization = organizerRow == null ? null
+                : new UserProfileDTO.OrganizationDTO(
                         intValue(organizerRow.get("organization_id")),
                         stringValue(organizerRow.get("organization_name")),
                         stringValue(organizerRow.get("position")));
 
-        UserProfileDTO.Options options = new UserProfileDTO.Options(
+        UserProfileDTO.OptionsDTO options = new UserProfileDTO.OptionsDTO(
                 contentRepo.getUniversities(),
                 contentRepo.getOrganizations());
 

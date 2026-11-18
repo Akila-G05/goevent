@@ -1,6 +1,6 @@
 package com.goevent.repository;
 
-import com.goevent.dto.EventFilter;
+import com.goevent.dto.EventFilterDTO;
 import com.goevent.enums.EventSort;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
@@ -190,13 +190,13 @@ public class EventRepo {
      * Approved upcoming events matching the filter. Text is bound as parameters
      * (LIKE wildcards escaped); the sort comes from a fixed set of SQL fragments.
      */
-    public List<Map<String, Object>> searchApproved(int statusId, EventFilter filter, EventSort sort, int limit) {
+    public List<Map<String, Object>> searchApproved(int statusId, EventFilterDTO filter, EventSort sort, int limit) {
         StringBuilder sql = new StringBuilder(SUMMARY_SELECT).append(" WHERE e.event_status_id = ?");
         List<Object> args = new ArrayList<>();
         args.add(statusId);
 
-        if (filter.query() != null) {
-            String like = "%" + escapeLike(filter.query()) + "%";
+        if (filter.getQuery() != null) {
+            String like = "%" + escapeLike(filter.getQuery()) + "%";
             sql.append(" AND (e.name LIKE ? ESCAPE '\\\\' OR e.description LIKE ? ESCAPE '\\\\'"
                     + " OR v.name LIKE ? ESCAPE '\\\\' OR v.city LIKE ? ESCAPE '\\\\' OR c.name LIKE ? ESCAPE '\\\\')");
 
@@ -205,21 +205,21 @@ public class EventRepo {
             }
         }
 
-        if (filter.category() != null) {
+        if (filter.getCategory() != null) {
             sql.append(" AND c.name = ?");
-            args.add(filter.category());
+            args.add(filter.getCategory());
         }
 
-        if (filter.audience() != null) {
+        if (filter.getAudience() != null) {
             sql.append(" AND a.type = ?");
-            args.add(filter.audience());
+            args.add(filter.getAudience());
         }
 
-        if (!filter.tags().isEmpty()) {
-            String marks = String.join(",", Collections.nCopies(filter.tags().size(), "?"));
+        if (!filter.getTags().isEmpty()) {
+            String marks = String.join(",", Collections.nCopies(filter.getTags().size(), "?"));
             sql.append(" AND EXISTS (SELECT 1 FROM event_has_tags eht JOIN tags t ON t.id = eht.tags_id"
                     + " WHERE eht.event_id = e.id AND t.name IN (" + marks + "))");
-            args.addAll(filter.tags());
+            args.addAll(filter.getTags());
         }
 
         sql.append(' ').append(orderBy(sort)).append(" LIMIT ?");

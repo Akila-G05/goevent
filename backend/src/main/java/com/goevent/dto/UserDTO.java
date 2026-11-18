@@ -3,7 +3,6 @@ package com.goevent.dto;
 import java.sql.Timestamp;
 
 public class UserDTO {
-
     private int id;
     private String fname;
     private String lname;

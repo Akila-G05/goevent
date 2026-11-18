@@ -1,7 +1,7 @@
 package com.goevent.controller;
 
 import com.goevent.dto.EventDTO;
-import com.goevent.dto.EventFilter;
+import com.goevent.dto.EventFilterDTO;
 import com.goevent.enums.EventSort;
 import com.goevent.service.EventService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -40,7 +40,7 @@ public class EventController {
             @RequestParam(value = "audience", required = false) String audience,
             @RequestParam(value = "tag", required = false) List<String> tags
     ) {
-        EventFilter filter = EventFilter.of(query, category, audience, tags);
+        EventFilterDTO filter = EventFilterDTO.of(query, category, audience, tags);
         return Map.of("status", true, "events", eventService.listApproved(limit, EventSort.parse(sort), filter));
     }
 
@@ -79,12 +79,6 @@ public class EventController {
         return Map.of("status", true, "saved", false);
     }
 
-    //organizer event schedule
-    @GetMapping("/calendar")
-    public Map<String, Object> calendar() {
-        return Map.of("status", true, "dates", eventService.reservedDates());
-    }
-
     //get organizers' event
     @GetMapping("/mine")
     public Map<String, Object> mine(HttpServletRequest httpRequest) {
@@ -107,16 +101,14 @@ public class EventController {
         long updated = eventService.update(id, input, httpRequest);
         return Map.of("status", true, "id", updated);
     }
+
     @GetMapping("/{id}")
     public Map<String, Object> detail(@PathVariable("id") long id) {
         return Map.of("status", true, "event", eventService.detail(id));
     }
 
     @PostMapping
-    public Map<String, Object> create(
-            @RequestBody EventDTO input,
-            HttpServletRequest httpRequest
-    ) {
+    public Map<String, Object> create(@RequestBody EventDTO input, HttpServletRequest httpRequest) {
         long id = eventService.create(input, httpRequest);
         return Map.of("status", true, "id", id);
     }
@@ -129,5 +121,11 @@ public class EventController {
             HttpServletRequest httpRequest
     ) {
         return eventService.attachImage(id, file, banner, httpRequest);
+    }
+
+    //organizer event schedule
+    @GetMapping("/calendar")
+    public Map<String, Object> calendar() {
+        return Map.of("status", true, "dates", eventService.reservedDates());
     }
 }

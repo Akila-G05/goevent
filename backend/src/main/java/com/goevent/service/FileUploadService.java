@@ -52,8 +52,8 @@ public class FileUploadService {
     public String uploadFile(String scope, int ownerId, MultipartFile file) {
         if (file == null || file.isEmpty()) {
             throw new ImageException(
-                    HttpStatus.BAD_REQUEST,
-                    "Please choose an image file"
+                HttpStatus.BAD_REQUEST,
+                "Please choose an image file"
             );
         }
 
@@ -65,8 +65,8 @@ public class FileUploadService {
 
         if (extension == null) {
             throw new ImageException(
-                    HttpStatus.BAD_REQUEST,
-                    "Only JPEG, PNG or WebP images are supported"
+                HttpStatus.BAD_REQUEST,
+                "Only JPEG, PNG or WebP images are supported"
             );
         }
 
@@ -83,8 +83,8 @@ public class FileUploadService {
             logger.error("Failed to upload image", e);
 
             throw new ImageException(
-                    HttpStatus.INTERNAL_SERVER_ERROR,
-                    "Could not save the image. Please try again."
+                HttpStatus.INTERNAL_SERVER_ERROR,
+                "Could not save the image. Please try again."
             );
         }
 
@@ -94,12 +94,7 @@ public class FileUploadService {
     // Find image
     public Optional<Resource> findFile(String scope, String owner, String fileName) {
 
-        if (!SCOPES.contains(scope)
-                || owner == null
-                || fileName == null
-                || !OWNER.matcher(owner).matches()
-                || !FILE_NAME.matcher(fileName).matches()) {
-
+        if (!SCOPES.contains(scope) || owner == null || fileName == null || !OWNER.matcher(owner).matches() || !FILE_NAME.matcher(fileName).matches()) {
             return Optional.empty();
         }
 
@@ -110,12 +105,12 @@ public class FileUploadService {
                 : Optional.empty();
     }
 
-    // Check whether URL belongs to this service
+    //check whether URL belongs to this service
     public boolean isOwnUrl(String scope, String url) {
         return ownedParts(scope, url) != null;
     }
 
-    // Delete uploaded image
+    //delete uploaded image
     public void deleteFile(String scope, String url) {
 
         String[] parts = ownedParts(scope, url);
@@ -134,7 +129,7 @@ public class FileUploadService {
         }
     }
 
-    // Get storage folder
+    //get storage folder
     private Path folder(String scope, String owner) {
 
         if (!SCOPES.contains(scope)) {
@@ -144,7 +139,7 @@ public class FileUploadService {
         return root.resolve(scope).resolve(owner);
     }
 
-    // Extract owner and filename from stored URL
+    //extract owner and filename from stored URL
     private String[] ownedParts(String scope, String url) {
 
         if (url == null || !SCOPES.contains(scope)) {
@@ -159,8 +154,7 @@ public class FileUploadService {
 
         String[] parts = url.substring(prefix.length()).split("/");
 
-        if (parts.length != 2
-                || !OWNER.matcher(parts[0]).matches()
+        if (parts.length != 2 || !OWNER.matcher(parts[0]).matches()
                 || !FILE_NAME.matcher(parts[1]).matches()) {
 
             return null;

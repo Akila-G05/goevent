@@ -22,7 +22,7 @@ public class AuthenticationRepo {
         this.jdbcTemplate = jdbcTemplate;
     }
 
-    // Map database row to UserDTO
+    //map database row to UserDTO
     private final RowMapper<UserDTO> userRowMapper = (rs, rowNum) -> {
         UserDTO user = new UserDTO();
 
@@ -43,15 +43,6 @@ public class AuthenticationRepo {
         return user;
     };
 
-    // Get existing Google user
-    public UserDTO getUserById(int id) {
-        try {
-            return jdbcTemplate.queryForObject("SELECT * FROM `user` WHERE id=?", userRowMapper, id);
-        } catch (EmptyResultDataAccessException error) {
-            return null;
-        }
-    }
-
     public UserDTO getUserByGoogleSub(String googleSub) {
 
         String query = "SELECT * FROM `user` WHERE google_sub = ? LIMIT 1";
@@ -63,7 +54,14 @@ public class AuthenticationRepo {
         }
     }
 
-    // Check whether email already exists
+    public UserDTO getUserById(int id) {
+        try {
+            return jdbcTemplate.queryForObject("SELECT * FROM `user` WHERE id=?", userRowMapper, id);
+        } catch (EmptyResultDataAccessException error) {
+            return null;
+        }
+    }
+
     public UserDTO getUserByEmail(String email) {
 
         String query = "SELECT * FROM `user` WHERE email = ? LIMIT 1";
@@ -75,7 +73,6 @@ public class AuthenticationRepo {
         }
     }
 
-    // Register new Google user
     public int registerGoogleUser(String fname, String lname, String email, int userStatusId, int roleId, String googleSub, String profileImgUrl, int authTypeId) {
 
         String query = """
@@ -89,7 +86,6 @@ public class AuthenticationRepo {
         );
     }
 
-    // Register new manual (email/password) user
     public int registerManualUser(String fname, String lname, String email, String passwordHash, int userStatusId, int roleId) {
 
         String query = """

@@ -116,11 +116,11 @@ public class AuthenticationService {
                     if (email == null || !Boolean.TRUE.equals(emailVerified)) {
                         message = "Google email is not verified";
                     } else {
-                        // 5. Check existing Google user
+                        //check existing Google user
                         UserDTO user = authenticationRepo.getUserByGoogleSub(googleSub);
 
                         if (user != null) {
-                            // Convert databese ID into enum
+                            //convert databese ID into enum
                             UserStatus userStatus = UserStatus.fromId(user.getUserStatusId());
 
                             switch (userStatus) {
@@ -133,7 +133,7 @@ public class AuthenticationService {
                                 case ACTIVE -> {
                                     responseObject.addProperty("action", "LOGIN");
 
-                                    // Create user sesion
+                                    //create sesion
                                     createVerifiedGoogleSession(httpRequest, user);
 
                                     responseObject.addProperty("userId", user.getId());
@@ -306,7 +306,6 @@ public class AuthenticationService {
                                 }
                             }
 
-                            // Manual registrations do not open a session; the user signs in explicitly.
                             responseObject.addProperty("action", "REGISTERED");
                             responseObject.addProperty("userId", registeredUser.getId());
                             responseObject.addProperty("roleId", Role.fromId(registeredUser.getRoleId()).name());

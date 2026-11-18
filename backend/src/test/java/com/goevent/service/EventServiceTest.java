@@ -1,9 +1,9 @@
 package com.goevent.service;
 
 import com.goevent.dto.EventDTO;
-import com.goevent.dto.EventDetails;
-import com.goevent.dto.EventFilter;
-import com.goevent.dto.EventSummary;
+import com.goevent.dto.EventDetailsDTO;
+import com.goevent.dto.EventFilterDTO;
+import com.goevent.dto.EventSummaryDTO;
 import com.goevent.enums.EventSort;
 import com.goevent.enums.Status;
 import com.goevent.exception.EventException;
@@ -217,16 +217,16 @@ class EventServiceTest {
 
         when(repo.approvedEvents(Status.APPROVED.getId(), EventSort.ASC, 50)).thenReturn(List.of(row));
 
-        List<EventSummary> events = service.listApproved(500, EventSort.ASC);
+        List<EventSummaryDTO> events = service.listApproved(500, EventSort.ASC);
 
         assertEquals(1, events.size());
-        EventSummary summary = events.get(0);
-        assertEquals(9, summary.id());
-        assertEquals("FREE", summary.eventLevel());
-        assertEquals("BOTH", summary.audience());
-        assertEquals("2027-05-01", summary.startsOn());
-        assertEquals("10:00 - 12:00", summary.timeRange());
-        assertNull(summary.imagePath());
+        EventSummaryDTO summary = events.get(0);
+        assertEquals(9, summary.getId());
+        assertEquals("FREE", summary.getEventLevel());
+        assertEquals("BOTH", summary.getAudience());
+        assertEquals("2027-05-01", summary.getStartsOn());
+        assertEquals("10:00 - 12:00", summary.getTimeRange());
+        assertNull(summary.getImagePath());
     }
 
     @Test
@@ -255,15 +255,15 @@ class EventServiceTest {
                 Map.of("link_name", "Website", "link", "https://example.com")));
         when(repo.eventTagNames(9L)).thenReturn(List.of("AI"));
 
-        EventDetails event = service.detail(9L);
+        EventDetailsDTO event = service.detail(9L);
 
-        assertEquals("Hall A", event.venue().name());
-        assertEquals("6.8508767,80.2641585", event.venue().coordinates());
-        assertEquals("Akila Gimhana", event.organizer().name());
-        assertEquals("2026", event.organizer().memberSince());
-        assertEquals("2027-05-01", event.dates().get(0).date());
-        assertEquals("Website", event.links().get(0).name());
-        assertEquals(List.of("AI"), event.tags());
+        assertEquals("Hall A", event.getVenue().getName());
+        assertEquals("6.8508767,80.2641585", event.getVenue().getCoordinates());
+        assertEquals("Akila Gimhana", event.getOrganizer().getName());
+        assertEquals("2026", event.getOrganizer().getMemberSince());
+        assertEquals("2027-05-01", event.getDates().get(0).getDate());
+        assertEquals("Website", event.getLinks().get(0).getName());
+        assertEquals(List.of("AI"), event.getTags());
     }
 
     @Test
@@ -367,16 +367,16 @@ class EventServiceTest {
         var events = service.mine(request);
 
         assertEquals(1, events.size());
-        assertEquals("PENDING", events.get(0).status());
+        assertEquals("PENDING", events.get(0).getStatus());
     }
 
     @Test
     void usesTheFilteredQueryWhenTheEventsPageSendsCriteria() {
         when(repo.searchApproved(anyInt(), any(), any(), anyInt())).thenReturn(List.of());
 
-        service.listApproved(10, EventSort.DESC, EventFilter.of("jazz", null, null, List.of("Public")));
+        service.listApproved(10, EventSort.DESC, EventFilterDTO.of("jazz", null, null, List.of("Public")));
 
-        verify(repo).searchApproved(Status.APPROVED.getId(), EventFilter.of("jazz", null, null, List.of("Public")),
+        verify(repo).searchApproved(Status.APPROVED.getId(), EventFilterDTO.of("jazz", null, null, List.of("Public")),
                 EventSort.DESC, 10);
         verify(repo, never()).approvedEvents(anyInt(), any(), anyInt());
     }
@@ -433,23 +433,23 @@ class EventServiceTest {
         return payload;
     }
 
-    private EventDTO.Venue venue() {
-        EventDTO.Venue venue = new EventDTO.Venue();
+    private EventDTO.VenueDTO venue() {
+        EventDTO.VenueDTO venue = new EventDTO.VenueDTO();
         venue.setName("Main Auditorium");
         venue.setCity("Colombo");
         venue.setAddress("Union Place");
         return venue;
     }
 
-    private EventDTO.Link link(String name, String url) {
-        EventDTO.Link link = new EventDTO.Link();
+    private EventDTO.LinkDTO link(String name, String url) {
+        EventDTO.LinkDTO link = new EventDTO.LinkDTO();
         link.setName(name);
         link.setUrl(url);
         return link;
     }
 
-    private EventDTO.EventDate date(String start, String end) {
-        EventDTO.EventDate row = new EventDTO.EventDate();
+    private EventDTO.EventDateDTO date(String start, String end) {
+        EventDTO.EventDateDTO row = new EventDTO.EventDateDTO();
         row.setDate(eventDate.toString());
         row.setStartTime(start);
         row.setEndTime(end);

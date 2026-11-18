@@ -1,10 +1,10 @@
 package com.goevent.service;
 
 import com.goevent.dto.EventDTO;
-import com.goevent.dto.EventDetails;
-import com.goevent.dto.EventFilter;
-import com.goevent.dto.EventSummary;
-import com.goevent.dto.OwnedEventSummary;
+import com.goevent.dto.EventDetailsDTO;
+import com.goevent.dto.EventFilterDTO;
+import com.goevent.dto.EventSummaryDTO;
+import com.goevent.dto.OwnedEventSummaryDTO;
 import com.goevent.enums.EventSort;
 import com.goevent.enums.Role;
 import com.goevent.enums.Status;
@@ -133,7 +133,7 @@ public class EventService {
 
     /** Every event the signed-in organizer published, in any review state. */
     @Transactional(readOnly = true)
-    public List<OwnedEventSummary> mine(HttpServletRequest httpRequest) {
+    public List<OwnedEventSummaryDTO> mine(HttpServletRequest httpRequest) {
 
         int actor = requireOrganizer(httpRequest);
 
@@ -144,7 +144,7 @@ public class EventService {
 
     /** Full detail of one of the organizer's own events, whatever its review state. */
     @Transactional(readOnly = true)
-    public EventDetails ownerDetail(long eventId, HttpServletRequest httpRequest) {
+    public EventDetailsDTO ownerDetail(long eventId, HttpServletRequest httpRequest) {
 
         int actor = requireOrganizer(httpRequest);
         requireOwnedEvent(eventId, actor);
@@ -188,7 +188,7 @@ public class EventService {
         int categoryId = resolveCategory(input);
         int audienceId = resolveAudience(input);
 
-        EventDTO.Venue venueInput = input.getVenue();
+        EventDTO.VenueDTO venueInput = input.getVenue();
 
         if (venueInput == null) {
             throw EventException.badRequest("Venue details are required.");
@@ -309,13 +309,13 @@ public class EventService {
 
     /** Public listing: approved events only, capped so one request stays bounded. */
     @Transactional(readOnly = true)
-    public List<EventSummary> listApproved(int limit, EventSort sort) {
-        return listApproved(limit, sort, EventFilter.of(null, null, null, List.of()));
+    public List<EventSummaryDTO> listApproved(int limit, EventSort sort) {
+        return listApproved(limit, sort, EventFilterDTO.of(null, null, null, List.of()));
     }
 
     /** Approved events matching the events-page filter, in the requested order. */
     @Transactional(readOnly = true)
-    public List<EventSummary> listApproved(int limit, EventSort sort, EventFilter filter) {
+    public List<EventSummaryDTO> listApproved(int limit, EventSort sort, EventFilterDTO filter) {
 
         int size = clampSize(limit);
 
@@ -343,7 +343,7 @@ public class EventService {
      * including anonymous visitors and organizers, gets a random selection.
      */
     @Transactional(readOnly = true)
-    public List<EventSummary> recommended(int limit, HttpServletRequest httpRequest) {
+    public List<EventSummaryDTO> recommended(int limit, HttpServletRequest httpRequest) {
 
         int size = clampSize(limit);
         Optional<Integer> universityId = studentUniversityId(httpRequest);
@@ -371,7 +371,7 @@ public class EventService {
     }
     /** The signed-in user's saved events that are still approved and upcoming. */
     @Transactional(readOnly = true)
-    public List<EventSummary> saved(HttpServletRequest httpRequest) {
+    public List<EventSummaryDTO> saved(HttpServletRequest httpRequest) {
 
         int userId = requireSignedIn(httpRequest);
 
@@ -441,7 +441,7 @@ public class EventService {
 
     /** Public detail: approved events only; anything else is reported as not found. */
     @Transactional(readOnly = true)
-    public EventDetails detail(long eventId) {
+    public EventDetailsDTO detail(long eventId) {
 
         Map<String, Object> row = eventRepo.approvedEventRow(eventId, Status.APPROVED.getId());
 
@@ -452,17 +452,17 @@ public class EventService {
         return toDetails(eventId, row);
     }
 
-    private EventDetails toDetails(long eventId, Map<String, Object> row) {
+    private EventDetailsDTO toDetails(long eventId, Map<String, Object> row) {
 
-        List<EventDetails.DateSlot> dates = eventRepo.eventDateRows(eventId).stream()
-                .map(date -> new EventDetails.DateSlot(text(date, "date"), text(date, "time")))
+        List<EventDetailsDTO.DateSlotDTO> dates = eventRepo.eventDateRows(eventId).stream()
+                .map(date -> new EventDetailsDTO.DateSlotDTO(text(date, "date"), text(date, "time")))
                 .toList();
 
-        List<EventDetails.Link> links = eventRepo.eventLinkRows(eventId).stream()
-                .map(link -> new EventDetails.Link(text(link, "link_name"), text(link, "link")))
+        List<EventDetailsDTO.LinkDTO> links = eventRepo.eventLinkRows(eventId).stream()
+                .map(link -> new EventDetailsDTO.LinkDTO(text(link, "link_name"), text(link, "link")))
                 .toList();
 
-        EventDetails.Venue venue = new EventDetails.Venue(
+        EventDetailsDTO.VenueDTO venue = new EventDetailsDTO.VenueDTO(
                 text(row, "venue_name"),
                 text(row, "venue_address"),
                 text(row, "venue_city"),
@@ -470,7 +470,7 @@ public class EventService {
                 mapLinks.coordinatesFor(text(row, "venue_link")).orElse(null)
         );
 
-        return new EventDetails(
+        return new EventDetailsDTO(
                 number(row, "id"),
                 text(row, "name"),
                 text(row, "description"),
@@ -478,7 +478,7 @@ public class EventService {
                 text(row, "audience"),
                 text(row, "event_level"),
                 venue,
-                new EventDetails.Organizer(text(row, "organizer_name"), text(row, "organizer_since")),
+                new EventDetailsDTO.OrganizerDTO(text(row, "organizer_name"), text(row, "organizer_since")),
                 text(row, "image_path"),
                 text(row, "banner_path"),
                 dates,
@@ -486,8 +486,8 @@ public class EventService {
                 eventRepo.eventTagNames(eventId));
     }
 
-    private static OwnedEventSummary owned(Map<String, Object> row) {
-        return new OwnedEventSummary(
+    private static OwnedEventSummaryDTO owned(Map<String, Object> row) {
+        return new OwnedEventSummaryDTO(
                 number(row, "id"),
                 text(row, "name"),
                 text(row, "category"),
@@ -500,8 +500,8 @@ public class EventService {
                 text(row, "starts_on"),
                 text(row, "time_range"));
     }
-    private static EventSummary summary(Map<String, Object> row) {
-        return new EventSummary(
+    private static EventSummaryDTO summary(Map<String, Object> row) {
+        return new EventSummaryDTO(
                 number(row, "id"),
                 text(row, "name"),
                 text(row, "description"),
@@ -592,7 +592,7 @@ public class EventService {
         return eventRepo.audienceId(name).orElseThrow(() -> EventException.badRequest("Unknown audience: " + name));
     }
 
-    private List<LinkRow> validLinks(List<EventDTO.Link> links) {
+    private List<LinkRow> validLinks(List<EventDTO.LinkDTO> links) {
 
         if (links == null || links.isEmpty()) {
             return List.of();
@@ -606,7 +606,7 @@ public class EventService {
 
         for (int index = 0; index < links.size(); index++) {
 
-            EventDTO.Link link = links.get(index);
+            EventDTO.LinkDTO link = links.get(index);
             String label = "Link " + (index + 1);
 
             if (link == null) {
@@ -624,7 +624,7 @@ public class EventService {
         return valid;
     }
 
-    private List<Schedule> validSchedules(List<EventDTO.EventDate> dates) {
+    private List<Schedule> validSchedules(List<EventDTO.EventDateDTO> dates) {
 
         if (dates == null || dates.isEmpty()) {
             throw EventException.badRequest("Add at least one date to the schedule.");
@@ -639,7 +639,7 @@ public class EventService {
 
         for (int index = 0; index < dates.size(); index++) {
 
-            EventDTO.EventDate row = dates.get(index);
+            EventDTO.EventDateDTO row = dates.get(index);
             String label = "Schedule row " + (index + 1);
 
             if (row == null) {
