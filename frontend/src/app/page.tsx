@@ -4,12 +4,12 @@ import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import Image from 'next/image';
 import Link from 'next/link';
-import { ArrowUpRight, ChevronDown, CornerDownRight, Search } from 'lucide-react';
+import { ArrowUpRight } from 'lucide-react';
 import { eventsApi } from '@/api/events';
 import { EventCarousel } from '@/components/events/event-carousel';
 import { EventRows } from '@/components/events/event-rows';
 import { Footer } from '@/components/shared/footer';
-import { filterAndSortEvents, type EventOrder } from '@/lib/event-sort';
+import { filterAndSortEvents } from '@/lib/event-sort';
 
 const MARQUEE_ITEMS = [
   'Music',
@@ -31,8 +31,6 @@ const HOST_STEPS = [
 ];
 
 export default function HomePage() {
-  const [searchQuery, setSearchQuery] = useState('');
-  const [sortOrder, setSortOrder] = useState<EventOrder>('newest');
 
   // Browsing cards: personalised on the server (student university, otherwise random)
   const recommendedQuery = useQuery({
@@ -51,20 +49,14 @@ export default function HomePage() {
     queryFn: () => eventsApi.list(50, 'asc'),
   });
 
-  const listedCount = eventsAscQuery.isSuccess ? eventsAscQuery.data.length : null;
-
-  const searchHref = `/events?${new URLSearchParams({
-    ...(searchQuery.trim() ? { q: searchQuery.trim() } : {}),
-    sort: sortOrder,
-  }).toString()}`;
 
   return (
     <div className="w-full bg-[#f8f9fa] text-black">
       {/* =========================================================================
           SECTION 1: HERO
           ========================================================================= */}
-      <section className="relative bg-[#0c0c0e] px-3 pb-10 pt-24 sm:px-6 lg:px-8">
-        <div className="relative mx-auto h-[82dvh] min-h-[620px] max-w-7xl overflow-hidden rounded-[2rem] border border-white/10 shadow-2xl">
+      <section className="relative h-[100dvh] min-h-[640px] w-full overflow-hidden bg-[#0c0c0e]">
+        <div className="absolute inset-0 overflow-hidden">
           <Image
             src="https://images.unsplash.com/photo-1659273145168-7217ae03db0c?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=NHwxMjA3fDA%3D"
             alt="Crowd with hands raised at a live event"
@@ -90,12 +82,7 @@ export default function HomePage() {
             </span>
           </div>
 
-          <div className="relative z-10 flex h-full flex-col justify-between p-6 pb-28 sm:p-10 sm:pb-32 lg:p-14 lg:pb-36">
-            <div className="inline-flex w-fit items-center gap-2 rounded-full border border-white/20 bg-black/40 px-4 py-2 text-xs font-semibold text-white backdrop-blur">
-              <span className="h-2 w-2 animate-pulse rounded-full bg-emerald-400" />
-              {listedCount === null ? 'Discover events near you' : `${listedCount} events listed right now`}
-            </div>
-
+          <div className="relative z-10 mx-auto flex h-full w-full max-w-7xl flex-col justify-center px-4 pb-28 pt-28 sm:px-6 sm:pb-32 lg:px-8 lg:pb-36">
             <div className="max-w-3xl animate-in fade-in slide-in-from-bottom-4 duration-700">
               <h1 className="font-display text-6xl font-black uppercase leading-[0.86] tracking-tight text-white sm:text-7xl lg:text-8xl">
                 Find your <br />
@@ -120,42 +107,6 @@ export default function HomePage() {
                   Host an event
                 </Link>
               </div>
-            </div>
-
-            <div className="grid max-w-2xl grid-cols-1 gap-3 rounded-2xl border border-white/15 bg-black/45 p-3 backdrop-blur-xl sm:grid-cols-[1fr_auto_auto]">
-              <div className="relative">
-                <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search by event, category, venue"
-                  aria-label="Search events"
-                  className="w-full rounded-xl border border-white/15 bg-white/10 py-3 pl-11 pr-4 text-sm text-white placeholder-zinc-400 transition-all focus:bg-white/20 focus:outline-none focus:ring-1 focus:ring-white/40"
-                />
-              </div>
-
-              <div className="relative">
-                <select
-                  aria-label="Sort events"
-                  value={sortOrder}
-                  onChange={(e) => setSortOrder(e.target.value as EventOrder)}
-                  className="w-full cursor-pointer appearance-none rounded-xl border border-white/15 bg-white/10 px-4 py-3 pr-10 text-sm text-zinc-200 focus:outline-none"
-                >
-                  <option value="newest" className="bg-[#1a1a20] text-white">Newest first</option>
-                  <option value="oldest" className="bg-[#1a1a20] text-white">Oldest first</option>
-                  <option value="name" className="bg-[#1a1a20] text-white">Name A-Z</option>
-                </select>
-                <ChevronDown className="pointer-events-none absolute right-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
-              </div>
-
-              <Link
-                href={searchHref}
-                className="flex items-center justify-center gap-2 rounded-xl bg-white px-6 py-3 text-sm font-semibold text-black shadow-lg transition-all hover:bg-zinc-200 active:scale-[0.98]"
-              >
-                <CornerDownRight className="h-4 w-4 stroke-[2.5]" />
-                <span>Search</span>
-              </Link>
             </div>
           </div>
 
@@ -215,11 +166,7 @@ export default function HomePage() {
 
         {recommendedQuery.isSuccess && recommendedQuery.data.length > 0 && (
           <div className="mt-8">
-            {filterAndSortEvents(recommendedQuery.data, searchQuery, sortOrder).length === 0 ? (
-              <p className="text-sm text-zinc-500">No events match your search.</p>
-            ) : (
-              <EventCarousel events={filterAndSortEvents(recommendedQuery.data, searchQuery, sortOrder)} />
-            )}
+            <EventCarousel events={filterAndSortEvents(recommendedQuery.data, '', 'newest')} />
           </div>
         )}
       </section>
@@ -239,6 +186,15 @@ export default function HomePage() {
                 <p className="mt-4 max-w-md text-sm text-zinc-400">
                   Create a listing for your workshop, festival or match, then manage it from your profile.
                 </p>
+                <div className="relative mt-8 h-56 overflow-hidden rounded-2xl border border-white/10">
+                  <Image
+                    src="https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=1000&q=80"
+                    alt="Stage lights at a live event"
+                    fill
+                    className="object-cover object-center brightness-[0.8]"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-[#0f0f13] via-transparent to-transparent" />
+                </div>
               </div>
 
               <ol className="mt-10 space-y-5">

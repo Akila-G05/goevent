@@ -25,10 +25,12 @@ const renderHome = () =>
   );
 
 describe('HomePage Component', () => {
-  it('renders the hero headline and the search button', () => {
+  it('renders the hero headline without the search bar or listing count', () => {
     renderHome();
     expect(screen.getByRole('heading', { level: 1, name: /next event/i })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /Search/i })).toBeInTheDocument();
+    expect(screen.queryByRole('textbox', { name: /Search events/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /^Search$/i })).not.toBeInTheDocument();
+    expect(screen.queryByText(/events listed right now/i)).not.toBeInTheDocument();
   });
 
   it('links the hero call to action to the browsing section', () => {
